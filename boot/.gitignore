@@ -1,0 +1,8 @@
+# Build artifacts
+*.elf
+*.map
+*.srec
+
+# Build intermediates
+*.d
+*.o
