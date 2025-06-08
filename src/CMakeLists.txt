@@ -3,6 +3,8 @@ add_executable(pslab-mini-firmware)
 target_sources(pslab-mini-firmware
     PRIVATE
         main.c
+        led.c
+        timer.c
         stubs.c
 )
 
