@@ -1,0 +1,48 @@
+[submodule "Drivers/CMSIS/Device/ST/STM32H5xx"]
+	path = Drivers/CMSIS/Device/ST/STM32H5xx
+	url = https://github.com/STMicroelectronics/cmsis_device_h5.git
+	branch = main
+[submodule "Drivers/STM32H5xx_HAL_Driver"]
+	path = Drivers/STM32H5xx_HAL_Driver
+	url = https://github.com/STMicroelectronics/stm32h5xx_hal_driver.git
+	branch = main
+[submodule "Drivers/BSP/STM32H5xx_Nucleo"]
+	path = Drivers/BSP/STM32H5xx_Nucleo
+	url = https://github.com/STMicroelectronics/stm32h5xx-nucleo-bsp.git
+	branch = main
+[submodule "Drivers/BSP/STM32H573I-DK"]
+	path = Drivers/BSP/STM32H573I-DK
+	url = https://github.com/STMicroelectronics/stm32h573i-discovery-bsp.git
+	branch = main
+[submodule "Drivers/BSP/Components/Common"]
+	path = Drivers/BSP/Components/Common
+	url = https://github.com/STMicroelectronics/stm32-bsp-Common
+	branch = main
+[submodule "Drivers/BSP/Components/ft6x06"]
+	path = Drivers/BSP/Components/ft6x06
+	url = https://github.com/STMicroelectronics/stm32-ft6x06
+	branch = main
+[submodule "Drivers/BSP/Components/mx_wifi"]
+	path = Drivers/BSP/Components/mx_wifi
+	url = https://github.com/STMicroelectronics/mx_wifi.git
+	branch = main
+[submodule "Drivers/BSP/Components/st7789h2"]
+	path = Drivers/BSP/Components/st7789h2
+	url = https://github.com/STMicroelectronics/stm32-st7789h2
+	branch = main
+[submodule "Drivers/BSP/Components/lan8742"]
+	path = Drivers/BSP/Components/lan8742
+	url = https://github.com/STMicroelectronics/stm32-lan8742
+	branch = main
+[submodule "Drivers/BSP/Components/cs42l51"]
+	path = Drivers/BSP/Components/cs42l51
+	url = https://github.com/STMicroelectronics/stm32-cs42l51
+	branch = main
+[submodule "Drivers/BSP/Components/mx25lm51245g"]
+	path = Drivers/BSP/Components/mx25lm51245g
+	url = https://github.com/STMicroelectronics/stm32-mx25lm51245g
+	branch = main
+[submodule "Drivers/BSP/Components/tcpp0203"]
+	path = Drivers/BSP/Components/tcpp0203
+	url = https://github.com/STMicroelectronics/stm32-tcpp0203
+	branch = main
