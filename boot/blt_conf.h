@@ -20,7 +20,7 @@
 * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 * PURPOSE. See the GNU General Public License for more details.
 *
-* You have received a copy of the GNU General Public License along with OpenBLT. It 
+* You have received a copy of the GNU General Public License along with OpenBLT. It
 * should be located in ".\Doc\license.html". If not, contact Feaser to obtain a copy.
 *
 * \endinternal
@@ -42,7 +42,7 @@
  * Set BOOT_CPU_USER_PROGRAM_START_HOOK to 1 if you would like a hook function to be
  * called the moment the user program is about to be started. This could be used to
  * de-initialize application specific parts, for example to stop blinking an LED, etc.
- */ 
+ */
 /** \brief Frequency of the external crystal or internal (HSI/MSI) oscillator. */
 #define BOOT_CPU_XTAL_SPEED_KHZ          (8000)
 /** \brief Desired system speed. */
@@ -70,46 +70,46 @@
  * configuring the IP address, network mask and gateway address are no longer needed.
  */
 /** \brief Enable/disable the NET transport layer. */
-#define BOOT_COM_NET_ENABLE               (1)
+#define BOOT_COM_NET_ENABLE               (0)
 /** \brief Configure number of bytes in the target->host data packet. */
-#define BOOT_COM_NET_TX_MAX_DATA          (129)
+// #define BOOT_COM_NET_TX_MAX_DATA          (129)
 /** \brief Configure number of bytes in the host->target data packet. */
-#define BOOT_COM_NET_RX_MAX_DATA          (129)
+// #define BOOT_COM_NET_RX_MAX_DATA          (129)
 /** \brief Configure the port that the TCP/IP server listens on */
-#define BOOT_COM_NET_PORT                 (1000)
+// #define BOOT_COM_NET_PORT                 (1000)
 /** \brief Enable/disable DHCP client for automatically obtaining an IP address. */
-#define BOOT_COM_NET_DHCP_ENABLE          (1)
+// #define BOOT_COM_NET_DHCP_ENABLE          (1)
 /** \brief Configure the 1st byte of the IP address */
-#define BOOT_COM_NET_IPADDR0              (192)
+// #define BOOT_COM_NET_IPADDR0              (192)
 /** \brief Configure the 2nd byte of the IP address */
-#define BOOT_COM_NET_IPADDR1              (168)
+// #define BOOT_COM_NET_IPADDR1              (168)
 /** \brief Configure the 3rd byte of the IP address */
-#define BOOT_COM_NET_IPADDR2              (178)
+// #define BOOT_COM_NET_IPADDR2              (178)
 /** \brief Configure the 4th byte of the IP address */
-#define BOOT_COM_NET_IPADDR3              (50)
+// #define BOOT_COM_NET_IPADDR3              (50)
 /** \brief Configure the 1st byte of the network mask */
-#define BOOT_COM_NET_NETMASK0             (255)
+// #define BOOT_COM_NET_NETMASK0             (255)
 /** \brief Configure the 2nd byte of the network mask */
-#define BOOT_COM_NET_NETMASK1             (255)
+// #define BOOT_COM_NET_NETMASK1             (255)
 /** \brief Configure the 3rd byte of the network mask */
-#define BOOT_COM_NET_NETMASK2             (255)
+// #define BOOT_COM_NET_NETMASK2             (255)
 /** \brief Configure the 4th byte of the network mask */
-#define BOOT_COM_NET_NETMASK3             (0)
+// #define BOOT_COM_NET_NETMASK3             (0)
 /** \brief Configure the 1st byte of the gateway address */
-#define BOOT_COM_NET_GATEWAY0             (192)
+// #define BOOT_COM_NET_GATEWAY0             (192)
 /** \brief Configure the 2nd byte of the gateway address */
-#define BOOT_COM_NET_GATEWAY1             (168)
+// #define BOOT_COM_NET_GATEWAY1             (168)
 /** \brief Configure the 3rd byte of the gateway address */
-#define BOOT_COM_NET_GATEWAY2             (178)
+// #define BOOT_COM_NET_GATEWAY2             (178)
 /** \brief Configure the 4th byte of the gateway address */
-#define BOOT_COM_NET_GATEWAY3             (1)
+// #define BOOT_COM_NET_GATEWAY3             (1)
 /** \brief Enable/disable the deferred initialization mechanism. When enabled, the
  *         communication interface is only initialized when: (a) no valid user program
  *         is detected, or (b) when CpuUserProgramStartHook() returns BLT_FALSE. Your
  *         bootloader application can explicitly initialize the communication interface
  *         by calling ComDeferredInit().
  */
-#define BOOT_COM_NET_DEFERRED_INIT_ENABLE (1)
+// #define BOOT_COM_NET_DEFERRED_INIT_ENABLE (1)
 
 /* The USB communication interface is selected by setting the BOOT_COM_USB_ENABLE
  * configurable to 1. The maximum amount of data bytes in a message for data transmission
@@ -138,19 +138,19 @@
  *
  */
 /** \brief Enable/disable CAN transport layer. */
-#define BOOT_COM_CAN_ENABLE             (1)
+#define BOOT_COM_CAN_ENABLE             (0)
 /** \brief Configure the desired CAN baudrate. */
-#define BOOT_COM_CAN_BAUDRATE           (500000)
+// #define BOOT_COM_CAN_BAUDRATE           (500000)
 /** \brief Configure CAN message ID target->host. */
-#define BOOT_COM_CAN_TX_MSG_ID          (0x7E1 /*| 0x80000000*/)
+// #define BOOT_COM_CAN_TX_MSG_ID          (0x7E1 /*| 0x80000000*/)
 /** \brief Configure number of bytes in the target->host CAN message. */
-#define BOOT_COM_CAN_TX_MAX_DATA        (8)
+// #define BOOT_COM_CAN_TX_MAX_DATA        (8)
 /** \brief Configure CAN message ID host->target. */
-#define BOOT_COM_CAN_RX_MSG_ID          (0x667 /*| 0x80000000*/)
+// #define BOOT_COM_CAN_RX_MSG_ID          (0x667 /*| 0x80000000*/)
 /** \brief Configure number of bytes in the host->target CAN message. */
-#define BOOT_COM_CAN_RX_MAX_DATA        (8)
+// #define BOOT_COM_CAN_RX_MAX_DATA        (8)
 /** \brief Select the desired CAN peripheral as a zero based index. */
-#define BOOT_COM_CAN_CHANNEL_INDEX      (0)
+// #define BOOT_COM_CAN_CHANNEL_INDEX      (0)
 
 /* The RS232 communication interface is selected by setting the BOOT_COM_RS232_ENABLE
  * configurable to 1. Configurable BOOT_COM_RS232_BAUDRATE selects the communication speed

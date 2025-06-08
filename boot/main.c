@@ -57,8 +57,6 @@ static void SystemClock_Config(void);
 ****************************************************************************************/
 int main(void)
 {
-  blt_int8u deferredInitRequestFlag = 0;
-
   /* Initialize the microcontroller */
   Init();
   /* Initialize the shared parameters module */
@@ -85,6 +83,7 @@ int main(void)
    * a firmware update to proceed. The code here reads out this flag and performs the
    * TCP/IP network stack initialization when requested.
    */
+  blt_int8u deferredInitRequestFlag = 0;
   SharedParamsReadByIndex(0, &deferredInitRequestFlag);
   if (deferredInitRequestFlag == 1)
   {
