@@ -1,0 +1,62 @@
+# Build files
+/build/
+/Debug/
+/Release/
+/*.elf
+/*.bin
+/*.hex
+/*.map
+/*.lst
+/*.d
+/*.o
+/*.obj
+/*.dep
+
+# IDE files
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+*.user
+*.log
+
+# STM32CubeMX generated files
+*.ioc
+*.launch
+*.uvoptx
+*.uvprojx
+*.uvguix.*
+*.cproject
+*.project
+*.settings/
+*.mxproject
+
+# Keil MDK
+*.uvopt
+*.uvproj
+*.uvguix.*
+
+# IAR EWARM
+*.ewd
+*.ewp
+*.ewt
+*.eww
+*.dep
+
+# Atollic TrueSTUDIO
+.settings/
+.metadata/
+*.launch
+*.atproject
+
+# VSCode
+.vscode/
+
+# CLion
+.idea/
+cmake-build-*/
+
+# Other
+*.DS_Store
+Thumbs.db
