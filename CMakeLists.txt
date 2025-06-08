@@ -9,7 +9,9 @@ find_package(HAL COMPONENTS STM32H5 REQUIRED)
 
 set(PROJECT_SOURCES
     src/main.c
+    src/led.c
     src/stubs.c
+    src/timer.c
 )
 
 add_executable(pslab-mini-firmware ${PROJECT_SOURCES})
