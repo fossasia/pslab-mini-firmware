@@ -31,6 +31,7 @@
 ****************************************************************************************/
 #include "boot.h"                                /* bootloader generic header          */
 #include "stm32h5xx.h"                           /* STM32 CPU and HAL header           */
+#include "stm32h5xx_hal_flash.h"                 /* STM32 HAL flash programming header */
 #include "stm32h5xx_ll_icache.h"                 /* STM32 LL internal cache header     */
 
 
