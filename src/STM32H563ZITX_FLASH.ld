@@ -46,7 +46,7 @@ MEMORY
 {
   SHARED (xrw)     : ORIGIN = 0x20000000,   LENGTH = 64
   RAM    (xrw)     : ORIGIN = 0x20000040,   LENGTH = 640K - 64
-  FLASH  (rx)      : ORIGIN = 0x08008000,   LENGTH = 2048K - 32K
+  FLASH  (rx)      : ORIGIN = 0x0800C000,   LENGTH = 2048K - 48K
 }
 
 /* Sections */
@@ -59,7 +59,7 @@ SECTIONS
     __shared_start__ = _sshared;
     *(.shared)
     *(.shared.*)
-    KEEP(*(.shared)) 
+    KEEP(*(.shared))
     . = ALIGN(4);
     _eshared = .;
     __shared_end__ = _eshared;
