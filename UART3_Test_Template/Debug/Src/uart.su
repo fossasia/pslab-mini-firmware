@@ -1,0 +1,6 @@
+C:/Users/DELL/Documents/Embedded Systems Bare-Metal Programming/STM_Code_h5/STM32_essential_drivers/STM32Cube_FW_H5_V1.5.0/Drivers/CMSIS/Include/core_cm33.h:2390:22:__NVIC_EnableIRQ	16	static,ignoring_inline_asm
+../Src/uart.c:52:6:uart3_rx_interrupt_init	8	static
+../Src/uart.c:83:13:uart_set_baudrate	24	static
+../Src/uart.c:87:17:compute_uart_bd	16	static
+../Src/uart.c:91:6:uart3_int_write	24	static
+../Src/uart.c:111:6:usart_tx_callback	4	static
