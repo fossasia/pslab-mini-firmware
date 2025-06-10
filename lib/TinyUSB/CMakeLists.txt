@@ -11,8 +11,6 @@ target_include_directories(tiny-usb
 
 target_compile_definitions(tiny-usb
     PRIVATE
-        USE_HAL_DRIVER
-        USE_FULL_LL_DRIVER
         STM32H563xx
 )
 
