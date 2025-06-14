@@ -1,11 +1,12 @@
-#ifndef TIMER_H
-#define TIMER_H
+#ifndef UART_H
+#define UART_H
 
 /****************************************************************************************
 * Function prototypes
 ****************************************************************************************/
-void          TimerInit(void);
-unsigned long TimerGet(void);
+void usart3_init(void);
 
-#endif /* TIMER_H */
-/*********************************** end of timer.h ************************************/
+extern UART_HandleTypeDef huart3; 
+
+#endif /* UART_H */
+/*********************************** end of uart.h **************************************/

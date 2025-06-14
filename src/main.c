@@ -1,38 +1,9 @@
-  /************************************************************************************//**
-  * \file         Demo/ARMCM33_STM32H5_Nucleo_H563ZI_GCC/Prog/main.c
-  * \brief        Demo program application source file.
-  * \ingroup      Prog_ARMCM33_STM32H5_Nucleo_H563ZI_GCC
-  * \internal
-  *----------------------------------------------------------------------------------------
-  *                          C O P Y R I G H T
-  *----------------------------------------------------------------------------------------
-  *   Copyright (c) 2024  by Feaser    http://www.feaser.com    All rights reserved
-  *
-  *----------------------------------------------------------------------------------------
-  *                            L I C E N S E
-  *----------------------------------------------------------------------------------------
-  * This file is part of OpenBLT. OpenBLT is free software: you can redistribute it and/or
-  * modify it under the terms of the GNU General Public License as published by the Free
-  * Software Foundation, either version 3 of the License, or (at your option) any later
-  * version.
-  *
-  * OpenBLT is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-  * PURPOSE. See the GNU General Public License for more details.
-  *
-  * You have received a copy of the GNU General Public License along with OpenBLT. It
-  * should be located in ".\Doc\license.html". If not, contact Feaser to obtain a copy.
-  *
-  * \endinternal
-  ****************************************************************************************/
-
   /****************************************************************************************
   * Include files
   ****************************************************************************************/
   #include "header.h"                                    /* generic header               */
   #include "stm32h5xx_hal.h"                             /* STM32 HAL driver             */
-  #include "stm32h5xx_hal_conf.h"
-
+  #include "uart.h"                                   /* UART driver                  */
   /****************************************************************************************
   * Function prototypes
   ****************************************************************************************/
@@ -40,15 +11,7 @@
   static void SystemClock_Config(void);
   static void VectorBase_Config(void);
 
-
-  UART_HandleTypeDef huart3; 
-
-
-  void usart3_init(void);
-
-  char message[20]= "Hello there\n\r";
-
-
+  char message[20]= "Hello there\n\r"; /* Message to be sent via UART */
 
   /************************************************************************************//**
   ** \brief     This is the entry point for the bootloader application and is called
@@ -60,17 +23,16 @@
   {
     /* Initialize the microcontroller. */
     Init();
-
-      usart3_init();
+    /* Initialize the uart driver. */
+    usart3_init();
 
     /* Start the infinite program loop. */
     while (1)
     {
-      /* Toggle LED with a fixed frequency. */
+      /*start UART transmission*/
       HAL_UART_Transmit(&huart3, (uint8_t *) message,20,100);
       HAL_Delay(10);
     }
-    /* Set program exit code. note that the program should never get here. */
     return 0;
   } /*** end of main ***/
 
@@ -133,7 +95,7 @@
     RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
     /* Configure the main internal regulator output voltage. */
-    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
     while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY))
     {
       ;
@@ -146,12 +108,12 @@
     RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource = RCC_PLL1_SOURCE_HSE;
-    RCC_OscInitStruct.PLL.PLLM = 4;
-    RCC_OscInitStruct.PLL.PLLN = 250;
+    RCC_OscInitStruct.PLL.PLLM = 5;
+    RCC_OscInitStruct.PLL.PLLN = 160;
     RCC_OscInitStruct.PLL.PLLP = 2;
     RCC_OscInitStruct.PLL.PLLQ = 2;
     RCC_OscInitStruct.PLL.PLLR = 2;
-    RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1_VCIRANGE_1;
+    RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1_VCIRANGE_2;
     RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1_VCORANGE_WIDE;
     RCC_OscInitStruct.PLL.PLLFRACN = 0;
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -168,10 +130,10 @@
                                   RCC_CLOCKTYPE_PCLK3;
     RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
     RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-    RCC_ClkInitStruct.APB3CLKDivider = RCC_HCLK_DIV1;
-    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
+    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+    RCC_ClkInitStruct.APB3CLKDivider = RCC_HCLK_DIV2;
+    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
     {
       /* Clock configuration incorrect or hardware failure. Hang the system to prevent
       * damage.
@@ -221,6 +183,8 @@
   } /*** end of HAL_MspInit ***/
 
 
+
+
   /************************************************************************************//**
   ** \brief     Deinitializes the Global MSP. This function is called from HAL_DeInit()
   **            function to perform system level Deinitialization (GPIOs, clock, DMA,
@@ -228,39 +192,6 @@
   ** \return    none.
   **
   ****************************************************************************************/
-  void usart3_init(void)
-  {	//ENABLE GPIO
-    GPIO_InitTypeDef 	GPIO_InitStruct ={0};
-      __HAL_RCC_GPIOD_CLK_ENABLE();
-      GPIO_InitStruct.Pin   = GPIO_PIN_8;
-      GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
-      GPIO_InitStruct.Pull  =  GPIO_NOPULL;
-      GPIO_InitStruct.Speed =  GPIO_SPEED_FREQ_VERY_HIGH;
-      GPIO_InitStruct.Alternate = GPIO_AF7_USART3;
-      HAL_GPIO_Init (GPIOD, &GPIO_InitStruct);
-
-      GPIO_InitStruct.Pin = GPIO_PIN_9;
-      HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-
-    //ENABLE UART
-
-
-      __HAL_RCC_USART3_CLK_ENABLE();
-
-      huart3.Instance = USART3;
-
-      huart3.Init.BaudRate = 115200;
-      huart3.Init.WordLength = UART_WORDLENGTH_8B;
-      huart3.Init.StopBits = UART_STOPBITS_1;
-      huart3.Init.Parity = UART_PARITY_NONE;
-      huart3.Init.Mode = UART_MODE_TX_RX;
-      huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-      huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-
-      HAL_UART_Init(&huart3);
-
-  }
-
   void HAL_MspDeInit(void)
   {
     /* Deconfigure GPIO pin for the LED. */

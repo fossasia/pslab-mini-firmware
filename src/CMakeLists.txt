@@ -6,6 +6,7 @@ target_sources(pslab-mini-firmware
         led.c
         timer.c
         stubs.c
+        uart.c
 )
 
 target_include_directories(pslab-mini-firmware
