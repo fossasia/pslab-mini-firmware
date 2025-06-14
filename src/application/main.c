@@ -29,10 +29,9 @@ int main(void)
 
     /* Basic UART/LED example:
     * - Poll UART for incoming bytes
+    * - If a byte is received, toggle the LED
     * - Try to read five bytes (this may timeout)
-    * - If the read bytes equal "Hello", then
-    *   - Toggle LED
-    *   - Respond "World"
+    * - If the read bytes equal "Hello", then respond "World"
     */
     while (1) {
         if (UART_rx_ready()) {
