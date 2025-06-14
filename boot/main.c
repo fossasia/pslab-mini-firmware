@@ -39,7 +39,6 @@
 #include "stm32h5xx_ll_gpio.h"                   /* STM32 LL GPIO header               */
 #include "stm32h5xx_ll_icache.h"                 /* STM32 LL internal cache header     */
 #include "stm32h5xx_ll_crs.h"                    /* STM32 LL CRS header                */
-#include "shared_params.h"                       /* Shared parameters header           */
 
 
 /****************************************************************************************
@@ -59,8 +58,6 @@ int main(void)
 {
   /* Initialize the microcontroller */
   Init();
-  /* Initialize the shared parameters module */
-  SharedParamsInit();
   /* Initialize the bootloader */
   BootInit();
 #if (BOOT_COM_DEFERRED_INIT_ENABLE == 1)

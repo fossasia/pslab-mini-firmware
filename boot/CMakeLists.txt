@@ -5,7 +5,6 @@ target_sources(pslab-mini-bootloader
         main.c
         hooks.c
         led.c
-        shared_params.c
 )
 
 target_include_directories(pslab-mini-bootloader
