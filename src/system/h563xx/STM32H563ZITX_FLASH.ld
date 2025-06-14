@@ -44,27 +44,17 @@ _Min_Stack_Size = 0x1000; /* required amount of stack */
 /* Memories definition */
 MEMORY
 {
-  SHARED (xrw)     : ORIGIN = 0x20000000,   LENGTH = 64
-  RAM    (xrw)     : ORIGIN = 0x20000040,   LENGTH = 640K - 64
-  FLASH  (rx)      : ORIGIN = 0x0800C000,   LENGTH = 2048K - 48K
+  RAM (xrw) :
+      ORIGIN = 0x20000000,
+      LENGTH = 640K
+  FLASH (rx) : 
+      ORIGIN = 0x08000000 + 48K,
+      LENGTH = 2048K - 48K
 }
 
 /* Sections */
 SECTIONS
 {
-  .shared (NOLOAD) :
-  {
-    . = ALIGN(4);
-    _sshared = .;
-    __shared_start__ = _sshared;
-    *(.shared)
-    *(.shared.*)
-    KEEP(*(.shared))
-    . = ALIGN(4);
-    _eshared = .;
-    __shared_end__ = _eshared;
-  } >SHARED
-
   /* The startup code into "FLASH" Rom type memory */
   .isr_vector :
   {
