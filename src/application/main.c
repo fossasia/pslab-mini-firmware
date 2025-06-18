@@ -27,24 +27,18 @@ int main(void)
 {
     SYSTEM_init();
 
-    /* Basic UART/LED example:
-    * - Poll UART for incoming bytes
-    * - If a byte is received, toggle the LED
-    * - Try to read five bytes (this may timeout)
-    * - If the read bytes equal "Hello", then respond "World"
+    /* * This example demonstrates the use of UART with DMA for non-blocking
+    * communication. It includes the following features:
+    * - Transmit a buffer of ten bytes
+    * - Receive a buffer of ten bytes
+    * - Use DMA for UART transmission and reception
+    * - Use HAL_UART_Transmit_DMA and HAL_UART_Receive_DMA for non-blocking communication
     */
-    while (1) {
-        if (UART_rx_ready()) {
-            LED_toggle();
-            char buf[6];
-            UART_read((uint8_t *)buf, 5);
-            buf[5] = '\0';
 
-            if (strcmp(buf, "Hello") == 0){
-                UART_write((uint8_t *)"World", 5);
-            }
-        }
-    }
+    UART_write_DMA(tx_buffer, 10);
+    UART_read_DMA(rx_buffer, 10);
+    while (1) {
+	}
 
     __builtin_unreachable();
 }

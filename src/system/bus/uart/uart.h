@@ -47,6 +47,38 @@ HAL_StatusTypeDef UART_read(uint8_t *rxbuf, uint32_t sz);
  */
 bool UART_rx_ready(void);
 
+/**
+ * @brief Receive data from UART using DMA.
+ *
+ * This function initiates a DMA transfer to receive a specified number of bytes
+ * into the provided buffer over the UART peripheral.
+ *
+ * @param rxbuf Pointer to allocated memory into which to read data.
+ * @param sz    Number of bytes to read into the buffer.
+ * @return HAL status (HAL_OK on success).
+ */
+HAL_StatusTypeDef UART_read_DMA(uint8_t *rxbuf, uint32_t sz);
+
+/**
+ * @brief Transmit data over UART using DMA.
+ *
+ * This function initiates a DMA transfer to transmit a specified number of bytes
+ * from the provided buffer over the UART peripheral.
+ *
+ * @param txbuf Pointer to the data buffer to be transmitted.
+ * @param sz    Number of bytes to write from the buffer.
+ * @return HAL status (HAL_OK on success).
+ */
+HAL_StatusTypeDef UART_write_DMA(uint8_t const *txbuf, uint32_t sz);
+
+extern DMA_HandleTypeDef hdma_usart3_rx;
+extern DMA_HandleTypeDef hdma_usart3_tx;
+
+extern uint8_t tx_buffer[10];
+extern uint8_t rx_buffer[10];
+
+extern uint32_t rx_counter, tx_counter;
+
 #ifdef __cplusplus
 }
 #endif
