@@ -48,6 +48,35 @@ HAL_StatusTypeDef UART_read(uint8_t *rxbuf, uint32_t sz);
 bool UART_rx_ready(void);
 
 /**
+ * @brief Check if the UART transmit buffer is ready to send data.
+ *
+ * This function returns true if the UART transmit data register is empty,
+ * indicating that it is ready to accept new data for transmission.
+ *
+ * @return true if the transmit buffer is ready, false otherwise.
+ */
+bool UART_tx_ready(void);
+
+/**
+ * @brief Initialize the DMA for UART RX.
+ *
+ * This function configures the DMA channel for receiving data over UART.
+ *
+ * @return HAL status (HAL_OK on success).
+ */
+HAL_StatusTypeDef hdma_usart3_rx_init(void);
+
+/**
+ * @brief Initialize the DMA for UART TX.
+ *
+ * This function configures the DMA channel for transmitting data over UART.
+ *
+ * @return HAL status (HAL_OK on success).
+ */
+HAL_StatusTypeDef hdma_usart3_tx_init(void);
+
+
+/**
  * @brief Receive data from UART using DMA.
  *
  * This function initiates a DMA transfer to receive a specified number of bytes
@@ -71,13 +100,6 @@ HAL_StatusTypeDef UART_read_DMA(uint8_t *rxbuf, uint32_t sz);
  */
 HAL_StatusTypeDef UART_write_DMA(uint8_t const *txbuf, uint32_t sz);
 
-extern DMA_HandleTypeDef hdma_usart3_rx;
-extern DMA_HandleTypeDef hdma_usart3_tx;
-
-extern uint8_t tx_buffer[10];
-extern uint8_t rx_buffer[10];
-
-extern uint32_t rx_counter, tx_counter;
 
 #ifdef __cplusplus
 }
