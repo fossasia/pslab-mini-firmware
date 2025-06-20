@@ -7,9 +7,12 @@ static void system_clock_config();
 void SYSTEM_init(void)
 {
     HAL_Init();
-    system_clock_config();
     UART_init();
-}
+    system_clock_config();
+    hdma_usart3_tx_init();
+    hdma_usart3_rx_init();
+    
+  }
 
 /**
  * @brief System clock configuration. This code was created by CubeMX and

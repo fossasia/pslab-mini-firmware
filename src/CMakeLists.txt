@@ -18,6 +18,9 @@ target_link_libraries(pslab-mini-firmware
     HAL::STM32::H5::RCCEx
     HAL::STM32::H5::PWREx
     HAL::STM32::H5::UART
+    HAL::STM32::H5::UARTEx
+    HAL::STM32::H5::DMA
+    HAL::STM32::H5::DMAEx
     CMSIS::STM32::H5
     STM32::NoSys
     STM32::Nano
