@@ -16,11 +16,13 @@ target_link_libraries(pslab-mini-firmware
     HAL::STM32::H5::ICACHE
     HAL::STM32::H5::GPIO
     HAL::STM32::H5::RCCEx
+    HAL::STM32::H5::PCDEx
     HAL::STM32::H5::PWREx
     HAL::STM32::H5::UART
     CMSIS::STM32::H5
     STM32::NoSys
     STM32::Nano
+    tinyusb
 )
 
 add_subdirectory(system)

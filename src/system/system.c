@@ -1,5 +1,8 @@
 #include "stm32h5xx_hal.h"
 
+#include "uart.h"
+#include "usb.h"
+
 #include "system.h"
 
 static void system_clock_config();
@@ -9,6 +12,7 @@ void SYSTEM_init(void)
     HAL_Init();
     system_clock_config();
     UART_init();
+    USB_init();
 }
 
 /**
@@ -34,11 +38,11 @@ static void system_clock_config(void)
   RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLL1_SOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 250;
-  RCC_OscInitStruct.PLL.PLLP = 2;
-  RCC_OscInitStruct.PLL.PLLQ = 2;
-  RCC_OscInitStruct.PLL.PLLR = 2;
+  RCC_OscInitStruct.PLL.PLLM = 4; // 8 MHz / 4 = 2 MHz input
+  RCC_OscInitStruct.PLL.PLLN = 240; // 2 MHz * 240 = 480 MHz VCO
+  RCC_OscInitStruct.PLL.PLLP = 2; // 480 MHz / 2 = 240 MHz system clock
+  RCC_OscInitStruct.PLL.PLLQ = 10; // 480 MHz / 10 = 48 MHz USB clock
+  RCC_OscInitStruct.PLL.PLLR = 2; // 480 MHz / 2 = 240 MHz peripheral clock
   RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1_VCIRANGE_1;
   RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1_VCORANGE_WIDE;
   RCC_OscInitStruct.PLL.PLLFRACN = 0;
