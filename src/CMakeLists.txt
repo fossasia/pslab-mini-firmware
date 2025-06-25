@@ -22,6 +22,7 @@ target_link_libraries(pslab-mini-firmware
     CMSIS::STM32::H5
     STM32::NoSys
     STM32::Nano
+    tinyusb
 )
 
 add_subdirectory(system)

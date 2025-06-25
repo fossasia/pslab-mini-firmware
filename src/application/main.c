@@ -6,6 +6,8 @@
 #include <string.h>
 
 #include "system.h"
+#include "uart.h"
+#include "usb.h"
 
 /*****************************************************************************
 * Macros
@@ -37,24 +39,40 @@ int main(void)
     int cb_threshold = 5;  // Callback when at least 5 bytes are available
     UART_set_rx_callback(uart_cb, cb_threshold);
 
-    /* Basic UART/LED example:
-    * - Poll UART for incoming bytes
-    * - Wait for at least 5 bytes to arrive
+    /* Basic UART/USB/LED example:
+    * - Poll UART and USB for incoming bytes
+    * - If a byte is received, toggle the LED
+    * - Try to read five bytes (this may timeout)
     * - If the read bytes equal "Hello", then respond "World"
     * - Otherwise echo back what was received
     */
     while (1) {
+        USB_task();
+
         if (uart_service_requested) {
             uart_service_requested = false;
             LED_toggle();
-            char buf[6] = {0};
+            uint8_t buf[6] = {0};
             uint32_t bytes_read = UART_read((uint8_t *)buf, 5);
             buf[bytes_read] = '\0';  // Ensure null termination
 
-            if (strcmp(buf, "Hello") == 0){
+            if (strcmp((char *)buf, "Hello") == 0) {
                 UART_write((uint8_t *)"World", 5);
             } else {
                 UART_write((uint8_t *)buf, bytes_read);
+            }
+        }
+
+        if (USB_rx_ready()) {
+            LED_toggle();
+            uint8_t buf[6] = {0};
+            uint32_t bytes_read = USB_read(buf, 5);
+            buf[bytes_read] = '\0';
+
+            if (strcmp((char *)buf, "Hello") == 0) {
+                USB_write((uint8_t *)"World", 5);
+            } else {
+                USB_write((uint8_t *)buf, bytes_read);
             }
         }
     }
