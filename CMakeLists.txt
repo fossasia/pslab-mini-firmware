@@ -17,5 +17,4 @@ find_package(CMSIS COMPONENTS STM32H563ZI REQUIRED)
 find_package(HAL COMPONENTS STM32H5 REQUIRED)
 
 add_subdirectory(boot)
-add_subdirectory(lib)
 add_subdirectory(src)

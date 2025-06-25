@@ -12,6 +12,7 @@ target_include_directories(pslab-mini-bootloader
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+add_subdirectory(lib)
 add_subdirectory(openblt)
 
 target_compile_definitions(pslab-mini-bootloader
@@ -28,8 +29,8 @@ target_link_libraries(pslab-mini-bootloader
         HAL::STM32::H5::LL_RCC
         HAL::STM32::H5::LL_USART
         HAL::STM32::H5::LL_UTILS
+        HAL::STM32::H5::LL_ICACHE
         CMSIS::STM32::H563xx
-        tiny-usb
 )
 target_compile_options(pslab-mini-bootloader
     PRIVATE
