@@ -35,16 +35,6 @@ void USB_init(void)
     gpio.Alternate = GPIO_AF10_USB;
     HAL_GPIO_Init(GPIOA, &gpio);
 
-    // Initialize USB clock. PLLQ1 runs at 48 MHz, cf. SYSTEM_init.
-    RCC_PeriphCLKInitTypeDef RCC_PeriphInitStruct = {0};
-    RCC_PeriphInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USB;
-    RCC_PeriphInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_PLL1Q;
-    if (HAL_RCCEx_PeriphCLKConfig(&RCC_PeriphInitStruct) != HAL_OK) {
-        // Clock configuration incorrect or hardware failure. Hang the system
-        // to prevent damage.
-        while (1);
-    }
-
     HAL_NVIC_SetPriority(USB_DRD_FS_IRQn, 5, 0);
 
     // TinyUSB takes it from here.
