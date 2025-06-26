@@ -23,7 +23,6 @@ static void system_clock_config(void)
 {
     RCC_OscInitTypeDef RCC_OscInitStruct = {0};
     RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-    RCC_PeriphCLKInitTypeDef RCC_PeriphInitStruct = {0};
 
     /* Configure the main internal regulator output voltage. */
     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
@@ -32,20 +31,12 @@ static void system_clock_config(void)
         ;
     }
 
-    // Initialize USB clock.
-    RCC_PeriphInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USB;
-    RCC_PeriphInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_PLL1Q;
-    if (HAL_RCCEx_PeriphCLKConfig(&RCC_PeriphInitStruct) != HAL_OK) {
-        // Clock configuration incorrect or hardware failure. Hang the system
-        // to prevent damage.
-        while (1);
-    }
-
     /* Initializes the RCC Oscillators according to the specified parameters
     * in the RCC_OscInitTypeDef structure.
     */
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
     RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+    RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource = RCC_PLL1_SOURCE_HSE;
     RCC_OscInitStruct.PLL.PLLM = 4; // 8 MHz / 4 = 2 MHz input

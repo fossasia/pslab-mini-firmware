@@ -15,9 +15,53 @@
 
 #include "usb.h"
 
+/**
+ * @brief Enable USB clock recovery system
+ * 
+ * Required when using HSI48 clock source.
+ */
+static void crs_enable(void)
+{
+    __HAL_RCC_CRS_CLK_ENABLE();
+    // USB clock, 48 MHz
+    #define USB_CRS_FRQ_TARGET (48000000)
+    // USB SOF frequency, 1 kHz
+    #define USB_CRS_FRQ_SYNC (1000)
+    // CRS trim step, 0.14% per RM0481.
+    #define USB_CRS_TRIM_STEP (14)
+    // 32 is the default trim value, which neither increases nor decreases
+    // the clock frequency. This value will be modified by CRS at runtime.
+    #define USB_CRS_TRIM_DEFAULT (32)
+
+    RCC_CRSInitTypeDef CRSInit = {0};
+    CRSInit.Prescaler = RCC_CRS_SYNC_DIV1;
+    CRSInit.Source = RCC_CRS_SYNC_SOURCE_USB;
+    CRSInit.Polarity = RCC_CRS_SYNC_POLARITY_RISING;
+    CRSInit.ReloadValue = __HAL_RCC_CRS_RELOADVALUE_CALCULATE(
+        USB_CRS_FRQ_TARGET,
+        USB_CRS_FRQ_SYNC
+    );
+    CRSInit.ErrorLimitValue = (
+        USB_CRS_FRQ_TARGET / USB_CRS_FRQ_SYNC * USB_CRS_TRIM_STEP / 10000 / 2
+    );
+    CRSInit.HSI48CalibrationValue = USB_CRS_TRIM_DEFAULT;
+
+    HAL_RCCEx_CRSConfig(&CRSInit);
+}
+
 void USB_init(void)
 {
     HAL_PWREx_EnableVddUSB();
+
+    // Initialize USB clock.
+    RCC_PeriphCLKInitTypeDef RCC_PeriphInitStruct = {0};
+    RCC_PeriphInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USB;
+    RCC_PeriphInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
+    if (HAL_RCCEx_PeriphCLKConfig(&RCC_PeriphInitStruct) != HAL_OK) {
+        // Clock configuration incorrect or hardware failure. Hang the system
+        // to prevent damage.
+        while (1);
+    }
 
     // Enable USB-related clocks.
     __HAL_RCC_GPIOA_CLK_ENABLE();
@@ -37,7 +81,11 @@ void USB_init(void)
 
     HAL_NVIC_SetPriority(USB_DRD_FS_IRQn, 5, 0);
 
-    // TinyUSB takes it from here.
+    if (__HAL_RCC_GET_USB_SOURCE() == RCC_USBCLKSOURCE_HSI48) {
+        crs_enable();
+    }
+
+    // TinyUSB owns the pins and ISR from this point.
     tusb_init();
 }
 
