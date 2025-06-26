@@ -23,6 +23,9 @@
 
 static UART_HandleTypeDef huart = { 0 };
 
+DMA_HandleTypeDef hdma_usart3_rx = { 0 };
+DMA_HandleTypeDef hdma_usart3_tx = { 0 };
+
 
 /**
  * @brief Initialize the UART peripheral.
@@ -40,8 +43,122 @@ HAL_StatusTypeDef UART_init(void)
     huart.Init.StopBits = UART_STOPBITS_1;
     huart.Init.Parity = UART_PARITY_NONE;
     huart.Init.Mode = UART_MODE_TX_RX;
+    huart.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    huart.Init.OverSampling = UART_OVERSAMPLING_16;
+    
+    HAL_NVIC_SetPriority(USART3_IRQn, 1, 0);
+    HAL_NVIC_EnableIRQ(USART3_IRQn);
+
     return HAL_UART_Init(&huart);
 }
+
+/**
+ * @brief Initialize the DMA for UART receive.
+ *
+ * This function configures the DMA channel used for UART reception,
+ * setting up the necessary parameters and enabling the clock for the DMA.
+ *
+ * @return HAL status code indicating success or failure.
+ */
+HAL_StatusTypeDef hdma_usart3_rx_init(void){
+
+    __HAL_RCC_GPDMA1_CLK_ENABLE();
+
+    hdma_usart3_rx.Instance = GPDMA1_Channel0;
+    hdma_usart3_rx.Init.Request = GPDMA1_REQUEST_USART3_RX;
+    hdma_usart3_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_usart3_rx.Init.SrcInc = DMA_SINC_FIXED;
+    hdma_usart3_rx.Init.DestInc = DMA_DINC_INCREMENTED;
+    hdma_usart3_rx.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
+    hdma_usart3_rx.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+    hdma_usart3_rx.Init.Priority = DMA_LOW_PRIORITY_HIGH_WEIGHT;
+    hdma_usart3_rx.Init.SrcBurstLength = 1;
+    hdma_usart3_rx.Init.DestBurstLength = 1;
+    hdma_usart3_rx.Init.TransferAllocatedPort = DMA_SRC_ALLOCATED_PORT1 |
+                                                 DMA_DEST_ALLOCATED_PORT0;
+    hdma_usart3_rx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+    hdma_usart3_rx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+    hdma_usart3_rx.Init.Mode = DMA_NORMAL;
+
+    __HAL_LINKDMA(&huart,hdmarx, hdma_usart3_rx);
+    HAL_NVIC_SetPriority(GPDMA1_Channel0_IRQn, 2, 0);
+    HAL_NVIC_EnableIRQ(GPDMA1_Channel0_IRQn);
+
+    return HAL_DMA_Init(&hdma_usart3_rx);
+
+
+}   
+
+/**
+ * @brief Initialize the DMA for UART transmit.
+ *
+ * This function configures the DMA channel used for UART transmission,
+ * setting up the necessary parameters and enabling the clock for the DMA.
+ *
+ * @return HAL status code indicating success or failure.
+ */
+HAL_StatusTypeDef hdma_usart3_tx_init(void){
+
+    __HAL_RCC_GPDMA1_CLK_ENABLE();
+
+    hdma_usart3_tx.Instance = GPDMA1_Channel1;
+    hdma_usart3_tx.Init.Request = GPDMA1_REQUEST_USART3_TX;
+    hdma_usart3_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    hdma_usart3_tx.Init.SrcInc = DMA_SINC_INCREMENTED;
+    hdma_usart3_tx.Init.DestInc = DMA_DINC_FIXED;
+    hdma_usart3_tx.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
+    hdma_usart3_tx.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+    hdma_usart3_tx.Init.Priority = DMA_LOW_PRIORITY_HIGH_WEIGHT;
+    hdma_usart3_tx.Init.SrcBurstLength = 1;
+    hdma_usart3_tx.Init.DestBurstLength = 1;
+    hdma_usart3_tx.Init.TransferAllocatedPort = DMA_SRC_ALLOCATED_PORT0 |
+                                                 DMA_DEST_ALLOCATED_PORT1;
+    hdma_usart3_tx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+    hdma_usart3_tx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+    hdma_usart3_tx.Init.Mode = DMA_NORMAL;
+
+    __HAL_LINKDMA(&huart, hdmatx, hdma_usart3_tx);
+    HAL_NVIC_SetPriority(GPDMA1_Channel1_IRQn, 2, 0);
+    HAL_NVIC_EnableIRQ(GPDMA1_Channel1_IRQn);
+
+    return HAL_DMA_Init(&hdma_usart3_tx);
+}
+
+/**
+ * @brief Read data from the UART interface using DMA.
+ *
+ * This function initiates a DMA transfer to receive data from the UART peripheral
+ * into the specified buffer. The transfer size is defined by the `datasize` parameter.
+ *
+ * @param rxBuffer   Pointer to the buffer where received data will be stored.
+ * @param datasize   Number of bytes to read into the buffer.
+ *
+ * @return HAL status code indicating success or failure of the operation.
+ */
+HAL_StatusTypeDef usart3_dma_read(uint8_t* rxBuffer, uint16_t datasize)
+{
+    return HAL_UART_Receive_DMA(&huart, (uint8_t *)rxBuffer, datasize);
+}
+
+/**
+ * @brief Write data to the UART interface using DMA.
+ *
+ * This function initiates a DMA transfer to send data from the specified buffer
+ * over the UART peripheral. The transfer size is defined by the `datasize` parameter.
+ *
+ * @param txBuffer   Pointer to the buffer containing data to be transmitted.
+ * @param datasize   Number of bytes to write from the buffer.
+ *
+ * @return HAL status code indicating success or failure of the operation.
+ */
+HAL_StatusTypeDef usart3_dma_write(uint8_t* txBuffer, uint16_t datasize)
+{
+    if (txBuffer == NULL || datasize == 0) {
+        return HAL_ERROR; // Invalid parameters
+    }
+    return HAL_UART_Transmit_DMA(&huart, (uint8_t *)txBuffer, datasize);
+}
+
 
 /**
  * @brief Write data to the UART interface.
@@ -54,9 +171,9 @@ HAL_StatusTypeDef UART_init(void)
  *
  * @return 0 on success, non-zero value on failure.
  */
-HAL_StatusTypeDef UART_write(uint8_t const *txbuf, uint32_t const sz)
+HAL_StatusTypeDef UART_write(uint8_t const *txbuf, uint16_t const sz)
 {
-    return HAL_UART_Transmit(&huart, txbuf, sz, UART_TIMEOUT);
+    return HAL_UART_Transmit_IT(&huart, txbuf, sz);
 }
 
 /**
@@ -70,9 +187,9 @@ HAL_StatusTypeDef UART_write(uint8_t const *txbuf, uint32_t const sz)
  *
  * @return 0 on success, non-zero value on failure.
  */
-HAL_StatusTypeDef UART_read(uint8_t *const rxbuf, uint32_t const sz)
+HAL_StatusTypeDef UART_read(uint8_t *const rxbuf, uint16_t const sz)
 {
-    return HAL_UART_Receive(&huart, rxbuf, sz, UART_TIMEOUT);
+    return HAL_UART_Receive_IT(&huart, rxbuf, sz);
 }
 
 /**
@@ -110,4 +227,19 @@ void HAL_UART_MspInit(__attribute__((unused))UART_HandleTypeDef *huart)
         .Alternate = GPIO_AF7_USART3,
     };
     HAL_GPIO_Init(GPIOD, &uart_gpio_init);
+}
+
+void USART3_IRQHandler(void)
+{
+    HAL_UART_IRQHandler(&huart);
+}
+
+void GPDMA1_Channel0_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(huart.hdmarx);
+}
+
+void GPDMA1_Channel1_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(huart.hdmatx);
 }
