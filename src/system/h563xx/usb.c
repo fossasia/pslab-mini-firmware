@@ -8,6 +8,7 @@
  */
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "stm32h5xx_hal.h"
@@ -112,6 +113,41 @@ uint32_t USB_write(uint8_t *buf, uint32_t sz)
 uint32_t USB_tx_flush(void)
 {
     return tud_cdc_write_flush();
+}
+
+static size_t get_unique_id(uint8_t id[], size_t max_len) {
+    (void) max_len;
+    uint32_t volatile *stm32_uuid = (uint32_t volatile *) UID_BASE;
+    uint32_t *id32 = (uint32_t *) (uintptr_t) id;
+    uint8_t const len = 12;
+
+    id32[0] = stm32_uuid[0];
+    id32[1] = stm32_uuid[1];
+    id32[2] = stm32_uuid[2];
+
+    return len;
+}
+
+size_t USB_get_serial(
+    uint16_t desc_str1[],
+    size_t const max_chars
+) {
+    uint8_t uid[16] TU_ATTR_ALIGNED(4);
+    size_t uid_len = get_unique_id(uid, sizeof(uid));
+    uid_len = uid_len > max_chars / 2 ? max_chars / 2 : uid_len;
+
+    for (size_t i = 0; i < uid_len; ++i) {
+        for (size_t j = 0; j < 2; ++j) {
+        char const nibble_to_hex[16] = {
+            '0', '1', '2', '3', '4', '5', '6', '7',
+            '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+        };
+        uint8_t const nibble = (uid[i] >> (j * 4)) & 0xf;
+        desc_str1[i * 2 + (1 - j)] = nibble_to_hex[nibble]; // UTF-16-LE
+        }
+    }
+
+    return 2 * uid_len;
 }
 
 /**
