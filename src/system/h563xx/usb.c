@@ -14,11 +14,14 @@
 #include "stm32h5xx_hal.h"
 #include "tusb.h"
 
+#include "led.h"
+#include "uart.h"
+
 #include "usb.h"
 
 /**
  * @brief Enable USB clock recovery system
- * 
+ *
  * Required when using HSI48 clock source.
  */
 static void crs_enable(void)
@@ -82,12 +85,15 @@ void USB_init(void)
 
     HAL_NVIC_SetPriority(USB_DRD_FS_IRQn, 5, 0);
 
+    // TinyUSB owns the pins and ISR from this point.
+    // Because AI reviewers keep commenting on it:
+    // TinyUSB enables the USB_DRD_FS_IRQn. It is not necessary (and would be
+    // incorrect) to call HAL_NVIC_EnableIRQ(USB_DRD_FS_IRQn) here.
+    tusb_init();
+
     if (__HAL_RCC_GET_USB_SOURCE() == RCC_USBCLKSOURCE_HSI48) {
         crs_enable();
     }
-
-    // TinyUSB owns the pins and ISR from this point.
-    tusb_init();
 }
 
 void USB_task(void)
