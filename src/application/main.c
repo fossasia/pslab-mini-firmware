@@ -54,7 +54,7 @@ int main(void)
             LED_toggle();
             uint8_t buf[6] = {0};
             uint32_t bytes_read = UART_read((uint8_t *)buf, 5);
-            buf[bytes_read] = '\0';  // Ensure null termination
+            buf[bytes_read] = '\0';
 
             if (strcmp((char *)buf, "Hello") == 0) {
                 UART_write((uint8_t *)"World", 5);
@@ -73,7 +73,10 @@ int main(void)
                 USB_write((uint8_t *)"World", 5);
             } else {
                 USB_write((uint8_t *)buf, bytes_read);
+
             }
+
+            USB_tx_flush();
         }
     }
 

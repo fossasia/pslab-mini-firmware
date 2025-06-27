@@ -7,7 +7,7 @@
  *   - Initialize USB hardware and driver
  *   - Periodically poll USB tasks to maintain the USB state machine
  *   - Check for incoming data, read from and write to the USB CDC interface
- *   - Flush any pending transmit data to the host
+ *   - Flush any pending transmit data to or from the host
  */
 #ifndef PSLAB_USB_H
 #define PSLAB_USB_H
@@ -30,7 +30,7 @@ void USB_init(void);
 /**
  * @brief Step the TinyUSB state machine
  *
- * Must be called periodically to handle USB events.
+ * Must be called periodically (at least once per 1 ms) to handle USB events.
  */
 static inline void USB_task(void)
 {
