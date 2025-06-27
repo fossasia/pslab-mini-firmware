@@ -46,6 +46,13 @@ bool USB_rx_ready(void);
 uint32_t USB_read(uint8_t *buf, uint32_t sz);
 
 /**
+ * @brief Flush the USB RX buffer.
+ *
+ * This function clears any pending data in the USB RX buffer.
+ */
+void USB_rx_flush(void);
+
+/**
  * @brief Write data to USB interface.
  *
  * @param buf Pointer to the data buffer to send.

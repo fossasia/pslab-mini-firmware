@@ -116,6 +116,11 @@ uint32_t USB_write(uint8_t *buf, uint32_t sz)
     return tud_cdc_write(buf, sz);
 }
 
+void USB_rx_flush(void)
+{
+    tud_cdc_read_flush();
+}
+
 uint32_t USB_tx_flush(void)
 {
     return tud_cdc_write_flush();
