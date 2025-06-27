@@ -11,35 +11,8 @@ void SYSTEM_init(void)
     HAL_Init();
     system_clock_config();
     UART_init();
-    UART_write((uint8_t *)"\n\r==========================================\n\r", 46);
-    HAL_Delay(10);
-    UART_write((uint8_t *)"UART Initialized Successfully\n\r", 31);
-    HAL_Delay(10);
-    status = hdma_usart3_tx_init();
-    if (status == HAL_OK) {
-    UART_write((uint8_t *)"DMA TX Init OK\n\r", 16);
-    }
-    else{
-    UART_write((uint8_t *)"DMA TX Init failed\n\r", 20);
-    }
-    HAL_Delay(10);
-
-    status = usart3_dma_write((uint8_t *)"DMA TX Initialized successfully\n\r", 33);
-    HAL_Delay(10);
-
-    if (status == HAL_OK) {
-    UART_write((uint8_t *)"DMA transmission Successful\n\r", 29);
-    }
-    else
-    {
-        // DMA transmission successful
-        UART_write((uint8_t *)"DMA transmission Failed\n\r", 25);
-    }
-    HAL_Delay(10);
-
+    hdma_usart3_tx_init();
     hdma_usart3_rx_init();
-    UART_write((uint8_t *)"DMA RX Initialized Successfully", 31);
-    HAL_Delay(10);
 }
 
 /**

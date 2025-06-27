@@ -29,8 +29,6 @@ int main(void)
 
     HAL_Delay(1000); // Wait for 1 second to ensure system is stable
 
-    UART_write((uint8_t *)"\n\rThe Main Code has Begun successfully\n\r", 44);
-
     while (1) {
             if (UART_rx_ready()) {
                 LED_toggle();
