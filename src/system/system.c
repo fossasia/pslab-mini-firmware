@@ -1,18 +1,16 @@
 #include "stm32h5xx_hal.h"
 
+#include "uart.h"
+
 #include "system.h"
-#include "bus/uart/uart.h"
 
 static void system_clock_config();
-HAL_StatusTypeDef status;
 
 void SYSTEM_init(void)
 {
     HAL_Init();
     system_clock_config();
     UART_init();
-    hdma_usart3_tx_init();
-    hdma_usart3_rx_init();
 }
 
 /**
