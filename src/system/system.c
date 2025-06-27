@@ -34,7 +34,7 @@ static void system_clock_config(void)
     /* Initializes the RCC Oscillators according to the specified parameters
     * in the RCC_OscInitTypeDef structure.
     */
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE | RCC_OSCILLATORTYPE_HSI48;
     RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
     RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -54,6 +54,9 @@ static void system_clock_config(void)
         */
         while(1);
     }
+
+    // Wait for HSI48.
+    while(!__HAL_RCC_GET_FLAG(RCC_FLAG_HSI48RDY)) {}
 
     /* Initializes the CPU, AHB and APB buses clocks. */
     RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
