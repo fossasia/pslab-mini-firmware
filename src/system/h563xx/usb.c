@@ -19,6 +19,16 @@
 
 #include "usb.h"
 
+// USB clock, 48 MHz
+#define USB_CRS_FRQ_TARGET (48000000)
+// USB SOF frequency, 1 kHz
+#define USB_CRS_FRQ_SYNC (1000)
+// CRS trim step, 0.14% per RM0481.
+#define USB_CRS_TRIM_STEP (14)
+// 32 is the default trim value, which neither increases nor decreases
+// the clock frequency. This value will be modified by CRS at runtime.
+#define USB_CRS_TRIM_DEFAULT (32)
+
 /**
  * @brief Enable USB clock recovery system
  *
@@ -27,15 +37,6 @@
 static void crs_enable(void)
 {
     __HAL_RCC_CRS_CLK_ENABLE();
-    // USB clock, 48 MHz
-    #define USB_CRS_FRQ_TARGET (48000000)
-    // USB SOF frequency, 1 kHz
-    #define USB_CRS_FRQ_SYNC (1000)
-    // CRS trim step, 0.14% per RM0481.
-    #define USB_CRS_TRIM_STEP (14)
-    // 32 is the default trim value, which neither increases nor decreases
-    // the clock frequency. This value will be modified by CRS at runtime.
-    #define USB_CRS_TRIM_DEFAULT (32)
 
     RCC_CRSInitTypeDef CRSInit = {0};
     CRSInit.Prescaler = RCC_CRS_SYNC_DIV1;
@@ -96,8 +97,10 @@ void USB_init(void)
     }
 }
 
-static size_t get_unique_id(uint8_t id[], size_t max_len) {
-    (void) max_len;
+static size_t get_unique_id(uint8_t id[])
+{
+    // The ID consists of three 32-bit words, unique to each individual MCU,
+    // stored at UID_BASE. They are concatenated to form a 96-bit identifier.
     uint32_t volatile *stm32_uuid = (uint32_t volatile *) UID_BASE;
     uint32_t *id32 = (uint32_t *) (uintptr_t) id;
     uint8_t const len = 12;
@@ -114,17 +117,17 @@ size_t USB_get_serial(
     size_t const max_chars
 ) {
     uint8_t uid[16] TU_ATTR_ALIGNED(4);
-    size_t uid_len = get_unique_id(uid, sizeof(uid));
+    size_t uid_len = get_unique_id(uid);
     uid_len = uid_len > max_chars / 2 ? max_chars / 2 : uid_len;
+    static char const nibble_to_hex[16] = {
+        '0', '1', '2', '3', '4', '5', '6', '7',
+        '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+    };
 
     for (size_t i = 0; i < uid_len; ++i) {
         for (size_t j = 0; j < 2; ++j) {
-        char const nibble_to_hex[16] = {
-            '0', '1', '2', '3', '4', '5', '6', '7',
-            '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
-        };
-        uint8_t const nibble = (uid[i] >> (j * 4)) & 0xf;
-        desc_str1[i * 2 + (1 - j)] = nibble_to_hex[nibble]; // UTF-16-LE
+            uint8_t const nibble = (uid[i] >> (j * 4)) & 0xf;
+            desc_str1[i * 2 + (1 - j)] = nibble_to_hex[nibble]; // UTF-16-LE
         }
     }
 

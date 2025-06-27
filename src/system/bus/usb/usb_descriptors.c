@@ -1,12 +1,12 @@
 /**
  * @file usb_descriptors.c
  * @brief USB descriptor definitions and TinyUSB callbacks.
- * 
+ *
  * USB descriptors are data structures used by USB devices to describe their
  * identity, capabilities, and configuration to the host system. They include
  * information such as device class, vendor and product IDs, supported
  * configurations, and human-readable strings.
- * 
+ *
  * This file defines the USB device, configuration, and string descriptors for
  * the device, and implements TinyUSB callbacks to integrate with the USB
  * stack.
@@ -77,6 +77,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
     static_assert(sizeof(LANG) == 2, "LANG id must be exactly two bytes");
     static_assert(sizeof(MANU) <= MAX_DESC_LEN, "MANU str too long");
     static_assert(sizeof(PROD) <= MAX_DESC_LEN, "PROD str too long");
+    static_assert(USB_UUID_LEN <= MAX_DESC_LEN, "SERI str too long");
 
     int len;
 

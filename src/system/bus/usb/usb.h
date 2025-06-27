@@ -18,6 +18,10 @@
 
 #include "tusb.h"
 
+#ifdef STM32H563xx
+#define USB_UUID_LEN 12 /* 96 bits = 12 bytes */
+#endif // STM32H563xx
+
 /**
  * @brief Initialize USB hardware and TinyUSB driver
  */
