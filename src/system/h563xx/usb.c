@@ -3,8 +3,8 @@
  * @brief USB interface implementation for STM32H563xx using TinyUSB
  *
  * This module handles initialization and operation of the USB peripheral of
- * the STM32H5 microcontroller. It configures the hardware, provides CDC-based
- * data transfer functions, and dispatches USB interrupts to the TinyUSB stack.
+ * the STM32H5 microcontroller. It configures the hardware and dispatches USB
+ * interrupts to the TinyUSB stack.
  */
 
 #include <stdbool.h>
@@ -94,36 +94,6 @@ void USB_init(void)
     if (__HAL_RCC_GET_USB_SOURCE() == RCC_USBCLKSOURCE_HSI48) {
         crs_enable();
     }
-}
-
-void USB_task(void)
-{
-    tud_task();
-}
-
-bool USB_rx_ready(void)
-{
-    return tud_cdc_available();
-}
-
-uint32_t USB_read(uint8_t *buf, uint32_t sz)
-{
-    return tud_cdc_read(buf, sz);
-}
-
-uint32_t USB_write(uint8_t *buf, uint32_t sz)
-{
-    return tud_cdc_write(buf, sz);
-}
-
-void USB_rx_flush(void)
-{
-    tud_cdc_read_flush();
-}
-
-uint32_t USB_tx_flush(void)
-{
-    return tud_cdc_write_flush();
 }
 
 static size_t get_unique_id(uint8_t id[], size_t max_len) {

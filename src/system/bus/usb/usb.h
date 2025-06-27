@@ -16,69 +16,87 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "tusb.h"
+
 /**
- * @brief Initialize USB hardware and TinyUSB driver.
+ * @brief Initialize USB hardware and TinyUSB driver
  */
 void USB_init(void);
 
 /**
- * @brief Poll TinyUSB device tasks.
+ * @brief Step the TinyUSB state machine
  *
- * Must be called periodically from the main loop to handle
- * USB events and maintain the USB state machine.
+ * Must be called periodically to handle USB events.
  */
-void USB_task(void);
+static inline void USB_task(void)
+{
+    tud_task();
+}
 
 /**
- * @brief Check if USB RX data is available.
+ * @brief Check if USB RX data is available
  *
- * @return true if data is ready to be read, false otherwise.
+ * @return true if data is ready to be read, false otherwise
  */
-bool USB_rx_ready(void);
+static inline bool USB_rx_ready(void)
+{
+    return tud_cdc_available();
+}
 
 /**
- * @brief Read data from USB interface.
+ * @brief Read data from USB interface
  *
- * @param buf Pointer to the buffer to store received data.
- * @param sz  Maximum number of bytes to read.
- * @return Number of bytes actually read.
+ * @param buf Pointer to the buffer to store received data
+ * @param sz  Maximum number of bytes to read
+ * @return Number of bytes actually read
  */
-uint32_t USB_read(uint8_t *buf, uint32_t sz);
+static inline uint32_t USB_read(uint8_t *buf, uint32_t sz)
+{
+    return tud_cdc_read(buf, sz);
+}
 
 /**
- * @brief Flush the USB RX buffer.
+ * @brief Write data to USB interface
+ *
+ * @param buf Pointer to the data buffer to send
+ * @param sz  Number of bytes to write
+ * @return Number of bytes actually written
+ */
+static inline uint32_t USB_write(uint8_t *buf, uint32_t sz)
+{
+    return tud_cdc_write(buf, sz);
+}
+
+/**
+ * @brief Flush the USB RX buffer
  *
  * This function clears any pending data in the USB RX buffer.
  */
-void USB_rx_flush(void);
+static inline void USB_rx_flush(void)
+{
+    tud_cdc_read_flush();
+}
 
 /**
- * @brief Write data to USB interface.
+ * @brief Flush any pending USB TX data
  *
- * @param buf Pointer to the data buffer to send.
- * @param sz  Number of bytes to write.
- * @return Number of bytes actually written.
+ * @return Number of bytes that were flushed
  */
-uint32_t USB_write(uint8_t *buf, uint32_t sz);
+static inline uint32_t USB_tx_flush(void)
+{
+    return tud_cdc_write_flush();
+}
 
 /**
- * @brief Retrieve the unique device serial as a USB string descriptor.
+ * @brief Retrieve the unique device serial as a USB string descriptor
  *
- * Reads the MCU's unique ID and converts it into an uppercase
- * hexadecimal UTF-16LE string suitable for use as a USB serial
- * number descriptor.
+ * Reads the MCU's unique ID and converts it into an uppercase hexadecimal
+ * UTF-16LE string suitable for use as a USB serial number descriptor.
  *
- * @param desc_str1  Buffer to receive the UTF-16LE encoded serial characters.
- * @param max_chars  Maximum number of UTF-16 characters the buffer can hold.
- * @return Number of UTF-16 characters written into desc_str1.
+ * @param desc_str1 Buffer to receive the UTF-16LE encoded serial characters
+ * @param max_chars Maximum number of UTF-16 characters the buffer can hold
+ * @return Number of UTF-16 characters written into desc_str1
  */
 size_t USB_get_serial(uint16_t desc_str1[], size_t max_chars);
-
-/**
- * @brief Flush any pending USB TX data.
- *
- * @return Number of bytes that were flushed.
- */
-uint32_t USB_tx_flush(void);
 
 #endif // PSLAB_USB_H
