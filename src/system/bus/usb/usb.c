@@ -27,6 +27,9 @@
 /* Circular buffer size - must be a power of 2 */
 #define USB_RX_BUFFER_SIZE 256
 
+/* Timeout for flushing TX buffer (roughly 100 calls to USB_task) */
+#define USB_TX_FLUSH_TIMEOUT 100
+
 /* Buffers and their management structures */
 static uint8_t rx_buffer_data[USB_RX_BUFFER_SIZE];
 static circular_buffer_t rx_buffer;
@@ -34,6 +37,9 @@ static circular_buffer_t rx_buffer;
 /* Callback state */
 static usb_rx_callback_t rx_callback = NULL;
 static uint32_t rx_threshold = 0;
+
+/* TX flush timeout tracking */
+static uint32_t tx_timeout_counter = 0;
 
 /**
  * @brief Move data from TinyUSB CDC RX buffer to our circular buffer
@@ -88,9 +94,16 @@ void USB_task(void)
     // Check for RX callbacks after processing USB tasks
     check_rx_callback();
 
-    // Flush TX buffer if needed
+    // Check if there's data in the TX buffer by comparing available space with total size
     if (tud_cdc_write_available() < CFG_TUD_CDC_TX_BUFSIZE) {
-        tud_cdc_write_flush();
+        tx_timeout_counter++;
+        if (tx_timeout_counter >= USB_TX_FLUSH_TIMEOUT) {
+            tud_cdc_write_flush();
+            tx_timeout_counter = 0;
+        }
+    } else {
+        // No data in buffer, reset counter
+        tx_timeout_counter = 0;
     }
 }
 
@@ -129,6 +142,9 @@ uint32_t USB_write(uint8_t const *buf, uint32_t sz)
     if (buf == NULL || sz == 0) {
         return 0;
     }
+
+    // Reset the timeout counter when new data is written
+    tx_timeout_counter = 0;
 
     return tud_cdc_write(buf, sz);
 }
