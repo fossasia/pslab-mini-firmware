@@ -18,6 +18,7 @@
 #include "uart.h"
 
 #include "usb.h"
+#include "../bus/usb/usb_internal.h"
 
 // USB clock, 48 MHz
 #define USB_CRS_FRQ_TARGET (48000000)
@@ -56,6 +57,9 @@ static void crs_enable(void)
 
 void USB_init(void)
 {
+    /* Initialize the buffer first */
+    USB_buffer_init();
+
     HAL_PWREx_EnableVddUSB();
 
     // Initialize USB clock.
