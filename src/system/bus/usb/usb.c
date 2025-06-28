@@ -86,6 +86,11 @@ void USB_task(void)
 {
     tud_task();
 
+    // Nothing to do if not connected
+    if ( !tud_cdc_connected() ) {
+        return;
+    }
+
     // Transfer any available data from the USB FIFO to our circular buffer
     if (tud_cdc_available() > 0) {
         transfer_from_usb_to_buffer();
@@ -94,7 +99,8 @@ void USB_task(void)
     // Check for RX callbacks after processing USB tasks
     check_rx_callback();
 
-    // Check if there's data in the TX buffer by comparing available space with total size
+    // Check if there's data in the TX buffer by comparing available space with
+    // total size
     if (tud_cdc_write_available() < CFG_TUD_CDC_TX_BUFSIZE) {
         tx_timeout_counter++;
         if (tx_timeout_counter >= USB_TX_FLUSH_TIMEOUT) {
@@ -168,4 +174,31 @@ bool USB_tx_busy(void)
     // TinyUSB doesn't have a direct way to check if TX is busy,
     // but we can check if the buffer is non-empty
     return tud_cdc_write_available() < CFG_TUD_CDC_TX_BUFSIZE;
+}
+
+/**
+ * @brief TinyUSB CDC line state change callback
+ *
+ * This function is called by the TinyUSB stack when the USB CDC line state
+ * changes. It detects when DTR (Data Terminal Ready) is de-asserted, which
+ * indicates the host has disconnected, and clears the local buffers to prevent
+ * stale data.
+ *
+ * @param itf USB interface number (ignored, we only use one)
+ * @param dtr Data Terminal Ready state
+ * @param rts Request To Send state
+ */
+void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
+{
+    (void)itf; // Unused parameter
+    (void)rts; // We're only concerned with DTR
+
+    // When DTR is de-asserted (goes low), the host has disconnected
+    if (!dtr) {
+        // Reset the circular buffer to clear any pending data
+        circular_buffer_reset(&rx_buffer);
+
+        // Reset the TX timeout counter
+        tx_timeout_counter = 0;
+    }
 }
