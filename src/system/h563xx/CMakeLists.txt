@@ -3,6 +3,7 @@ target_sources(pslab-mini-firmware
         startup_stm32h563xx.s
         system_stm32h5xx.c
         usb.c
+        uart.c
 )
 
 target_include_directories(pslab-mini-firmware
