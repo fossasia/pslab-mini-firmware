@@ -33,6 +33,7 @@
 
 #include "stm32h5xx_hal.h"
 
+#include "bus_common.h"
 #include "uart.h"
 
 
@@ -40,32 +41,15 @@
 #define UART_TX_BUFFER_SIZE 256
 
 
-/* Callback function type */
-typedef void (*uart_rx_callback_t)(uint32_t bytes_available);
-
 static UART_HandleTypeDef huart = { 0 };
 static DMA_HandleTypeDef hdma_usart3_tx = { 0 };
 static DMA_HandleTypeDef hdma_usart3_rx = { 0 };
 
-/* Circular buffer structure */
-typedef struct {
-    uint8_t *buffer;
-    uint32_t volatile head;
-    uint32_t volatile tail;
-    uint32_t size;
-} circular_buffer_t;
-
 /* Buffers and their management structures */
 static uint8_t rx_buffer_data[UART_RX_BUFFER_SIZE];
 static uint8_t tx_buffer_data[UART_TX_BUFFER_SIZE];
-static circular_buffer_t rx_buffer = {
-    .buffer = rx_buffer_data,
-    .size = UART_RX_BUFFER_SIZE
-};
-static circular_buffer_t tx_buffer = {
-    .buffer = tx_buffer_data,
-    .size = UART_TX_BUFFER_SIZE
-};
+static circular_buffer_t rx_buffer;
+static circular_buffer_t tx_buffer;
 
 /* Interrupt state */
 static bool volatile tx_in_progress = false;
@@ -79,49 +63,12 @@ static uart_rx_callback_t rx_callback = NULL;
 static uint32_t rx_threshold = 0;
 
 
-/* TX and RX buffer helper functions */
-
-/**
- * @brief Check if TX buffer is empty.
- */
-static bool tx_buffer_is_empty(void)
-{
-    return tx_buffer.head == tx_buffer.tail;
-}
-
-/**
- * @brief Check if TX buffer is full.
- */
-static bool tx_buffer_is_full(void)
-{
-    return ((tx_buffer.head + 1) % tx_buffer.size) == tx_buffer.tail;
-}
-
 /**
  * @brief Get number of bytes available in TX buffer.
  */
 static uint32_t tx_buffer_available(void)
 {
-    if (tx_buffer.head >= tx_buffer.tail) {
-        return tx_buffer.head - tx_buffer.tail;
-    } else {
-        return tx_buffer.size - tx_buffer.tail + tx_buffer.head;
-    }
-}
-
-/**
- * @brief Put a byte into TX buffer.
- */
-static bool tx_buffer_put(uint8_t const data)
-{
-    if (tx_buffer_is_full()) {
-        /* Buffer full - optionally could overwrite oldest data */
-        return false;
-    }
-
-    tx_buffer.buffer[tx_buffer.head] = data;
-    tx_buffer.head = (tx_buffer.head + 1) % tx_buffer.size;
-    return true;
+    return circular_buffer_available(&tx_buffer);
 }
 
 /**
@@ -130,35 +77,17 @@ static bool tx_buffer_put(uint8_t const data)
 static uint32_t rx_buffer_available(void)
 {
     /* Get current DMA write position */
-    uint32_t dma_head = (
-        UART_RX_BUFFER_SIZE - __HAL_DMA_GET_COUNTER(&hdma_usart3_rx)
-    );
+    uint32_t dma_pos = UART_RX_BUFFER_SIZE - __HAL_DMA_GET_COUNTER(&hdma_usart3_rx);
+    uint32_t dma_head = dma_pos;
 
     /* Update our cached head position */
     rx_dma_head = dma_head;
 
-    /* Calculate available bytes */
-    if (dma_head >= rx_buffer.tail) {
-        return dma_head - rx_buffer.tail;
-    } else {
-        return UART_RX_BUFFER_SIZE - rx_buffer.tail + dma_head;
-    }
-}
+    /* Update the circular buffer's head position based on DMA */
+    rx_buffer.head = dma_head;
 
-/**
- * @brief Get a byte from RX buffer.
- */
-static bool rx_buffer_get(uint8_t *const data)
-{
-    /* Check if data is available */
-    if (rx_buffer_available() == 0) {
-        return false;
-    }
-
-    /* Read byte and advance tail */
-    *data = rx_buffer_data[rx_buffer.tail];
-    rx_buffer.tail = (rx_buffer.tail + 1) % UART_RX_BUFFER_SIZE;
-    return true;
+    /* Calculate available bytes using common function */
+    return circular_buffer_available(&rx_buffer);
 }
 
 /**
@@ -166,7 +95,7 @@ static bool rx_buffer_get(uint8_t *const data)
  */
 static void start_transmission(void)
 {
-    if (tx_in_progress || tx_buffer_is_empty()) {
+    if (tx_in_progress || circular_buffer_is_empty(&tx_buffer)) {
         return;
     }
 
@@ -175,10 +104,8 @@ static void start_transmission(void)
     uint32_t contiguous_bytes;
 
     if (tx_buffer.tail <= tx_buffer.head) {
-        /* No wrap-around: send from tail to head */
         contiguous_bytes = tx_buffer.head - tx_buffer.tail;
     } else {
-        /* Wrap-around: send from tail to end of buffer */
         contiguous_bytes = tx_buffer.size - tx_buffer.tail;
     }
 
@@ -194,12 +121,7 @@ static void start_transmission(void)
     if (contiguous_bytes > 0) {
         tx_in_progress = true;
         tx_dma_size = contiguous_bytes;
-
-        /* Start DMA transmission */
-        HAL_UART_Transmit_DMA(
-            &huart, &tx_buffer.buffer[tx_buffer.tail],
-            contiguous_bytes
-        );
+        HAL_UART_Transmit_DMA(&huart, &tx_buffer.buffer[tx_buffer.tail], contiguous_bytes);
     }
 }
 
@@ -208,12 +130,12 @@ static void start_transmission(void)
  *
  * This function configures the UART hardware, including baud rate, data bits,
  * stop bits, and parity, to prepare it for serial communication.
- *
- * @return HAL status (HAL_OK on success).
  */
-HAL_StatusTypeDef UART_init(void)
+void UART_init(void)
 {
-    HAL_StatusTypeDef status;
+    /* Initialize circular buffers */
+    circular_buffer_init(&rx_buffer, rx_buffer_data, UART_RX_BUFFER_SIZE);
+    circular_buffer_init(&tx_buffer, tx_buffer_data, UART_TX_BUFFER_SIZE);
 
     huart.Instance = USART3;
     huart.Init.BaudRate = 115200;
@@ -221,14 +143,9 @@ HAL_StatusTypeDef UART_init(void)
     huart.Init.StopBits = UART_STOPBITS_1;
     huart.Init.Parity = UART_PARITY_NONE;
     huart.Init.Mode = UART_MODE_TX_RX;
-
-    status = HAL_UART_Init(&huart);
-    if (status != HAL_OK) {
-        return status;
-    }
+    HAL_UART_Init(&huart);
 
     /* Start DMA reception
-     * Note: Although DMA is in normal mode, we implement circular behavior
      * by restarting transfers in HAL_UART_RxCpltCallback */
     HAL_UART_Receive_DMA(&huart, rx_buffer_data, UART_RX_BUFFER_SIZE);
 
@@ -238,8 +155,6 @@ HAL_StatusTypeDef UART_init(void)
     /* Clear any pending flags */
     __HAL_UART_CLEAR_FLAG(&huart, UART_FLAG_IDLE);
     __HAL_UART_CLEAR_FLAG(&huart, UART_FLAG_ORE);
-
-    return HAL_OK;
 }
 
 /**
@@ -251,26 +166,21 @@ HAL_StatusTypeDef UART_init(void)
  * @param txbuf      Pointer to the data buffer to be transmitted.
  * @param sz         Number of bytes to write from the buffer.
  *
- * @return HAL_OK on success, HAL_ERROR if buffer is full.
+ * @return Number of bytes actually written.
  */
-HAL_StatusTypeDef UART_write(uint8_t const *txbuf, uint32_t const sz)
+uint32_t UART_write(uint8_t const *txbuf, uint32_t const sz)
 {
     if (txbuf == NULL || sz == 0) {
-        return HAL_ERROR;
+        return 0;
     }
 
     /* Queue bytes for transmission */
-    for (uint32_t i = 0; i < sz; ++i) {
-        if (!tx_buffer_put(txbuf[i])) {
-            /* Buffer full - could not queue all bytes */
-            return HAL_ERROR;
-        }
-    }
+    uint32_t bytes_written = circular_buffer_write(&tx_buffer, txbuf, sz);
 
     /* Start transmission if not already in progress */
     start_transmission();
 
-    return HAL_OK;
+    return bytes_written;
 }
 
 /**
@@ -290,16 +200,11 @@ uint32_t UART_read(uint8_t *const rxbuf, uint32_t const sz)
         return 0;
     }
 
-    uint32_t bytes_read = 0;
-    uint8_t data;
+    uint32_t available = rx_buffer_available();
+    uint32_t to_read = sz > available ? available : sz;
 
-    /* Read bytes from receive buffer */
-    while (bytes_read < sz && rx_buffer_get(&data)) {
-        rxbuf[bytes_read] = data;
-        bytes_read++;
-    }
-
-    return bytes_read;
+    /* Read from circular buffer using common function */
+    return circular_buffer_read(&rx_buffer, rxbuf, to_read);
 }
 
 /**
@@ -361,7 +266,7 @@ bool UART_tx_busy(void)
  *
  * @return None
  */
-void HAL_UART_MspInit(__attribute__((unused))UART_HandleTypeDef *const huart)
+void HAL_UART_MspInit(UART_HandleTypeDef *const huart_ptr)
 {
     __HAL_RCC_GPIOD_CLK_ENABLE();
     __HAL_RCC_USART3_CLK_ENABLE();
@@ -371,8 +276,8 @@ void HAL_UART_MspInit(__attribute__((unused))UART_HandleTypeDef *const huart)
         .Pin = GPIO_PIN_8 | GPIO_PIN_9,
         .Mode = GPIO_MODE_AF_PP,
         .Pull = GPIO_NOPULL,
-        .Speed = GPIO_SPEED_FREQ_MEDIUM,
-        .Alternate = GPIO_AF7_USART3,
+        .Speed = GPIO_SPEED_FREQ_HIGH,
+        .Alternate = GPIO_AF7_USART3
     };
     HAL_GPIO_Init(GPIOD, &uart_gpio_init);
 
@@ -389,7 +294,7 @@ void HAL_UART_MspInit(__attribute__((unused))UART_HandleTypeDef *const huart)
     hdma_usart3_tx.Init.SrcBurstLength = 1;
     hdma_usart3_tx.Init.DestBurstLength = 1;
     hdma_usart3_tx.Init.TransferAllocatedPort = (
-        DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT0
+        DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT1
     );
     hdma_usart3_tx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
     hdma_usart3_tx.Init.Mode = DMA_NORMAL;
@@ -409,7 +314,7 @@ void HAL_UART_MspInit(__attribute__((unused))UART_HandleTypeDef *const huart)
     hdma_usart3_rx.Init.SrcBurstLength = 1;
     hdma_usart3_rx.Init.DestBurstLength = 1;
     hdma_usart3_rx.Init.TransferAllocatedPort = (
-        DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT0
+        DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT1
     );
     hdma_usart3_rx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
     /* Use normal mode, manage circular manually */
@@ -418,8 +323,8 @@ void HAL_UART_MspInit(__attribute__((unused))UART_HandleTypeDef *const huart)
     HAL_DMA_Init(&hdma_usart3_rx);
 
     /* Link DMA to UART */
-    __HAL_LINKDMA(huart, hdmatx, hdma_usart3_tx);
-    __HAL_LINKDMA(huart, hdmarx, hdma_usart3_rx);
+    __HAL_LINKDMA(huart_ptr, hdmatx, hdma_usart3_tx);
+    __HAL_LINKDMA(huart_ptr, hdmarx, hdma_usart3_rx);
 
     /* Configure NVIC for UART and DMA interrupts */
     HAL_NVIC_SetPriority(USART3_IRQn, 3, 0);
@@ -441,18 +346,14 @@ void HAL_UART_MspInit(__attribute__((unused))UART_HandleTypeDef *const huart)
 void USART3_IRQHandler(void)
 {
     /* Handle idle line interrupt for packet detection */
-    if (
-        __HAL_UART_GET_FLAG(&huart, UART_FLAG_IDLE)
+    if (__HAL_UART_GET_FLAG(&huart, UART_FLAG_IDLE)
         && __HAL_UART_GET_IT_SOURCE(&huart, UART_IT_IDLE)
     ) {
         __HAL_UART_CLEAR_IDLEFLAG(&huart);
 
-        /* Check if callback should be triggered */
-        if (rx_callback != NULL && rx_threshold > 0) {
-            uint32_t available = rx_buffer_available();
-            if (available >= rx_threshold) {
-                rx_callback(available);
-            }
+        /* Check for RX callback */
+        if (rx_callback && rx_buffer_available() >= rx_threshold) {
+            rx_callback(rx_buffer_available());
         }
     }
 
@@ -464,19 +365,15 @@ void USART3_IRQHandler(void)
  * @brief TX Complete callback from HAL.
  *
  * This function is called when a DMA transmission is complete.
- * It updates the buffer pointers and starts the next transmission if available.
  */
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *const huart_ptr)
 {
     if (huart_ptr->Instance == USART3) {
-        /* Update buffer tail pointer */
+        /* Update tail position to reflect transmitted data */
         tx_buffer.tail = (tx_buffer.tail + tx_dma_size) % tx_buffer.size;
-
-        /* Mark transmission as complete */
         tx_in_progress = false;
-        tx_dma_size = 0;
 
-        /* Start next transmission if data is available */
+        /* Check if more data needs to be transmitted */
         start_transmission();
     }
 }
@@ -484,40 +381,42 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *const huart_ptr)
 /**
  * @brief RX Complete callback from HAL.
  *
- * This function is called when the RX DMA transfer completes (head reaches
- * end of buffer). It restarts the DMA transfer to continue reception.
+ * This function is called when DMA RX is complete (i.e., buffer full).
  */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *const huart_ptr)
 {
     if (huart_ptr->Instance == USART3) {
-        /* Reset head position to wraparound buffer */
-        rx_dma_head = 0;
-
         /* Restart DMA reception */
         HAL_UART_Receive_DMA(&huart, rx_buffer_data, UART_RX_BUFFER_SIZE);
+
+        /* Check for RX callback */
+        if (rx_callback && rx_buffer_available() >= rx_threshold) {
+            rx_callback(rx_buffer_available());
+        }
     }
 }
 
 /**
  * @brief Set RX callback to be triggered when threshold bytes are available.
  *
- * This function sets up a callback that will be called from the interrupt
- * handler when the specified number of bytes becomes available in the RX
- * buffer.
- *
  * @param callback Function to call when threshold is reached (NULL to disable)
  * @param threshold Number of bytes that must be available to trigger callback
  */
 void UART_set_rx_callback(
-    uart_rx_callback_t const callback,
+    uart_rx_callback_t callback,
     uint32_t const threshold
 ) {
     rx_callback = callback;
     rx_threshold = threshold;
+
+    /* Check if callback should be triggered immediately */
+    if (rx_callback && rx_buffer_available() >= rx_threshold) {
+        rx_callback(rx_buffer_available());
+    }
 }
 
 /**
- * @brief DMA Channel 0 interrupt handler for UART TX.
+ * @brief DMA TX interrupt handler.
  */
 void GPDMA1_Channel0_IRQHandler(void)
 {
@@ -525,7 +424,7 @@ void GPDMA1_Channel0_IRQHandler(void)
 }
 
 /**
- * @brief DMA Channel 1 interrupt handler for UART RX.
+ * @brief DMA RX interrupt handler.
  */
 void GPDMA1_Channel1_IRQHandler(void)
 {

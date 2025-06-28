@@ -23,6 +23,13 @@
 #endif // STM32H563xx
 
 /**
+ * @brief Callback function type for USB RX data availability.
+ *
+ * @param bytes_available Number of bytes currently available in RX buffer.
+ */
+typedef void (*usb_rx_callback_t)(uint32_t bytes_available);
+
+/**
  * @brief Initialize USB hardware and TinyUSB driver
  */
 void USB_init(void);
@@ -32,20 +39,21 @@ void USB_init(void);
  *
  * Must be called periodically (at least once per 1 ms) to handle USB events.
  */
-static inline void USB_task(void)
-{
-    tud_task();
-}
+void USB_task(void);
 
 /**
  * @brief Check if USB RX data is available
  *
  * @return true if data is ready to be read, false otherwise
  */
-static inline bool USB_rx_ready(void)
-{
-    return tud_cdc_available();
-}
+bool USB_rx_ready(void);
+
+/**
+ * @brief Get number of bytes available in receive buffer.
+ *
+ * @return Number of bytes available to read.
+ */
+uint32_t USB_rx_available(void);
 
 /**
  * @brief Read data from USB interface
@@ -54,10 +62,7 @@ static inline bool USB_rx_ready(void)
  * @param sz  Maximum number of bytes to read
  * @return Number of bytes actually read
  */
-static inline uint32_t USB_read(uint8_t *buf, uint32_t sz)
-{
-    return tud_cdc_read(buf, sz);
-}
+uint32_t USB_read(uint8_t *buf, uint32_t sz);
 
 /**
  * @brief Write data to USB interface
@@ -66,30 +71,29 @@ static inline uint32_t USB_read(uint8_t *buf, uint32_t sz)
  * @param sz  Number of bytes to write
  * @return Number of bytes actually written
  */
-static inline uint32_t USB_write(uint8_t *buf, uint32_t sz)
-{
-    return tud_cdc_write(buf, sz);
-}
+uint32_t USB_write(uint8_t const *buf, uint32_t sz);
 
 /**
- * @brief Flush the USB RX buffer
+ * @brief Set RX callback to be triggered when threshold bytes are available.
  *
- * This function clears any pending data in the USB RX buffer.
+ * @param callback Function to call when threshold is reached (NULL to disable)
+ * @param threshold Number of bytes that must be available to trigger callback
  */
-static inline void USB_rx_flush(void)
-{
-    tud_cdc_read_flush();
-}
+void USB_set_rx_callback(usb_rx_callback_t callback, uint32_t threshold);
 
 /**
- * @brief Flush any pending USB TX data
+ * @brief Get TX buffer free space.
  *
- * @return Number of bytes that were flushed
+ * @return Number of bytes that can still be written to TX buffer.
  */
-static inline uint32_t USB_tx_flush(void)
-{
-    return tud_cdc_write_flush();
-}
+uint32_t USB_tx_free_space(void);
+
+/**
+ * @brief Check if TX transmission is in progress.
+ *
+ * @return true if transmission is ongoing, false otherwise.
+ */
+bool USB_tx_busy(void);
 
 /**
  * @brief Retrieve the unique device serial as a USB string descriptor

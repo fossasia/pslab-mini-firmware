@@ -41,8 +41,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "stm32h5xx_hal.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,7 +52,7 @@ extern "C" {
  *
  * @return HAL status (HAL_OK on success).
  */
-HAL_StatusTypeDef UART_init(void);
+void UART_init(void);
 
 /**
  * @brief Transmit data over UART.
@@ -63,7 +61,7 @@ HAL_StatusTypeDef UART_init(void);
  * @param sz    Number of bytes to send.
  * @return HAL status (HAL_OK on success).
  */
-HAL_StatusTypeDef UART_write(uint8_t const *txbuf, uint32_t sz);
+uint32_t UART_write(uint8_t const *txbuf, uint32_t sz);
 
 /**
  * @brief Receive data from UART.
