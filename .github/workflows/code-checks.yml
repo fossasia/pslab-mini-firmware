@@ -1,0 +1,55 @@
+name: Code Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format
+
+      - name: Format code
+        run: |
+          clang-format src/**/*.c src/**/*.h -i -style=file
+
+      - name: Check formatting
+        run: |
+          if ! git diff --color --exit-code src/; then
+            echo "Please format the code."
+            exit 1
+          fi
+  
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy cppcheck gcc-arm-none-eabi libnewlib-arm-none-eabi
+
+      - name: Lint code
+        run: |
+          # Generate compile_commands.json in the build directory
+          mkdir build
+          cd build
+          cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
+          cd ../
+
+          cppcheck src/ --error-exitcode=1
+          clang-tidy src/**/*.c src/**/*.h --config-file=.clang-tidy -p=build

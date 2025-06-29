@@ -1,0 +1,37 @@
+name: Build
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt install gcc-arm-none-eabi libnewlib-arm-none-eabi
+
+      - name: Build Firmware
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          make
+
+      - name: Publish build files
+        uses: actions/upload-artifact@v4
+        with:
+          name: pslab-mini-firmware
+          path: build/src/pslab-mini-firmware.srec
