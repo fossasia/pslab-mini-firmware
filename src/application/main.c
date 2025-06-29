@@ -1,8 +1,8 @@
 /****************************************************************************
-* Includes
-*****************************************************************************/
-#include <stdlib.h>
+ * Includes
+ *****************************************************************************/
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "system.h"
@@ -10,23 +10,23 @@
 #include "usb.h"
 
 /*****************************************************************************
-* Macros
-******************************************************************************/
+ * Macros
+ ******************************************************************************/
 
 /*****************************************************************************
-* Static variables
-******************************************************************************/
+ * Static variables
+ ******************************************************************************/
 
 static bool uart_service_requested = false;
 static bool usb_service_requested = false;
 
 /*****************************************************************************
-* Static prototypes
-******************************************************************************/
+ * Static prototypes
+ ******************************************************************************/
 
 /******************************************************************************
-* Function definitions
-******************************************************************************/
+ * Function definitions
+ ******************************************************************************/
 
 void uart_cb(uint32_t bytes_available)
 {
@@ -43,18 +43,18 @@ void usb_cb(uint32_t bytes_available)
 int main(void)
 {
     SYSTEM_init();
-    int cb_threshold = 5;  // Callback when at least 5 bytes are available
+    int cb_threshold = 5; // Callback when at least 5 bytes are available
     UART_set_rx_callback(uart_cb, cb_threshold);
     USB_set_rx_callback(usb_cb, cb_threshold);
 
     /* Basic UART/USB/LED example:
-    * - Register callbacks for both UART and USB
-    * - Process incoming bytes when callbacks are triggered
-    * - If a byte is received, toggle the LED
-    * - Try to read five bytes (this may timeout)
-    * - If the read bytes equal "Hello", then respond "World"
-    * - Otherwise echo back what was received
-    */
+     * - Register callbacks for both UART and USB
+     * - Process incoming bytes when callbacks are triggered
+     * - If a byte is received, toggle the LED
+     * - Try to read five bytes (this may timeout)
+     * - If the read bytes equal "Hello", then respond "World"
+     * - Otherwise echo back what was received
+     */
     while (1) {
         USB_task();
 
