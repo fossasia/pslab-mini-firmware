@@ -21,8 +21,9 @@
 #include "tusb.h"
 
 #include "bus_common.h"
+#include "usb_ll.h"
 #include "usb.h"
-#include "usb_internal.h"
+
 
 /* Circular buffer size - must be a power of 2 */
 #define USB_RX_BUFFER_SIZE 256
@@ -73,13 +74,10 @@ static bool check_rx_callback(void)
     return false;
 }
 
-/**
- * @brief Initialize the internal USB buffers.
- * Called from USB_init() in h563xx/usb.c
- */
-void USB_buffer_init(void)
+void USB_init(void)
 {
     circular_buffer_init(&rx_buffer, rx_buffer_data, USB_RX_BUFFER_SIZE);
+    USB_LL_init();
 }
 
 void USB_task(void)

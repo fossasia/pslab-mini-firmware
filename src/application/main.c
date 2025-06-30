@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "led.h"
 #include "system.h"
 #include "uart.h"
 #include "usb.h"
