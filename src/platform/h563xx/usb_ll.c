@@ -14,11 +14,7 @@
 #include "stm32h5xx_hal.h"
 #include "tusb.h"
 
-#include "led.h"
-#include "uart.h"
-
-#include "usb.h"
-#include "../bus/usb/usb_internal.h"
+#include "usb_ll.h"
 
 // USB clock, 48 MHz
 #define USB_CRS_FRQ_TARGET (48000000)
@@ -55,11 +51,8 @@ static void crs_enable(void)
     HAL_RCCEx_CRSConfig(&CRSInit);
 }
 
-void USB_init(void)
+void USB_LL_init(void)
 {
-    /* Initialize the buffer first */
-    USB_buffer_init();
-
     HAL_PWREx_EnableVddUSB();
 
     // Initialize USB clock.
@@ -116,7 +109,7 @@ static size_t get_unique_id(uint8_t id[])
     return len;
 }
 
-size_t USB_get_serial(
+size_t USB_LL_get_serial(
     uint16_t desc_str1[],
     size_t const max_chars
 ) {

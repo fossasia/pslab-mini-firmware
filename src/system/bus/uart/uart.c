@@ -13,7 +13,7 @@
  * - Circular buffer implementation with automatic wrap-around
  *
  * This implementation relies on hardware-specific functions defined in
- * src/system/h563xx/uart.c (or equivalent for other platforms).
+ * src/system/h563xx/uart_ll.c (or equivalent for other platforms).
  *
  * @author Alexander Bessman
  * @date 2025-06-28
@@ -25,8 +25,8 @@
 #include <string.h>
 
 #include "bus_common.h"
+#include "uart_ll.h"
 #include "uart.h"
-#include "uart_internal.h"
 
 /* Buffer sizes - must be powers of 2 */
 #define UART_RX_BUFFER_SIZE 256
@@ -45,44 +45,13 @@ static uint32_t volatile rx_dma_head = 0;
 static uart_rx_callback_t rx_callback = NULL;
 static uint32_t rx_threshold = 0;
 
-/* Forward declarations of hardware-specific functions */
-void UART_set_dma_buffer(uint8_t *buffer, uint32_t size);
-void UART_start_dma_tx(uint8_t *buffer, uint32_t size);
-uint32_t UART_get_dma_position(void);
-bool UART_hw_tx_busy(void);
-
-
-/**
- * @brief Buffer initialization called from hardware-specific init
- *
- * @param buffer Buffer to use for RX DMA (ignored, we use our own)
- * @param size Size of the buffer (ignored)
- */
-void UART_buffer_init(void)
-{
-    /* Initialize circular buffers */
-    circular_buffer_init(&rx_buffer, rx_buffer_data, UART_RX_BUFFER_SIZE);
-    circular_buffer_init(&tx_buffer, tx_buffer_data, UART_TX_BUFFER_SIZE);
-
-    /* Set the DMA buffer in the hardware layer */
-    UART_set_dma_buffer(rx_buffer_data, UART_RX_BUFFER_SIZE);
-}
-
-/**
- * @brief Get number of bytes available in TX buffer.
- */
-static uint32_t tx_buffer_available(void)
-{
-    return circular_buffer_available(&tx_buffer);
-}
-
 /**
  * @brief Get number of bytes available in RX buffer.
  */
 static uint32_t rx_buffer_available(void)
 {
     /* Get current DMA write position */
-    uint32_t dma_pos = UART_get_dma_position();
+    uint32_t dma_pos = UART_LL_get_dma_position();
     uint32_t dma_head = dma_pos;
 
     /* Update our cached head position */
@@ -96,11 +65,62 @@ static uint32_t rx_buffer_available(void)
 }
 
 /**
+ * @brief Check if RX callback condition is met and call if needed
+ */
+static bool check_rx_callback(void)
+{
+    if (rx_callback && rx_buffer_available() >= rx_threshold) {
+        rx_callback(rx_buffer_available());
+        return true;
+    }
+    return false;
+}
+
+/**
+ * @brief Callback invoked by hardware layer on UART idle line detection
+ *
+ * @param dma_pos Current DMA position
+ */
+static void idle_callback(uint32_t dma_pos)
+{
+    /* Update our cached DMA position */
+    rx_dma_head = dma_pos;
+    rx_buffer.head = dma_pos;
+
+    /* Check for callbacks */
+    check_rx_callback();
+}
+
+/**
+ * @brief Callback invoked by hardware layer when RX DMA reaches end of buffer
+ *
+ * @param buffer_size Size of the buffer
+ */
+static void rx_complete_callback()
+{
+    /* Hardware layer restarts DMA */
+    /* Reset DMA position */
+    rx_dma_head = 0;
+    rx_buffer.head = 0;
+
+    /* Check if we should run application RX callback now */
+    check_rx_callback();
+}
+
+/**
+ * @brief Get number of bytes available in TX buffer.
+ */
+static uint32_t tx_buffer_available(void)
+{
+    return circular_buffer_available(&tx_buffer);
+}
+
+/**
  * @brief Start transmission if not already in progress.
  */
 static void start_transmission(void)
 {
-    if (UART_hw_tx_busy() || circular_buffer_is_empty(&tx_buffer)) {
+    if (UART_LL_tx_busy() || circular_buffer_is_empty(&tx_buffer)) {
         return;
     }
 
@@ -125,16 +145,16 @@ static void start_transmission(void)
 
     if (contiguous_bytes > 0) {
         /* Start hardware TX DMA */
-        UART_start_dma_tx(&tx_buffer.buffer[tx_buffer.tail], contiguous_bytes);
+        UART_LL_start_dma_tx(&tx_buffer.buffer[tx_buffer.tail], contiguous_bytes);
     }
 }
 
 /**
- * @brief Callback invoked by hardware layer when TX is complete
+ * @brief Callback invoked by hardware layer when TX DMA reaches end of buffer
  *
  * @param bytes_transferred Number of bytes transferred
  */
-void UART_tx_complete_callback(uint32_t bytes_transferred)
+static void tx_complete_callback(uint32_t bytes_transferred)
 {
     /* Update TX buffer tail with the number of bytes that were sent */
     tx_buffer.tail = (tx_buffer.tail + bytes_transferred) % tx_buffer.size;
@@ -144,41 +164,21 @@ void UART_tx_complete_callback(uint32_t bytes_transferred)
 }
 
 /**
- * @brief Check if RX callback condition is met and call if needed
- */
-static bool check_rx_callback(void)
-{
-    if (rx_callback && rx_buffer_available() >= rx_threshold) {
-        rx_callback(rx_buffer_available());
-        return true;
-    }
-    return false;
-}
-
-/**
- * @brief Callback invoked by hardware layer when RX DMA buffer is full
+ * @brief Buffer initialization called from hardware-specific init
  *
- * @param buffer_size Size of the buffer
+ * @param buffer Buffer to use for RX DMA (ignored, we use our own)
+ * @param size Size of the buffer (ignored)
  */
-void UART_rx_complete_callback(uint32_t buffer_size)
+void UART_init(void)
 {
-    /* In circular DMA mode, just check for callbacks */
-    check_rx_callback();
-}
+    /* Initialize circular buffers */
+    circular_buffer_init(&rx_buffer, rx_buffer_data, UART_RX_BUFFER_SIZE);
+    circular_buffer_init(&tx_buffer, tx_buffer_data, UART_TX_BUFFER_SIZE);
 
-/**
- * @brief Callback invoked by hardware layer on UART idle line detection
- *
- * @param dma_pos Current DMA position
- */
-void UART_idle_callback(uint32_t dma_pos)
-{
-    /* Update our cached DMA position */
-    rx_dma_head = dma_pos;
-    rx_buffer.head = dma_pos;
-
-    /* Check for callbacks */
-    check_rx_callback();
+    UART_LL_init(rx_buffer_data, UART_RX_BUFFER_SIZE);
+    UART_LL_set_idle_callback(idle_callback);
+    UART_LL_set_rx_complete_callback(rx_complete_callback);
+    UART_LL_set_tx_complete_callback(tx_complete_callback);
 }
 
 /**
@@ -276,7 +276,7 @@ uint32_t UART_tx_free_space(void)
  */
 bool UART_tx_busy(void)
 {
-    return UART_hw_tx_busy();
+    return UART_LL_tx_busy();
 }
 
 /**

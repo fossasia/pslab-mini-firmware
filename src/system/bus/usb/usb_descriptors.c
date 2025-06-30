@@ -18,7 +18,7 @@
 
 #include "tusb.h"
 
-#include "usb.h"
+#include "usb_ll.h"
 
 #define LANG ((char const[]){0x09, 0x04}) // English
 #define MANU ("FOSSASIA")
@@ -83,7 +83,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
 
     switch (index) {
     case IDX_SERI:
-        len = USB_get_serial(_desc_str + 1, MAX_DESC_LEN);
+        len = USB_LL_get_serial(_desc_str + 1, MAX_DESC_LEN);
         break;
     case IDX_LANG:
         len = 1;

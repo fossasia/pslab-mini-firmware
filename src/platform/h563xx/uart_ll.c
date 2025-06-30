@@ -1,5 +1,5 @@
 /**
- * @file uart.c
+ * @file uart_ll.c
  * @brief UART hardware implementation for STM32H563xx
  *
  * This module handles initialization and operation of the UART peripheral of
@@ -24,8 +24,7 @@
 
 #include "stm32h5xx_hal.h"
 
-#include "uart.h"
-#include "../bus/uart/uart_internal.h"
+#include "uart_ll.h"
 
 /* HAL UART handle */
 static UART_HandleTypeDef huart = { 0 };
@@ -39,6 +38,11 @@ static uint32_t rx_buffer_size;
 /* Interrupt state */
 static volatile bool tx_in_progress = false;
 static volatile uint32_t tx_dma_size = 0;
+
+/* Callback function pointers */
+static UART_LL_tx_complete_callback_t tx_complete_callback = NULL;
+static UART_LL_rx_complete_callback_t rx_complete_callback = NULL;
+static UART_LL_idle_callback_t idle_callback = NULL;
 
 /**
  * @brief MSP initialization for UART
@@ -129,11 +133,8 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
  * This function configures the UART hardware, including baud rate, data bits,
  * stop bits, and parity, to prepare it for serial communication.
  */
-void UART_init(void)
+void UART_LL_init(uint8_t *rx_buf, uint32_t sz)
 {
-    /* Initialize the hardware-independent part first */
-    UART_buffer_init();
-
     huart.Instance = USART3;
     huart.Init.BaudRate = 115200;
     huart.Init.WordLength = UART_WORDLENGTH_8B;
@@ -145,6 +146,9 @@ void UART_init(void)
     huart.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
     huart.Init.ClockPrescaler = UART_PRESCALER_DIV1;
     HAL_UART_Init(&huart);
+
+    rx_buffer_data = rx_buf;
+    rx_buffer_size = sz;
 
     /* Start DMA reception */
     HAL_UART_Receive_DMA(&huart, rx_buffer_data, rx_buffer_size);
@@ -163,7 +167,7 @@ void UART_init(void)
  * @param buffer Pointer to data to transmit
  * @param size Number of bytes to transmit
  */
-void UART_start_dma_tx(uint8_t *buffer, uint32_t size)
+void UART_LL_start_dma_tx(uint8_t *buffer, uint32_t size)
 {
     tx_in_progress = true;
     tx_dma_size = size;
@@ -175,7 +179,7 @@ void UART_start_dma_tx(uint8_t *buffer, uint32_t size)
  *
  * @return Current DMA position
  */
-uint32_t UART_get_dma_position(void)
+uint32_t UART_LL_get_dma_position(void)
 {
     return rx_buffer_size - __HAL_DMA_GET_COUNTER(&hdma_usart3_rx);
 }
@@ -185,9 +189,51 @@ uint32_t UART_get_dma_position(void)
  *
  * @return true if TX is in progress, false otherwise
  */
-bool UART_hw_tx_busy(void)
+bool UART_LL_tx_busy(void)
 {
     return tx_in_progress;
+}
+
+/**
+ * @brief Set up the RX buffer for DMA
+ *
+ * This function is called from the hardware-independent UART module to
+ * provide the buffer for DMA operations.
+ *
+ * @param buffer Pointer to the RX buffer
+ * @param size Size of the RX buffer
+ */
+void UART_LL_set_dma_buffer(uint8_t *buffer, uint32_t size)
+{
+    rx_buffer_data = buffer;
+    rx_buffer_size = size;
+}
+
+/**
+ * @brief Set the TX complete callback function
+ * @param callback Callback function to call when TX is complete
+ */
+void UART_LL_set_tx_complete_callback(UART_LL_tx_complete_callback_t callback)
+{
+    tx_complete_callback = callback;
+}
+
+/**
+ * @brief Set the RX complete callback function
+ * @param callback Callback function to call when RX buffer is full
+ */
+void UART_LL_set_rx_complete_callback(UART_LL_rx_complete_callback_t callback)
+{
+    rx_complete_callback = callback;
+}
+
+/**
+ * @brief Set the idle line callback function
+ * @param callback Callback function to call when idle line is detected
+ */
+void UART_LL_set_idle_callback(UART_LL_idle_callback_t callback)
+{
+    idle_callback = callback;
 }
 
 /**
@@ -200,7 +246,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
     if (huart->Instance == USART3) {
         tx_in_progress = false;
         /* Notify the hardware-independent layer */
-        UART_tx_complete_callback(tx_dma_size);
+        if (tx_complete_callback != NULL) {
+            tx_complete_callback(tx_dma_size);
+        }
     }
 }
 
@@ -212,9 +260,13 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART3) {
-        /* In circular DMA mode, this indicates buffer is full */
+        /* Restart DMA reception */
+        HAL_UART_Receive_DMA(huart, rx_buffer_data, rx_buffer_size);
+
         /* Notify the hardware-independent layer */
-        UART_rx_complete_callback(rx_buffer_size);
+        if (rx_complete_callback != NULL) {
+            rx_complete_callback();
+        }
     }
 }
 
@@ -231,10 +283,12 @@ void USART3_IRQHandler(void)
         __HAL_UART_CLEAR_IDLEFLAG(&huart);
 
         /* Calculate the number of bytes received */
-        uint32_t dma_pos = UART_get_dma_position();
+        uint32_t dma_pos = UART_LL_get_dma_position();
 
         /* Notify the hardware-independent layer */
-        UART_idle_callback(dma_pos);
+        if (idle_callback != NULL) {
+            idle_callback(dma_pos);
+        }
     }
 
     /* Handle other UART interrupts */
@@ -255,19 +309,4 @@ void GPDMA1_Channel0_IRQHandler(void)
 void GPDMA1_Channel1_IRQHandler(void)
 {
     HAL_DMA_IRQHandler(&hdma_usart3_rx);
-}
-
-/**
- * @brief Set up the RX buffer for DMA
- *
- * This function is called from the hardware-independent UART module to
- * provide the buffer for DMA operations.
- *
- * @param buffer Pointer to the RX buffer
- * @param size Size of the RX buffer
- */
-void UART_set_dma_buffer(uint8_t *buffer, uint32_t size)
-{
-    rx_buffer_data = buffer;
-    rx_buffer_size = size;
 }

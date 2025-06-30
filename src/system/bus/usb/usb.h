@@ -16,12 +16,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "tusb.h"
-
-#ifdef STM32H563xx
-#define USB_UUID_LEN 12 /* 96 bits = 12 bytes */
-#endif // STM32H563xx
-
 /**
  * @brief Callback function type for USB RX data availability.
  *
@@ -94,17 +88,5 @@ uint32_t USB_tx_free_space(void);
  * @return true if transmission is ongoing, false otherwise.
  */
 bool USB_tx_busy(void);
-
-/**
- * @brief Retrieve the unique device serial as a USB string descriptor
- *
- * Reads the MCU's unique ID and converts it into an uppercase hexadecimal
- * UTF-16LE string suitable for use as a USB serial number descriptor.
- *
- * @param desc_str1 Buffer to receive the UTF-16LE encoded serial characters
- * @param max_chars Maximum number of UTF-16 characters the buffer can hold
- * @return Number of UTF-16 characters written into desc_str1
- */
-size_t USB_get_serial(uint16_t desc_str1[], size_t max_chars);
 
 #endif // PSLAB_USB_H
