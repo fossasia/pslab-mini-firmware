@@ -17,6 +17,5 @@ void SYSTEM_init(void)
 {
     PLATFORM_init();
     LED_init();
-    UART_init();
     USB_init();
 }

@@ -20,7 +20,7 @@
 
 #include "tusb.h"
 
-#include "bus_common.h"
+#include "bus.h"
 #include "usb_ll.h"
 #include "usb.h"
 
