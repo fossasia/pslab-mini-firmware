@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "bus.h"
 #include "led.h"
 #include "system.h"
 #include "uart.h"
@@ -14,9 +15,17 @@
 * Macros
 ******************************************************************************/
 
+#define RX_BUFFER_SIZE 256
+#define TX_BUFFER_SIZE 256
+
+#define STLINK_UART 2
+
 /*****************************************************************************
 * Static variables
 ******************************************************************************/
+
+static uint8_t uart_rx_buffer_data[RX_BUFFER_SIZE] = {0};
+static uint8_t uart_tx_buffer_data[TX_BUFFER_SIZE] = {0};
 
 static bool uart_service_requested = false;
 static bool usb_service_requested = false;
@@ -29,8 +38,9 @@ static bool usb_service_requested = false;
 * Function definitions
 ******************************************************************************/
 
-void uart_cb(uint32_t bytes_available)
+void uart_cb(uart_handle_t *huart, uint32_t bytes_available)
 {
+    (void)huart;
     (void)bytes_available;
     uart_service_requested = true;
 }
@@ -44,8 +54,16 @@ void usb_cb(uint32_t bytes_available)
 int main(void)
 {
     SYSTEM_init();
+    circular_buffer_t rx_buf = {0};
+    circular_buffer_t tx_buf = {0};
+    circular_buffer_init(&rx_buf, uart_rx_buffer_data, RX_BUFFER_SIZE);
+    circular_buffer_init(&tx_buf, uart_tx_buffer_data, TX_BUFFER_SIZE);
+
+    
+    uart_handle_t *huart = UART_init(STLINK_UART, &rx_buf, &tx_buf);
+
     int cb_threshold = 5;  // Callback when at least 5 bytes are available
-    UART_set_rx_callback(uart_cb, cb_threshold);
+    UART_set_rx_callback(huart, uart_cb, cb_threshold);
     USB_set_rx_callback(usb_cb, cb_threshold);
 
     /* Basic UART/USB/LED example:
@@ -63,13 +81,13 @@ int main(void)
             uart_service_requested = false;
             LED_toggle();
             uint8_t buf[6] = {0};
-            uint32_t bytes_read = UART_read((uint8_t *)buf, 5);
+            uint32_t bytes_read = UART_read(huart, (uint8_t *)buf, 5);
             buf[bytes_read] = '\0';
 
             if (strcmp((char *)buf, "Hello") == 0) {
-                UART_write((uint8_t *)"World", 5);
+                UART_write(huart, (uint8_t *)"World", 5);
             } else {
-                UART_write((uint8_t *)buf, bytes_read);
+                UART_write(huart, (uint8_t *)buf, bytes_read);
             }
         }
 

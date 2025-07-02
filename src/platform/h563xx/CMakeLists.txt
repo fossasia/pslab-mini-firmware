@@ -29,6 +29,9 @@ target_link_libraries(pslab-platform
         HAL::STM32::H5::PWREx
         HAL::STM32::H5::UARTEx
         CMSIS::STM32::H5
+)
+# pslab-platform provides newlib for malloc etc.
+target_link_libraries(pslab-platform
+    INTERFACE
         STM32::NoSys
-        STM32::Nano
 )
