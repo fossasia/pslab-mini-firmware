@@ -332,5 +332,3 @@ void cleanup_uarts(void) {
 - Use callbacks for time-critical protocol implementations
 - Minimize data copying by reading directly into application buffers
 - Monitor buffer utilization to prevent overflow conditions
-
-The multi-instance UART driver provides a robust, scalable foundation for complex embedded applications requiring multiple serial communication

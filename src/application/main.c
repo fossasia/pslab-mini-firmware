@@ -18,7 +18,7 @@
 #define RX_BUFFER_SIZE 256
 #define TX_BUFFER_SIZE 256
 
-#define USART3 2
+#define STLINK_UART 2
 
 /*****************************************************************************
 * Static variables
@@ -60,7 +60,7 @@ int main(void)
     circular_buffer_init(&tx_buf, uart_tx_buffer_data, TX_BUFFER_SIZE);
 
     
-    uart_handle_t *huart = UART_init(USART3, &rx_buf, &tx_buf);
+    uart_handle_t *huart = UART_init(STLINK_UART, &rx_buf, &tx_buf);
 
     int cb_threshold = 5;  // Callback when at least 5 bytes are available
     UART_set_rx_callback(huart, uart_cb, cb_threshold);

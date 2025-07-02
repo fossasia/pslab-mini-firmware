@@ -95,6 +95,8 @@ static uint32_t rx_buffer_available(uart_handle_t *handle)
 
 /**
  * @brief Check if RX callback condition is met and call if needed
+ * 
+ * @return true if condition was met and callback called, false otherwise
  */
 static bool check_rx_callback(uart_handle_t *handle)
 {
@@ -102,11 +104,16 @@ static bool check_rx_callback(uart_handle_t *handle)
         return false;
     }
 
-    if (handle->rx_callback && rx_buffer_available(handle) >= handle->rx_threshold) {
-        handle->rx_callback(handle, rx_buffer_available(handle));
-        return true;
+    if (!handle->rx_callback) {
+        return false;
     }
-    return false;
+
+    if (rx_buffer_available(handle) < handle->rx_threshold) {
+        return false;
+    }
+
+    handle->rx_callback(handle, rx_buffer_available(handle));
+    return true;
 }
 
 /**
@@ -183,21 +190,17 @@ static void start_transmission(uart_handle_t *handle)
         contiguous_bytes = handle->tx_buffer->size - handle->tx_buffer->tail;
     }
 
-    /* Limit to available bytes and reasonable DMA transfer size */
+    /* Limit DMA transfer size to available bytes */
     if (contiguous_bytes > available) {
         contiguous_bytes = available;
     }
-    /* Limit DMA transfer size */
-    if (contiguous_bytes > (handle->tx_buffer->size / 2)) {
-        contiguous_bytes = handle->tx_buffer->size / 2;
-    }
 
-    if (contiguous_bytes > 0) {
-        /* Start hardware TX DMA */
-        UART_LL_start_dma_tx(handle->bus_id, 
-                             &handle->tx_buffer->buffer[handle->tx_buffer->tail], 
-                             contiguous_bytes);
-    }
+    /* Start hardware TX DMA */
+    UART_LL_start_dma_tx(
+        handle->bus_id, 
+        &handle->tx_buffer->buffer[handle->tx_buffer->tail], 
+        contiguous_bytes
+    );
 }
 
 /**
@@ -214,7 +217,9 @@ static void tx_complete_callback(uart_bus_t bus, uint32_t bytes_transferred)
     }
 
     /* Update TX buffer tail with the number of bytes that were sent */
-    handle->tx_buffer->tail = (handle->tx_buffer->tail + bytes_transferred) % handle->tx_buffer->size;
+    handle->tx_buffer->tail = (
+        (handle->tx_buffer->tail + bytes_transferred) % handle->tx_buffer->size
+    );
 
     /* Try to start another transmission if there's more data */
     start_transmission(handle);
@@ -226,11 +231,13 @@ static void tx_complete_callback(uart_bus_t bus, uint32_t bytes_transferred)
  * @param bus UART bus instance to initialize (0-based index)
  * @param rx_buffer Pointer to pre-allocated RX circular buffer
  * @param tx_buffer Pointer to pre-allocated TX circular buffer
- * @return Pointer to UART handle on success, NULL on failure (including invalid bus number)
+ * @return Pointer to UART handle on success, NULL on failure
  */
-uart_handle_t *UART_init(size_t bus, 
-                         circular_buffer_t *rx_buffer, circular_buffer_t *tx_buffer)
-{
+uart_handle_t *UART_init(
+    size_t bus, 
+    circular_buffer_t *rx_buffer,
+    circular_buffer_t *tx_buffer
+) {
     if (!rx_buffer || !tx_buffer || bus >= UART_BUS_COUNT) {
         return NULL;
     }
