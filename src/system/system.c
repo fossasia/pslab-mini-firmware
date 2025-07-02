@@ -8,8 +8,6 @@
 
 #include "led.h"
 #include "platform.h"
-#include "uart.h"
-#include "usb.h"
 
 #include "system.h"
 
@@ -17,5 +15,4 @@ void SYSTEM_init(void)
 {
     PLATFORM_init();
     LED_init();
-    USB_init();
 }
