@@ -1,7 +1,23 @@
 add_executable(pslab-mini-firmware)
 set_property(TARGET pslab-mini-firmware PROPERTY C_STANDARD 23)
 
-# Add clang-format target
+# Glob all C source files in the current directory and subdirectories
+# for clang-format and clang-tidy
+file(GLOB_RECURSE
+    ALL_C_SOURCE_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+)
+
+# Exclude src/platform/h563xx/system_stm32h5xx.c from linting
+list(
+    REMOVE_ITEM
+    ALL_C_SOURCE_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/h563xx/system_stm32h5xx.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/h563xx/stm32h5xx_hal_conf.h"
+)
+
+# Add format target
 # Note that this doesn't run automatically, you need to run it manually
 # by executing `cmake --build . --target format` in the build directory.
 find_program(CLANG_FORMAT "clang-format")
