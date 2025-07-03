@@ -8,7 +8,7 @@ set(CMAKE_CXX_FLAGS_DEBUG_INIT  "-Og -g")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
 endif()
 
 project(pslab-mini C ASM)
