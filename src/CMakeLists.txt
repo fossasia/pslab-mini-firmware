@@ -83,7 +83,6 @@ add_subdirectory(platform)
 target_link_libraries(pslab-mini-firmware
     PRIVATE
         pslab-platform
-        tinyusb
 )
 
 # Add platform-specific linker script

@@ -1,5 +1,7 @@
 # Create platform library
 add_library(pslab-platform STATIC)
+set_property(TARGET pslab-platform PROPERTY C_STANDARD 23)
+
 
 # Include the selected platform subdirectory
 if(PLATFORM STREQUAL "h563xx")
@@ -11,9 +13,4 @@ endif()
 target_include_directories(pslab-platform
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-target_link_libraries(pslab-platform
-    PRIVATE
-        tinyusb
 )
