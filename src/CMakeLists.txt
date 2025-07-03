@@ -24,10 +24,30 @@ endif(CLANG_FORMAT)
 # Automatic linting with clang-tidy
 find_program(CLANG_TIDY "clang-tidy")
 if(CLANG_TIDY)
+    # Find the arm-none-eabi toolchain include directory
+    execute_process(
+        COMMAND ${CMAKE_C_COMPILER} -print-sysroot
+        OUTPUT_VARIABLE ARM_SYSROOT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+
+    if(ARM_SYSROOT)
+        set(ARM_INCLUDE_DIR "${ARM_SYSROOT}/include")
+    else(ARM_SYSROOT)
+        # Fallback: try to find include directory relative to compiler
+        get_filename_component(COMPILER_DIR ${CMAKE_C_COMPILER} DIRECTORY)
+        set(ARM_INCLUDE_DIR "${COMPILER_DIR}/../arm-none-eabi/include")
+        if(NOT EXISTS ${ARM_INCLUDE_DIR})
+            # Another fallback for common locations
+            set(ARM_INCLUDE_DIR "/usr/lib/arm-none-eabi/include")
+        endif(NOT EXISTS ${ARM_INCLUDE_DIR})
+    endif(ARM_SYSROOT)
+
     set(_clang_tidy_cmd
         clang-tidy
         --extra-arg=--target=arm-none-eabi
-        --extra-arg=-isystem/usr/lib/arm-none-eabi/include
+        --extra-arg=-isystem${ARM_INCLUDE_DIR}
         --extra-arg-before=-Qunused-arguments
         --fix
     )
