@@ -205,7 +205,8 @@ uint32_t USB_LL_read(
     usb_bus_t const interface_id,
     uint8_t *buf,
     uint32_t bufsize
-) {
+)
+{
     return tud_cdc_n_read(interface_id, buf, bufsize);
 }
 
@@ -213,7 +214,8 @@ uint32_t USB_LL_write(
     usb_bus_t const interface_id,
     uint8_t const *buf,
     uint32_t bufsize
-) {
+)
+{
     return tud_cdc_n_write(interface_id, buf, bufsize);
 }
 
