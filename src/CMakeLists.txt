@@ -22,11 +22,6 @@ list(
 # by executing `cmake --build . --target format` in the build directory.
 find_program(CLANG_FORMAT "clang-format")
 if(CLANG_FORMAT)
-    file(GLOB_RECURSE
-        ALL_C_SOURCE_FILES
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.h
-    )
     add_custom_target(format
         COMMAND ${CLANG_FORMAT}
         -i
