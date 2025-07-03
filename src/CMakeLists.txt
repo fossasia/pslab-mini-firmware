@@ -5,28 +5,21 @@ target_include_directories(pslab-mini-firmware
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_compile_definitions(pslab-mini-firmware
-    PRIVATE
-        STM32H563xx
-        USE_HAL_DRIVER
-)
-
-target_link_libraries(pslab-mini-firmware
-    HAL::STM32::H5::CORTEX
-    HAL::STM32::H5::DMAEx
-    HAL::STM32::H5::ICACHE
-    HAL::STM32::H5::GPIO
-    HAL::STM32::H5::RCCEx
-    HAL::STM32::H5::PWREx
-    HAL::STM32::H5::UARTEx
-    CMSIS::STM32::H5
-    STM32::NoSys
-    STM32::Nano
-    tinyusb
-)
-
-add_subdirectory(system)
 add_subdirectory(application)
+add_subdirectory(system)
+add_subdirectory(platform)
+
+# Link the platform library
+target_link_libraries(pslab-mini-firmware
+    PRIVATE
+        pslab-platform
+        tinyusb
+)
+
+# Add platform-specific linker script
+if(PLATFORM STREQUAL "h563xx")
+    stm32_add_linker_script(pslab-mini-firmware PRIVATE platform/h563xx/STM32H563ZITX_FLASH.ld)
+endif()
 
 stm32_print_size_of_target(pslab-mini-firmware)
 stm32_generate_srec_file(pslab-mini-firmware)

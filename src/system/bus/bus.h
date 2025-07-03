@@ -1,5 +1,5 @@
 /**
- * @file bus_common.h
+ * @file bus.h
  * @brief Common utilities for bus interfaces (UART, USB, etc.)
  *
  * This module provides shared functionality for various bus interfaces,

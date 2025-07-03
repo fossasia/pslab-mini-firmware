@@ -13,6 +13,10 @@ endif()
 
 project(pslab-mini C ASM)
 
+# Platform selection option
+set(PLATFORM "h563xx" CACHE STRING "Target platform")
+set_property(CACHE PLATFORM PROPERTY STRINGS "h563xx")
+
 find_package(CMSIS COMPONENTS STM32H563ZI REQUIRED)
 find_package(HAL COMPONENTS STM32H5 REQUIRED)
 

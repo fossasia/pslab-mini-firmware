@@ -1,5 +1,5 @@
 /**
- * @file bus_common.c
+ * @file bus.c
  * @brief Common utilities for bus interfaces (UART, USB, etc.)
  *
  * This module provides shared functionality for various bus interfaces,
@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "bus_common.h"
+#include "bus.h"
 
 /**
  * @brief Initialize a circular buffer

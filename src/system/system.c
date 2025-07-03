@@ -1,20 +1,3 @@
-#include "stm32h5xx_hal.h"
-
-#include "uart.h"
-#include "usb.h"
-
-#include "system.h"
-
-static void system_clock_config();
-
-void SYSTEM_init(void)
-{
-    HAL_Init();
-    system_clock_config();
-    UART_init();
-    USB_init();
-}
-
 /**
  * @brief System clock configuration. This code was created by CubeMX and
  *        configures the system clock.
@@ -77,15 +60,12 @@ static void system_clock_config(void)
 
 /**
  * @brief This is a ISR handling the 1 ms timebase.
+ * @file system.c
+ * @brief Hardware system initialization routines for the PSLab Mini firmware.
  *
- * The timebase is configured in HAL_InitTick, which is weakly defined in
- * stm32h5xx_hal.h.
+ * This module provides the SYSTEM_init() function, which initializes all core hardware
+ * peripherals and must be called immediately after reset, before any other hardware access.
  */
-void SysTick_Handler(void)
-{
-    HAL_IncTick();
-    HAL_SYSTICK_IRQHandler();
-}
 
 /************************************************************************************/ /**
                                                                                         ** \brief     Initializes the Global MSP. This function is called from HAL_Init()
@@ -123,17 +103,13 @@ void HAL_MspInit(void)
                                                                                         **
                                                                                         ****************************************************************************************/
 void HAL_MspDeInit(void)
-{
-    /* Deconfigure GPIO pin for the LED. */
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_0);
+#include "led.h"
+#include "platform.h"
 
-    /* GPIO ports clock disable. */
-    __HAL_RCC_GPIOH_CLK_DISABLE();
-    __HAL_RCC_GPIOG_CLK_DISABLE();
-    __HAL_RCC_GPIOE_CLK_DISABLE();
-    __HAL_RCC_GPIOD_CLK_DISABLE();
-    __HAL_RCC_GPIOC_CLK_DISABLE();
-    __HAL_RCC_GPIOB_CLK_DISABLE();
-    __HAL_RCC_GPIOA_CLK_DISABLE();
+#include "system.h"
+
+void SYSTEM_init(void)
+{
+    PLATFORM_init();
+    LED_init();
 }

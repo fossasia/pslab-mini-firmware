@@ -1,10 +1,11 @@
 /**
- * @file usb.c
+ * @file usb_ll.c
  * @brief USB interface implementation for STM32H563xx using TinyUSB
  *
  * This module handles initialization and operation of the USB peripheral of
  * the STM32H5 microcontroller. It configures the hardware and dispatches USB
- * interrupts to the TinyUSB stack.
+ * interrupts to the TinyUSB stack. The implementation supports multiple bus
+ * instances (though current hardware has only one USB controller).
  */
 
 #include <stdbool.h>
@@ -14,11 +15,7 @@
 #include "stm32h5xx_hal.h"
 #include "tusb.h"
 
-#include "led.h"
-#include "uart.h"
-
-#include "usb.h"
-#include "../bus/usb/usb_internal.h"
+#include "usb_ll.h"
 
 // USB clock, 48 MHz
 #define USB_CRS_FRQ_TARGET (48000000)
@@ -29,6 +26,14 @@
 // 32 is the default trim value, which neither increases nor decreases
 // the clock frequency. This value will be modified by CRS at runtime.
 #define USB_CRS_TRIM_DEFAULT (32)
+
+/* USB instance state tracking */
+typedef struct {
+    bool initialized;
+} usb_instance_t;
+
+/* Instance array for future multi-controller support */
+static usb_instance_t usb_instances[USB_BUS_COUNT] = {0};
 
 /**
  * @brief Enable USB clock recovery system
@@ -55,10 +60,11 @@ static void crs_enable(void)
     HAL_RCCEx_CRSConfig(&CRSInit);
 }
 
-void USB_init(void)
+void USB_LL_init(usb_bus_t bus)
 {
-    /* Initialize the buffer first */
-    USB_buffer_init();
+    if (bus >= USB_BUS_COUNT || usb_instances[bus].initialized) {
+        return;
+    }
 
     HAL_PWREx_EnableVddUSB();
 
@@ -99,6 +105,34 @@ void USB_init(void)
     if (__HAL_RCC_GET_USB_SOURCE() == RCC_USBCLKSOURCE_HSI48) {
         crs_enable();
     }
+
+    usb_instances[bus].initialized = true;
+}
+
+/**
+ * @brief Deinitialize the USB peripheral
+ *
+ * @param bus USB bus instance to deinitialize
+ */
+void USB_LL_deinit(usb_bus_t bus)
+{
+    if (bus >= USB_BUS_COUNT || !usb_instances[bus].initialized) {
+        return;
+    }
+
+    // Disable USB interrupt
+    HAL_NVIC_DisableIRQ(USB_DRD_FS_IRQn);
+
+    // Disable USB clocks
+    __HAL_RCC_USB_CLK_DISABLE();
+
+    // Reset GPIO pins
+    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11 | GPIO_PIN_12);
+
+    // Disable USB power
+    HAL_PWREx_DisableVddUSB();
+
+    usb_instances[bus].initialized = false;
 }
 
 static size_t get_unique_id(uint8_t id[])
@@ -116,7 +150,7 @@ static size_t get_unique_id(uint8_t id[])
     return len;
 }
 
-size_t USB_get_serial(
+size_t USB_LL_get_serial(
     uint16_t desc_str1[],
     size_t const max_chars
 ) {
