@@ -19,6 +19,17 @@ if(CLANG_FORMAT)
         COMMENT "Formatting code with clang-format"
         VERBATIM
     )
+
+    # Add check-format target that fails if formatting would change files
+    add_custom_target(check-format
+        COMMAND ${CLANG_FORMAT}
+        --dry-run
+        --Werror
+        -style=file
+        ${ALL_C_SOURCE_FILES}
+        COMMENT "Checking code formatting with clang-format"
+        VERBATIM
+    )
 endif(CLANG_FORMAT)
 
 # Automatic linting with clang-tidy
