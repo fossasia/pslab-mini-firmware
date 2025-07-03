@@ -3,7 +3,6 @@ target_sources(pslab-mini-firmware
         bus.c
         uart.c
         usb.c
-        usb_descriptors.c
 )
 
 target_include_directories(pslab-mini-firmware

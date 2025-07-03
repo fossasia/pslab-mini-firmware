@@ -55,4 +55,80 @@ void USB_LL_deinit(usb_bus_t bus);
  */
 size_t USB_LL_get_serial(uint16_t desc_str1[], size_t max_chars);
 
+/**
+ * @brief Get number of bytes available for reading from USB CDC interface
+ *
+ * @param interface_id USB CDC interface instance
+ * @return Number of bytes available in the RX buffer
+ */
+uint32_t USB_LL_rx_available(usb_bus_t interface_id);
+
+/**
+ * @brief Get number of bytes available for writing to USB CDC interface
+ *
+ * @param interface_id USB CDC interface instance
+ * @return Number of bytes that can be written to the TX buffer
+ */
+uint32_t USB_LL_tx_available(usb_bus_t interface_id);
+
+/**
+ * @brief Read data from USB CDC interface
+ *
+ * @param interface_id USB CDC interface instance
+ * @param buf Buffer to store the read data
+ * @param bufsize Maximum number of bytes to read
+ * @return Number of bytes actually read
+ */
+uint32_t USB_LL_read(usb_bus_t interface_id, uint8_t *buf, uint32_t bufsize);
+
+/**
+ * @brief Write data to USB CDC interface
+ *
+ * @param interface_id USB CDC interface instance
+ * @param buf Buffer containing data to write
+ * @param bufsize Number of bytes to write
+ * @return Number of bytes actually written
+ */
+uint32_t USB_LL_write(
+    usb_bus_t interface_id,
+    uint8_t const *buf,
+    uint32_t bufsize
+);
+
+/**
+ * @brief Get the size of the USB CDC transmit buffer
+ *
+ * @param interface_id USB CDC interface instance
+ * @return Size of the TX buffer in bytes
+ */
+uint32_t USB_LL_tx_bufsize(usb_bus_t interface_id);
+
+/**
+ * @brief Process USB tasks and handle pending operations
+ *
+ * This function should be called periodically to handle USB operations
+ * and maintain communication with the host.
+ *
+ * @param interface_id USB CDC interface instance
+ */
+void USB_LL_task(usb_bus_t interface_id);
+
+/**
+ * @brief Check if USB CDC interface is connected to host
+ *
+ * @param interface_id USB CDC interface instance
+ * @return true if connected to host, false otherwise
+ */
+bool USB_LL_connected(usb_bus_t interface_id);
+
+/**
+ * @brief Flush the USB CDC transmit buffer
+ *
+ * Forces any buffered transmit data to be sent to the host immediately.
+ *
+ * @param interface_id USB CDC interface instance
+ * @return Number of bytes flushed
+ */
+uint32_t USB_LL_tx_flush(usb_bus_t interface_id);
+
 #endif /* PSLAB_USB_LL_H */

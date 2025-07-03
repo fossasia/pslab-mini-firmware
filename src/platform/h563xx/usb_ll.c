@@ -14,6 +14,7 @@
 
 #include "stm32h5xx_hal.h"
 #include "tusb.h"
+#include "tusb_config.h"
 
 #include "usb_ll.h"
 
@@ -189,3 +190,51 @@ size_t USB_LL_get_serial(uint16_t desc_str1[], size_t const max_chars)
  * driver. Called by the NVIC when USB_DRD_FS_IRQn is triggered.
  */
 void USB_DRD_FS_IRQHandler(void) { tud_int_handler(0); }
+
+uint32_t USB_LL_rx_available(usb_bus_t const interface_id)
+{
+    return tud_cdc_n_available(interface_id);
+}
+
+uint32_t USB_LL_tx_available(usb_bus_t const interface_id)
+{
+    return tud_cdc_n_write_available(interface_id);
+}
+
+uint32_t USB_LL_read(
+    usb_bus_t const interface_id,
+    uint8_t *buf,
+    uint32_t bufsize
+) {
+    return tud_cdc_n_read(interface_id, buf, bufsize);
+}
+
+uint32_t USB_LL_write(
+    usb_bus_t const interface_id,
+    uint8_t const *buf,
+    uint32_t bufsize
+) {
+    return tud_cdc_n_write(interface_id, buf, bufsize);
+}
+
+uint32_t USB_LL_tx_bufsize(usb_bus_t const interface_id)
+{
+    (void)interface_id;
+    return CFG_TUD_CDC_TX_BUFSIZE;
+}
+
+uint32_t USB_LL_tx_flush(usb_bus_t const interface_id)
+{
+    return tud_cdc_n_write_flush(interface_id);
+}
+
+void USB_LL_task(usb_bus_t const interface_id)
+{
+    (void)interface_id;
+    tud_task();
+}
+
+bool USB_LL_connected(usb_bus_t const interface_id)
+{
+    return tud_cdc_n_connected(interface_id);
+}
