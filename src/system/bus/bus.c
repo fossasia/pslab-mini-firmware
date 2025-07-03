@@ -58,9 +58,8 @@ uint32_t circular_buffer_available(circular_buffer_t *cb)
 {
     if (cb->head >= cb->tail) {
         return cb->head - cb->tail;
-    } else {
-        return cb->size - cb->tail + cb->head;
     }
+    return cb->size - cb->tail + cb->head;
 }
 
 /**
@@ -104,10 +103,7 @@ bool circular_buffer_get(circular_buffer_t *cb, uint8_t *data)
  *
  * @param cb Pointer to circular buffer structure
  */
-void circular_buffer_reset(circular_buffer_t *cb)
-{
-    cb->head = cb->tail = 0;
-}
+void circular_buffer_reset(circular_buffer_t *cb) { cb->head = cb->tail = 0; }
 
 /**
  * @brief Write multiple bytes to circular buffer
@@ -117,7 +113,11 @@ void circular_buffer_reset(circular_buffer_t *cb)
  * @param len Number of bytes to write
  * @return Number of bytes actually written
  */
-uint32_t circular_buffer_write(circular_buffer_t *cb, const uint8_t *data, uint32_t len)
+uint32_t circular_buffer_write(
+    circular_buffer_t *cb,
+    uint8_t const *data,
+    uint32_t len
+)
 {
     uint32_t bytes_written = 0;
 
@@ -140,7 +140,11 @@ uint32_t circular_buffer_write(circular_buffer_t *cb, const uint8_t *data, uint3
  * @param len Maximum number of bytes to read
  * @return Number of bytes actually read
  */
-uint32_t circular_buffer_read(circular_buffer_t *cb, uint8_t *data, uint32_t len)
+uint32_t circular_buffer_read(
+    circular_buffer_t *cb,
+    uint8_t *data,
+    uint32_t len
+)
 {
     uint32_t bytes_read = 0;
 

@@ -49,12 +49,10 @@ static void crs_enable(void)
     CRSInit.Source = RCC_CRS_SYNC_SOURCE_USB;
     CRSInit.Polarity = RCC_CRS_SYNC_POLARITY_RISING;
     CRSInit.ReloadValue = __HAL_RCC_CRS_RELOADVALUE_CALCULATE(
-        USB_CRS_FRQ_TARGET,
-        USB_CRS_FRQ_SYNC
+        USB_CRS_FRQ_TARGET, USB_CRS_FRQ_SYNC
     );
-    CRSInit.ErrorLimitValue = (
-        USB_CRS_FRQ_TARGET / USB_CRS_FRQ_SYNC * USB_CRS_TRIM_STEP / 10000 / 2
-    );
+    CRSInit.ErrorLimitValue =
+        (USB_CRS_FRQ_TARGET / USB_CRS_FRQ_SYNC * USB_CRS_TRIM_STEP / 10000 / 2);
     CRSInit.HSI48CalibrationValue = USB_CRS_TRIM_DEFAULT;
 
     HAL_RCCEx_CRSConfig(&CRSInit);
@@ -87,10 +85,10 @@ void USB_LL_init(usb_bus_t bus)
     // with the actual system state.
     // PA11 = DM, PA12 = DP
     GPIO_InitTypeDef gpio = {0};
-    gpio.Pin  = GPIO_PIN_11 | GPIO_PIN_12;
+    gpio.Pin = GPIO_PIN_11 | GPIO_PIN_12;
     gpio.Mode = GPIO_MODE_AF_PP;
     gpio.Pull = GPIO_NOPULL;
-    gpio.Speed= GPIO_SPEED_FREQ_VERY_HIGH;
+    gpio.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     gpio.Alternate = GPIO_AF10_USB;
     HAL_GPIO_Init(GPIOA, &gpio);
 
@@ -139,8 +137,8 @@ static size_t get_unique_id(uint8_t id[])
 {
     // The ID consists of three 32-bit words, unique to each individual MCU,
     // stored at UID_BASE. They are concatenated to form a 96-bit identifier.
-    uint32_t volatile *stm32_uuid = (uint32_t volatile *) UID_BASE;
-    uint32_t *id32 = (uint32_t *) (uintptr_t) id;
+    uint32_t volatile *stm32_uuid = (uint32_t volatile *)UID_BASE;
+    uint32_t *id32 = (uint32_t *)(uintptr_t)id;
     uint8_t const len = 12;
 
     id32[0] = stm32_uuid[0];
@@ -150,16 +148,28 @@ static size_t get_unique_id(uint8_t id[])
     return len;
 }
 
-size_t USB_LL_get_serial(
-    uint16_t desc_str1[],
-    size_t const max_chars
-) {
+size_t USB_LL_get_serial(uint16_t desc_str1[], size_t const max_chars)
+{
     uint8_t uid[16] TU_ATTR_ALIGNED(4);
     size_t uid_len = get_unique_id(uid);
     uid_len = uid_len > max_chars / 2 ? max_chars / 2 : uid_len;
     static char const nibble_to_hex[16] = {
-        '0', '1', '2', '3', '4', '5', '6', '7',
-        '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+        '0',
+        '1',
+        '2',
+        '3',
+        '4',
+        '5',
+        '6',
+        '7',
+        '8',
+        '9',
+        'A',
+        'B',
+        'C',
+        'D',
+        'E',
+        'F'
     };
 
     for (size_t i = 0; i < uid_len; ++i) {
@@ -178,7 +188,4 @@ size_t USB_LL_get_serial(
  * Dispatches the USB DRD FS interrupt to the TinyUSB device controller
  * driver. Called by the NVIC when USB_DRD_FS_IRQn is triggered.
  */
-void USB_DRD_FS_IRQHandler(void)
-{
-    tud_int_handler(0);
-}
+void USB_DRD_FS_IRQHandler(void) { tud_int_handler(0); }

@@ -19,7 +19,7 @@
  * usb_handle_t *usb_handle;
  * circular_buffer_t rx_buffer;
  * uint8_t rx_data[256];
- * 
+ *
  * circular_buffer_init(&rx_buffer, rx_data, 256);
  * usb_handle = USB_init(0, &rx_buffer);
  * if (usb_handle == NULL) {
@@ -30,14 +30,14 @@
  * // Main loop
  * while (1) {
  *     USB_task(usb_handle);
- *     
+ *
  *     if (USB_rx_ready(usb_handle)) {
  *         uint8_t buffer[32];
  *         uint32_t bytes = USB_read(usb_handle, buffer, sizeof(buffer));
  *         USB_write(usb_handle, buffer, bytes);
  *     }
  * }
- * 
+ *
  * // Cleanup when done
  * USB_deinit(usb_handle);
  * @endcode
@@ -45,10 +45,10 @@
 #ifndef PSLAB_USB_H
 #define PSLAB_USB_H
 
+#include "bus.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include "bus.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -65,7 +65,10 @@ typedef struct usb_handle_t usb_handle_t;
  * @param handle Pointer to USB handle structure
  * @param bytes_available Number of bytes currently available in RX buffer.
  */
-typedef void (*usb_rx_callback_t)(usb_handle_t *handle, uint32_t bytes_available);
+typedef void (*usb_rx_callback_t)(
+    usb_handle_t *handle,
+    uint32_t bytes_available
+);
 
 /**
  * @brief Get the number of available USB interfaces.
@@ -77,12 +80,14 @@ size_t USB_get_interface_count(void);
 /**
  * @brief Initialize USB hardware and TinyUSB driver
  *
- * Configures the USB hardware and initializes the TinyUSB stack for device operation.
- * Allocates and returns a new USB handle.
+ * Configures the USB hardware and initializes the TinyUSB stack for device
+ * operation. Allocates and returns a new USB handle.
  *
- * @param interface USB interface to initialize (0-based index, currently only 0 is supported)
+ * @param interface USB interface to initialize (0-based index, currently only 0
+ * is supported)
  * @param rx_buffer Pointer to pre-allocated RX circular buffer
- * @return Pointer to USB handle on success, NULL on failure (including invalid interface number)
+ * @return Pointer to USB handle on success, NULL on failure (including invalid
+ * interface number)
  */
 usb_handle_t *USB_init(size_t interface, circular_buffer_t *rx_buffer);
 
@@ -145,7 +150,11 @@ uint32_t USB_write(usb_handle_t *handle, uint8_t const *buf, uint32_t sz);
  * @param callback Function to call when threshold is reached (NULL to disable)
  * @param threshold Number of bytes that must be available to trigger callback
  */
-void USB_set_rx_callback(usb_handle_t *handle, usb_rx_callback_t callback, uint32_t threshold);
+void USB_set_rx_callback(
+    usb_handle_t *handle,
+    usb_rx_callback_t callback,
+    uint32_t threshold
+);
 
 /**
  * @brief Get TX buffer free space.

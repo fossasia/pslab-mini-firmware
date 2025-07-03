@@ -25,61 +25,67 @@
 #define PROD ("Pocket Science Lab")
 #define SERI (NULL) // Unique identifier, calculated at runtime from MCU UID.
 
-enum {
-    IDX_LANG,
-    IDX_MANU,
-    IDX_PROD,
-    IDX_SERI,
-    IDX_TOT
-};
+enum { IDX_LANG, IDX_MANU, IDX_PROD, IDX_SERI, IDX_TOT };
 
 // Device
-tusb_desc_device_t const desc_device = {
-    .bLength            = sizeof(tusb_desc_device_t),
-    .bDescriptorType    = TUSB_DESC_DEVICE,
-    .bcdUSB             = 0x0200,
-    .bDeviceClass       = TUSB_CLASS_MISC,
-    .bDeviceSubClass    = MISC_SUBCLASS_COMMON,
-    .bDeviceProtocol    = MISC_PROTOCOL_IAD,
-    .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE,
-    .idVendor           = 0xcafe,
-    .idProduct          = 0x1234,
-    .bcdDevice          = 0x0100,
-    .iManufacturer      = 0x01,
-    .iProduct           = 0x02,
-    .iSerialNumber      = 0x03,
+tusb_desc_device_t const g_DESC_DEVICE = {
+    .bLength = sizeof(tusb_desc_device_t),
+    .bDescriptorType = TUSB_DESC_DEVICE,
+    .bcdUSB = 0x0200,
+    .bDeviceClass = TUSB_CLASS_MISC,
+    .bDeviceSubClass = MISC_SUBCLASS_COMMON,
+    .bDeviceProtocol = MISC_PROTOCOL_IAD,
+    .bMaxPacketSize0 = CFG_TUD_ENDPOINT0_SIZE,
+    .idVendor = 0xcafe,
+    .idProduct = 0x1234,
+    .bcdDevice = 0x0100,
+    .iManufacturer = 0x01,
+    .iProduct = 0x02,
+    .iSerialNumber = 0x03,
     .bNumConfigurations = 0x01
 };
 
 // Configuration + CDC
-uint8_t const desc_configuration[] = {
-    TUD_CONFIG_DESCRIPTOR(1, 2, 0, TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN, 0x00, 100),
+uint8_t const g_DESC_CONFIGURATION[] = {
+    TUD_CONFIG_DESCRIPTOR(
+        1,
+        2,
+        0,
+        TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN,
+        0x00,
+        100
+    ),
     TUD_CDC_DESCRIPTOR(0, 4, 0x81, 8, 0x01, 0x82, 64)
 };
 
 // String descriptors
-char const *string_desc_arr[] = {
-    LANG,
-    MANU,
-    PROD,
-    SERI
-};
+char const *string_desc_arr[] = {LANG, MANU, PROD, SERI};
 
-uint8_t const *tud_descriptor_device_cb(void) { return (uint8_t const *)&desc_device; }
-uint8_t const *tud_descriptor_configuration_cb(uint8_t index) { (void)index; return desc_configuration; }
-uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
-    if (index >= IDX_TOT) {return NULL;}
+uint8_t const *tud_descriptor_device_cb(void)
+{
+    return (uint8_t const *)&g_DESC_DEVICE;
+}
+uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
+{
+    (void)index;
+    return g_DESC_CONFIGURATION;
+}
+uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
+{
+    if (index >= IDX_TOT) {
+        return nullptr;
+    }
 
     (void)langid;
     static uint16_t _desc_str[32 + 1];
-    #define MAX_DESC_LEN (sizeof(_desc_str) / sizeof(_desc_str[0]) - 1)
+#define MAX_DESC_LEN ((sizeof(_desc_str) / sizeof(_desc_str[0])) - 1)
 
     static_assert(sizeof(LANG) == 2, "LANG id must be exactly two bytes");
     static_assert(sizeof(MANU) <= MAX_DESC_LEN, "MANU str too long");
     static_assert(sizeof(PROD) <= MAX_DESC_LEN, "PROD str too long");
     static_assert(USB_UUID_LEN <= MAX_DESC_LEN, "SERI str too long");
 
-    int len;
+    size_t len = 0;
 
     switch (index) {
     case IDX_SERI:

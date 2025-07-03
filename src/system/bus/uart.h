@@ -17,7 +17,7 @@
  * uart_handle_t *uart_handle;
  * circular_buffer_t rx_buffer, tx_buffer;
  * uint8_t rx_data[256], tx_data[256];
- * 
+ *
  * circular_buffer_init(&rx_buffer, rx_data, 256);
  * circular_buffer_init(&tx_buffer, tx_data, 256);
  * uart_handle = UART_init(0, &rx_buffer, &tx_buffer);
@@ -39,7 +39,7 @@
  * }
  *
  * UART_set_rx_callback(uart_handle, on_header_ready, HEADER_SIZE);
- * 
+ *
  * // Cleanup when done
  * UART_deinit(uart_handle);
  * @endcode
@@ -48,13 +48,13 @@
  * @date 2025-06-27
  */
 
- #ifndef UART_H
+#ifndef UART_H
 #define UART_H
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stddef.h>
 #include "bus.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,7 +71,10 @@ typedef struct uart_handle_t uart_handle_t;
  * @param handle Pointer to UART handle structure
  * @param bytes_available Number of bytes currently available in RX buffer.
  */
-typedef void (*uart_rx_callback_t)(uart_handle_t *handle, uint32_t bytes_available);
+typedef void (*uart_rx_callback_t)(
+    uart_handle_t *handle,
+    uint32_t bytes_available
+);
 
 /**
  * @brief Get the number of available UART bus instances.
@@ -89,10 +92,14 @@ size_t UART_get_bus_count(void);
  * @param bus UART bus instance to initialize (0-based index)
  * @param rx_buffer Pointer to pre-allocated RX circular buffer
  * @param tx_buffer Pointer to pre-allocated TX circular buffer
- * @return Pointer to UART handle on success, NULL on failure (including invalid bus number)
+ * @return Pointer to UART handle on success, NULL on failure (including invalid
+ * bus number)
  */
-uart_handle_t *UART_init(size_t bus, 
-                         circular_buffer_t *rx_buffer, circular_buffer_t *tx_buffer);
+uart_handle_t *UART_init(
+    size_t bus,
+    circular_buffer_t *rx_buffer,
+    circular_buffer_t *tx_buffer
+);
 
 /**
  * @brief Deinitialize the UART peripheral.
@@ -147,7 +154,11 @@ uint32_t UART_rx_available(uart_handle_t *handle);
  * @param callback Function to call when threshold is reached (NULL to disable)
  * @param threshold Number of bytes that must be available to trigger callback
  */
-void UART_set_rx_callback(uart_handle_t *handle, uart_rx_callback_t callback, uint32_t threshold);
+void UART_set_rx_callback(
+    uart_handle_t *handle,
+    uart_rx_callback_t callback,
+    uint32_t threshold
+);
 
 /**
  * @brief Get TX buffer free space.
