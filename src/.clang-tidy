@@ -3,6 +3,10 @@ Checks: [
 
   cert*,
 
+  clang-analyzer*,
+  # Newlib doesn't have memcpy_s
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+
   cppcoreguidelines*,
   # Need globals to communicate with interrupts
   -cppcoreguidelines-avoid-non-const-global-variables,
@@ -22,8 +26,12 @@ Checks: [
   llvm*,
   # We use a different include guard style
   -llvm-header-guard,
+  # System headers are fine
+  -llvmlibc-restrict-system-libc-headers,
 
   misc*,
+  # TinyUSB uses a single header file for all its code
+ -misc-include-cleaner
 
   modernize*,
 
