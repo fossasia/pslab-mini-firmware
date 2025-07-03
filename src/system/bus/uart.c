@@ -216,8 +216,8 @@ static void tx_complete_callback(uart_bus_t bus, uint32_t bytes_transferred)
 
     /* Update TX buffer tail with the number of bytes that were sent */
     handle->tx_buffer->tail =
-        ((handle->tx_buffer->tail + bytes_transferred) % handle->tx_buffer->size
-        );
+        ((handle->tx_buffer->tail + bytes_transferred) %
+         handle->tx_buffer->size);
 
     /* Try to start another transmission if there's more data */
     start_transmission(handle);

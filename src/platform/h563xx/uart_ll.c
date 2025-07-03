@@ -64,10 +64,11 @@ static uart_instance_t uart_instances[UART_BUS_COUNT] = {
         {.huart = &huart2,
          .hdma_tx = &hdma_usart2_tx,
          .hdma_rx = &hdma_usart2_rx},
-    [UART_BUS_2] =
-        {.huart = &huart3,
-         .hdma_tx = &hdma_usart3_tx,
-         .hdma_rx = &hdma_usart3_rx},
+    [UART_BUS_2] = {
+        .huart = &huart3,
+        .hdma_tx = &hdma_usart3_tx,
+        .hdma_rx = &hdma_usart3_rx
+    },
 };
 
 /**
