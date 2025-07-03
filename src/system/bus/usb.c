@@ -22,20 +22,20 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "tusb.h"
 
 #include "bus.h"
-#include "usb_ll.h"
 #include "usb.h"
+#include "usb_ll.h"
 
 /* Maximum number of USB interfaces */
 #define USB_INTERFACE_COUNT USB_BUS_COUNT
 
 /* Timeout for flushing TX buffer (roughly 100 calls to USB_task) */
-#define USB_TX_FLUSH_TIMEOUT 100
+enum { USB_TX_FLUSH_TIMEOUT = 100 };
 
 /**
  * @brief USB interface handle structure
@@ -50,17 +50,14 @@ struct usb_handle_t {
 };
 
 /* Global array to keep track of active USB handles */
-static usb_handle_t *active_handles[USB_INTERFACE_COUNT] = {NULL};
+static usb_handle_t *active_handles[USB_INTERFACE_COUNT] = {nullptr};
 
 /**
  * @brief Get the number of available USB interfaces.
  *
  * @return Number of USB interfaces supported by this platform
  */
-size_t USB_get_interface_count(void)
-{
-    return USB_INTERFACE_COUNT;
-}
+size_t USB_get_interface_count(void) { return USB_INTERFACE_COUNT; }
 
 /**
  * @brief Get USB handle from interface ID
@@ -71,7 +68,7 @@ size_t USB_get_interface_count(void)
 static usb_handle_t *get_handle_from_interface(uint8_t interface_id)
 {
     if (interface_id >= USB_INTERFACE_COUNT) {
-        return NULL;
+        return nullptr;
     }
     return active_handles[interface_id];
 }
@@ -89,7 +86,7 @@ static uint32_t transfer_from_usb_to_buffer(usb_handle_t *handle)
 
     uint32_t available = tud_cdc_n_available(handle->interface_id);
     uint32_t transferred = 0;
-    uint8_t temp;
+    uint8_t temp = 0;
 
     while (available > 0 && !circular_buffer_is_full(handle->rx_buffer)) {
         if (tud_cdc_n_read(handle->interface_id, &temp, 1) == 1) {
@@ -131,8 +128,8 @@ static bool check_rx_callback(usb_handle_t *handle)
 /**
  * @brief Initialize USB hardware and TinyUSB driver
  *
- * Configures the USB hardware and initializes the TinyUSB stack for device operation.
- * Allocates and returns a new USB handle.
+ * Configures the USB hardware and initializes the TinyUSB stack for device
+ * operation. Allocates and returns a new USB handle.
  *
  * @param interface USB interface to initialize (0-based index)
  * @param rx_buffer Pointer to pre-allocated RX circular buffer
@@ -141,26 +138,26 @@ static bool check_rx_callback(usb_handle_t *handle)
 usb_handle_t *USB_init(size_t interface, circular_buffer_t *rx_buffer)
 {
     if (!rx_buffer || interface >= USB_INTERFACE_COUNT) {
-        return NULL;
+        return nullptr;
     }
 
     uint8_t interface_id = (uint8_t)interface;
 
     /* Check if interface is already initialized */
     if (active_handles[interface_id] != NULL) {
-        return NULL;
+        return nullptr;
     }
 
     /* Allocate handle */
     usb_handle_t *handle = malloc(sizeof(usb_handle_t));
     if (!handle) {
-        return NULL;
+        return nullptr;
     }
 
     /* Initialize handle */
     handle->interface_id = interface_id;
     handle->rx_buffer = rx_buffer;
-    handle->rx_callback = NULL;
+    handle->rx_callback = nullptr;
     handle->rx_threshold = 0;
     handle->tx_timeout_counter = 0;
     handle->initialized = true;
@@ -194,7 +191,7 @@ void USB_deinit(usb_handle_t *handle)
 
     /* Clear from global array */
     if (handle->interface_id < USB_INTERFACE_COUNT) {
-        active_handles[handle->interface_id] = NULL;
+        active_handles[handle->interface_id] = nullptr;
     }
 
     /* Mark as uninitialized */
@@ -234,7 +231,8 @@ void USB_task(usb_handle_t *handle)
 
     // Check if there's data in the TX buffer by comparing available space with
     // total size
-    if (tud_cdc_n_write_available(handle->interface_id) < CFG_TUD_CDC_TX_BUFSIZE) {
+    if (tud_cdc_n_write_available(handle->interface_id) <
+        CFG_TUD_CDC_TX_BUFSIZE) {
         handle->tx_timeout_counter++;
         if (handle->tx_timeout_counter >= USB_TX_FLUSH_TIMEOUT) {
             tud_cdc_n_write_flush(handle->interface_id);
@@ -257,10 +255,8 @@ bool USB_rx_ready(usb_handle_t *handle)
     if (!handle || !handle->initialized) {
         return false;
     }
-    return (
-        !circular_buffer_is_empty(handle->rx_buffer) 
-        || tud_cdc_n_available(handle->interface_id) > 0
-    );
+    return (!circular_buffer_is_empty(handle->rx_buffer) ||
+            tud_cdc_n_available(handle->interface_id) > 0) != 0;
 }
 
 /**
@@ -334,10 +330,11 @@ uint32_t USB_write(usb_handle_t *handle, uint8_t const *buf, uint32_t sz)
  * @param threshold Number of bytes that must be available to trigger callback
  */
 void USB_set_rx_callback(
-    usb_handle_t *handle, 
-    usb_rx_callback_t callback, 
+    usb_handle_t *handle,
+    usb_rx_callback_t callback,
     uint32_t threshold
-) {
+)
+{
     if (!handle || !handle->initialized) {
         return;
     }
@@ -376,7 +373,8 @@ bool USB_tx_busy(usb_handle_t *handle)
     }
     // TinyUSB doesn't have a direct way to check if TX is busy,
     // but we can check if the buffer is non-empty
-    return tud_cdc_n_write_available(handle->interface_id) < CFG_TUD_CDC_TX_BUFSIZE;
+    return tud_cdc_n_write_available(handle->interface_id) <
+           CFG_TUD_CDC_TX_BUFSIZE;
 }
 
 /**

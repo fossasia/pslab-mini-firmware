@@ -1,10 +1,11 @@
 /**
  * @file uart.c
- * @brief Hardware-independent UART (Universal Asynchronous Receiver/Transmitter) implementation
+ * @brief Hardware-independent UART (Universal Asynchronous
+ * Receiver/Transmitter) implementation
  *
  * This module provides the hardware-independent layer of the UART driver.
- * It manages circular buffers for transmission and reception, handles callbacks,
- * and provides the public API exposed through uart.h.
+ * It manages circular buffers for transmission and reception, handles
+ * callbacks, and provides the public API exposed through uart.h.
  *
  * Features:
  * - Support for multiple UART bus instances
@@ -23,12 +24,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "bus.h"
-#include "uart_ll.h"
 #include "uart.h"
+#include "uart_ll.h"
 
 /**
  * @brief UART bus handle structure
@@ -44,17 +45,14 @@ struct uart_handle_t {
 };
 
 /* Global array to keep track of active UART handles */
-static uart_handle_t *active_handles[UART_BUS_COUNT] = {NULL};
+static uart_handle_t *active_handles[UART_BUS_COUNT] = {nullptr};
 
 /**
  * @brief Get the number of available UART bus instances.
  *
  * @return Number of UART buses supported by this platform
  */
-size_t UART_get_bus_count(void)
-{
-    return UART_BUS_COUNT;
-}
+size_t UART_get_bus_count(void) { return UART_BUS_COUNT; }
 
 /**
  * @brief Get UART handle from bus instance
@@ -65,7 +63,7 @@ size_t UART_get_bus_count(void)
 static uart_handle_t *get_handle_from_bus(uart_bus_t bus)
 {
     if (bus >= UART_BUS_COUNT) {
-        return NULL;
+        return nullptr;
     }
     return active_handles[bus];
 }
@@ -95,7 +93,7 @@ static uint32_t rx_buffer_available(uart_handle_t *handle)
 
 /**
  * @brief Check if RX callback condition is met and call if needed
- * 
+ *
  * @return true if condition was met and callback called, false otherwise
  */
 static bool check_rx_callback(uart_handle_t *handle)
@@ -174,15 +172,15 @@ static uint32_t tx_buffer_available(uart_handle_t *handle)
  */
 static void start_transmission(uart_handle_t *handle)
 {
-    if (!handle || !handle->initialized || 
-        UART_LL_tx_busy(handle->bus_id) || 
-        circular_buffer_is_empty(handle->tx_buffer)) {
+    if (!handle || !handle->initialized ||
+        (int)UART_LL_tx_busy(handle->bus_id) ||
+        (int)circular_buffer_is_empty(handle->tx_buffer)) {
         return;
     }
 
     /* Calculate how many contiguous bytes we can send */
     uint32_t available = tx_buffer_available(handle);
-    uint32_t contiguous_bytes;
+    uint32_t contiguous_bytes = 0;
 
     if (handle->tx_buffer->tail <= handle->tx_buffer->head) {
         contiguous_bytes = handle->tx_buffer->head - handle->tx_buffer->tail;
@@ -197,8 +195,8 @@ static void start_transmission(uart_handle_t *handle)
 
     /* Start hardware TX DMA */
     UART_LL_start_dma_tx(
-        handle->bus_id, 
-        &handle->tx_buffer->buffer[handle->tx_buffer->tail], 
+        handle->bus_id,
+        &handle->tx_buffer->buffer[handle->tx_buffer->tail],
         contiguous_bytes
     );
 }
@@ -217,9 +215,9 @@ static void tx_complete_callback(uart_bus_t bus, uint32_t bytes_transferred)
     }
 
     /* Update TX buffer tail with the number of bytes that were sent */
-    handle->tx_buffer->tail = (
-        (handle->tx_buffer->tail + bytes_transferred) % handle->tx_buffer->size
-    );
+    handle->tx_buffer->tail =
+        ((handle->tx_buffer->tail + bytes_transferred) %
+         handle->tx_buffer->size);
 
     /* Try to start another transmission if there's more data */
     start_transmission(handle);
@@ -234,25 +232,26 @@ static void tx_complete_callback(uart_bus_t bus, uint32_t bytes_transferred)
  * @return Pointer to UART handle on success, NULL on failure
  */
 uart_handle_t *UART_init(
-    size_t bus, 
+    size_t bus,
     circular_buffer_t *rx_buffer,
     circular_buffer_t *tx_buffer
-) {
+)
+{
     if (!rx_buffer || !tx_buffer || bus >= UART_BUS_COUNT) {
-        return NULL;
+        return nullptr;
     }
 
     uart_bus_t bus_id = (uart_bus_t)bus;
 
     /* Check if bus is already initialized */
     if (active_handles[bus_id] != NULL) {
-        return NULL;
+        return nullptr;
     }
 
     /* Allocate handle */
     uart_handle_t *handle = malloc(sizeof(uart_handle_t));
     if (!handle) {
-        return NULL;
+        return nullptr;
     }
 
     /* Initialize handle */
@@ -260,7 +259,7 @@ uart_handle_t *UART_init(
     handle->rx_buffer = rx_buffer;
     handle->tx_buffer = tx_buffer;
     handle->rx_dma_head = 0;
-    handle->rx_callback = NULL;
+    handle->rx_callback = nullptr;
     handle->rx_threshold = 0;
     handle->initialized = false;
 
@@ -292,12 +291,12 @@ void UART_deinit(uart_handle_t *handle)
     UART_LL_deinit(handle->bus_id);
 
     /* Clear callbacks */
-    UART_LL_set_idle_callback(handle->bus_id, NULL);
-    UART_LL_set_rx_complete_callback(handle->bus_id, NULL);
-    UART_LL_set_tx_complete_callback(handle->bus_id, NULL);
+    UART_LL_set_idle_callback(handle->bus_id, nullptr);
+    UART_LL_set_rx_complete_callback(handle->bus_id, nullptr);
+    UART_LL_set_tx_complete_callback(handle->bus_id, nullptr);
 
     /* Remove from active handles */
-    active_handles[handle->bus_id] = NULL;
+    active_handles[handle->bus_id] = nullptr;
 
     /* Mark as uninitialized */
     handle->initialized = false;
@@ -318,14 +317,19 @@ void UART_deinit(uart_handle_t *handle)
  *
  * @return Number of bytes actually written.
  */
-uint32_t UART_write(uart_handle_t *handle, uint8_t const *txbuf, uint32_t const sz)
+uint32_t UART_write(
+    uart_handle_t *handle,
+    uint8_t const *txbuf,
+    uint32_t const sz
+)
 {
     if (!handle || !handle->initialized || txbuf == NULL || sz == 0) {
         return 0;
     }
 
     /* Queue bytes for transmission */
-    uint32_t bytes_written = circular_buffer_write(handle->tx_buffer, txbuf, sz);
+    uint32_t bytes_written =
+        circular_buffer_write(handle->tx_buffer, txbuf, sz);
 
     /* Start transmission if not already in progress */
     start_transmission(handle);
@@ -345,7 +349,11 @@ uint32_t UART_write(uart_handle_t *handle, uint8_t const *txbuf, uint32_t const 
  *
  * @return Number of bytes actually read.
  */
-uint32_t UART_read(uart_handle_t *handle, uint8_t *const rxbuf, uint32_t const sz)
+uint32_t UART_read(
+    uart_handle_t *handle,
+    uint8_t *const rxbuf,
+    uint32_t const sz
+)
 {
     if (!handle || !handle->initialized || rxbuf == NULL || sz == 0) {
         return 0;
@@ -428,7 +436,8 @@ void UART_set_rx_callback(
     uart_handle_t *handle,
     uart_rx_callback_t callback,
     uint32_t const threshold
-) {
+)
+{
     if (!handle || !handle->initialized) {
         return;
     }
@@ -437,7 +446,8 @@ void UART_set_rx_callback(
     handle->rx_threshold = threshold;
 
     /* Check if callback should be triggered immediately */
-    if (handle->rx_callback && rx_buffer_available(handle) >= handle->rx_threshold) {
+    if (handle->rx_callback &&
+        rx_buffer_available(handle) >= handle->rx_threshold) {
         handle->rx_callback(handle, rx_buffer_available(handle));
     }
 }

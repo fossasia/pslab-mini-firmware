@@ -1,10 +1,11 @@
 /**
  * @file led_ll.h
  * @brief Low-level LED control interface for PSLab Mini
- * 
- * This module provides a low-level interface to control the PSLab's onboard LEDs.
- * It offers basic initialization and toggle functionality for the LED hardware.
- * 
+ *
+ * This module provides a low-level interface to control the PSLab's onboard
+ * LEDs. It offers basic initialization and toggle functionality for the LED
+ * hardware.
+ *
  * @author PSLab Team
  * @date 2025
  */
@@ -14,7 +15,7 @@
 
 /**
  * @brief Initialize the LED hardware
- * 
+ *
  * Configures the GPIO pins and enables the necessary clocks for LED control.
  * This function must be called before any other LED operations.
  */
@@ -22,7 +23,7 @@ void LED_LL_init(void);
 
 /**
  * @brief Toggle the LED state
- * 
+ *
  * Toggles the current state of the onboard LED (on->off, off->on).
  * The LED must be initialized with LED_LL_init() before calling this function.
  */

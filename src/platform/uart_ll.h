@@ -11,8 +11,8 @@
 #ifndef PSLAB_UART_LL_H
 #define PSLAB_UART_LL_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 /**
  * @brief UART bus instance enumeration
@@ -70,7 +70,10 @@ void UART_LL_start_dma_tx(uart_bus_t bus, uint8_t *buffer, uint32_t size);
  * @param bus UART bus instance
  * @param bytes_transferred Number of bytes successfully transmitted
  */
-typedef void (*UART_LL_tx_complete_callback_t)(uart_bus_t bus, uint32_t bytes_transferred);
+typedef void (*UART_LL_tx_complete_callback_t)(
+    uart_bus_t bus,
+    uint32_t bytes_transferred
+);
 
 /**
  * @brief Callback function type for completed reception
@@ -90,20 +93,29 @@ typedef void (*UART_LL_idle_callback_t)(uart_bus_t bus, uint32_t dma_pos);
  * @param bus UART bus instance
  * @param callback Callback function to call when TX is complete
  */
-void UART_LL_set_tx_complete_callback(uart_bus_t bus, UART_LL_tx_complete_callback_t callback);
+void UART_LL_set_tx_complete_callback(
+    uart_bus_t bus,
+    UART_LL_tx_complete_callback_t callback
+);
 
 /**
  * @brief Set the RX complete callback function
  * @param bus UART bus instance
  * @param callback Callback function to call when RX buffer is full
  */
-void UART_LL_set_rx_complete_callback(uart_bus_t bus, UART_LL_rx_complete_callback_t callback);
+void UART_LL_set_rx_complete_callback(
+    uart_bus_t bus,
+    UART_LL_rx_complete_callback_t callback
+);
 
 /**
  * @brief Set the idle line callback function
  * @param bus UART bus instance
  * @param callback Callback function to call when idle line is detected
  */
-void UART_LL_set_idle_callback(uart_bus_t bus, UART_LL_idle_callback_t callback);
+void UART_LL_set_idle_callback(
+    uart_bus_t bus,
+    UART_LL_idle_callback_t callback
+);
 
 #endif /* PSLAB_UART_LL_H */
