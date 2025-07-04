@@ -29,6 +29,27 @@ PenaltyReturnTypeOnItsOwnLine: 1000
 # Attach braces to surrounding context, except on functions.
 BreakBeforeBraces: Linux
 
+# Braces on separate lines in struct initializers:
+# struct MyStruct my_struct = {
+#     .member_a = 1,
+#     .member_b = 2,
+# }
+# Note that this REQUIRES a trailing comma on the last member, otherwise you
+# get this:
+# struct MyStruct my_struct = { .member_a = 1,
+#                               .member_b = 2 }
+# A side-effect of this rule is that all braced initializers get space padded:
+# int arr[5] = { 0 }; // instead of {0}
+# which is fine, I guess.
+Cpp11BracedListStyle: false
+
+# This inserts trailing commas in container literals, which should be useful
+# to get the abovementioned struct initialization behavior.
+# This rule currently does nothing, because it is only enabled for JavaScript
+# in the tool itself. By keeping it here, it may become active in the future
+# if and when clang-format enables it for other languages.
+InsertTrailingCommas: Wrapped
+
 AllowShortLoopsOnASingleLine: true
 
 BitFieldColonSpacing: Before
