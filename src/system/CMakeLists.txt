@@ -1,4 +1,5 @@
 add_subdirectory(bus)
+add_subdirectory(adc)
 
 target_sources(pslab-mini-firmware
     PRIVATE
