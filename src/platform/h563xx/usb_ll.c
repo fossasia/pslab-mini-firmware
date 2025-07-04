@@ -34,7 +34,7 @@ typedef struct {
 } usb_instance_t;
 
 /* Instance array for future multi-controller support */
-static usb_instance_t usb_instances[USB_BUS_COUNT] = {0};
+static usb_instance_t usb_instances[USB_BUS_COUNT] = { 0 };
 
 /**
  * @brief Enable USB clock recovery system
@@ -45,7 +45,7 @@ static void crs_enable(void)
 {
     __HAL_RCC_CRS_CLK_ENABLE();
 
-    RCC_CRSInitTypeDef CRSInit = {0};
+    RCC_CRSInitTypeDef CRSInit = { 0 };
     CRSInit.Prescaler = RCC_CRS_SYNC_DIV1;
     CRSInit.Source = RCC_CRS_SYNC_SOURCE_USB;
     CRSInit.Polarity = RCC_CRS_SYNC_POLARITY_RISING;
@@ -68,7 +68,7 @@ void USB_LL_init(usb_bus_t bus)
     HAL_PWREx_EnableVddUSB();
 
     // Initialize USB clock.
-    RCC_PeriphCLKInitTypeDef RCC_PeriphInitStruct = {0};
+    RCC_PeriphCLKInitTypeDef RCC_PeriphInitStruct = { 0 };
     RCC_PeriphInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USB;
     RCC_PeriphInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
     if (HAL_RCCEx_PeriphCLKConfig(&RCC_PeriphInitStruct) != HAL_OK) {
@@ -85,7 +85,7 @@ void USB_LL_init(usb_bus_t bus)
     // it under the hood. The following code is to keep HAL's state consistent
     // with the actual system state.
     // PA11 = DM, PA12 = DP
-    GPIO_InitTypeDef gpio = {0};
+    GPIO_InitTypeDef gpio = { 0 };
     gpio.Pin = GPIO_PIN_11 | GPIO_PIN_12;
     gpio.Mode = GPIO_MODE_AF_PP;
     gpio.Pull = GPIO_NOPULL;
@@ -155,22 +155,8 @@ size_t USB_LL_get_serial(uint16_t desc_str1[], size_t const max_chars)
     size_t uid_len = get_unique_id(uid);
     uid_len = uid_len > max_chars / 2 ? max_chars / 2 : uid_len;
     static char const nibble_to_hex[16] = {
-        '0',
-        '1',
-        '2',
-        '3',
-        '4',
-        '5',
-        '6',
-        '7',
-        '8',
-        '9',
-        'A',
-        'B',
-        'C',
-        'D',
-        'E',
-        'F'
+        '0', '1', '2', '3', '4', '5', '6', '7',
+        '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
     };
 
     for (size_t i = 0; i < uid_len; ++i) {
