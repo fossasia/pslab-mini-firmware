@@ -38,6 +38,8 @@ Checks: [
   performance*,
 
   readability*,
+  # This check wants 'return (a > 0) != 0' instead of just 'return a > 0' ???
+  -readability-implicit-bool-conversion,
 ]
 
 CheckOptions:
