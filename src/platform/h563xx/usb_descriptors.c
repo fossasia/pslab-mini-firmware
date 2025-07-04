@@ -20,7 +20,7 @@
 
 #include "usb_ll.h"
 
-#define LANG ((char const[]){0x09, 0x04}) // English
+#define LANG ((char const[]){ 0x09, 0x04 }) // English
 #define MANU ("FOSSASIA")
 #define PROD ("Pocket Science Lab")
 #define SERI (NULL) // Unique identifier, calculated at runtime from MCU UID.
@@ -59,7 +59,7 @@ uint8_t const g_DESC_CONFIGURATION[] = {
 };
 
 // String descriptors
-char const *string_desc_arr[] = {LANG, MANU, PROD, SERI};
+char const *string_desc_arr[] = { LANG, MANU, PROD, SERI };
 
 uint8_t const *tud_descriptor_device_cb(void)
 {

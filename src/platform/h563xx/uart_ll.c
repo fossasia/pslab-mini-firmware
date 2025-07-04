@@ -42,32 +42,34 @@ typedef struct {
 } uart_instance_t;
 
 /* HAL UART handles */
-static UART_HandleTypeDef huart1 = {0};
-static UART_HandleTypeDef huart2 = {0};
-static UART_HandleTypeDef huart3 = {0};
+static UART_HandleTypeDef huart1 = { 0 };
+static UART_HandleTypeDef huart2 = { 0 };
+static UART_HandleTypeDef huart3 = { 0 };
 
 /* DMA handles */
-static DMA_HandleTypeDef hdma_usart1_tx = {0};
-static DMA_HandleTypeDef hdma_usart1_rx = {0};
-static DMA_HandleTypeDef hdma_usart2_tx = {0};
-static DMA_HandleTypeDef hdma_usart2_rx = {0};
-static DMA_HandleTypeDef hdma_usart3_tx = {0};
-static DMA_HandleTypeDef hdma_usart3_rx = {0};
+static DMA_HandleTypeDef hdma_usart1_tx = { 0 };
+static DMA_HandleTypeDef hdma_usart1_rx = { 0 };
+static DMA_HandleTypeDef hdma_usart2_tx = { 0 };
+static DMA_HandleTypeDef hdma_usart2_rx = { 0 };
+static DMA_HandleTypeDef hdma_usart3_tx = { 0 };
+static DMA_HandleTypeDef hdma_usart3_rx = { 0 };
 
 /* Instance array */
 static uart_instance_t uart_instances[UART_BUS_COUNT] = {
-    [UART_BUS_0] =
-        {.huart = &huart1,
-         .hdma_tx = &hdma_usart1_tx,
-         .hdma_rx = &hdma_usart1_rx},
-    [UART_BUS_1] =
-        {.huart = &huart2,
-         .hdma_tx = &hdma_usart2_tx,
-         .hdma_rx = &hdma_usart2_rx},
+    [UART_BUS_0] = {
+        .huart = &huart1,
+        .hdma_tx = &hdma_usart1_tx,
+        .hdma_rx = &hdma_usart1_rx,
+    },
+    [UART_BUS_1] = {
+        .huart = &huart2,
+        .hdma_tx = &hdma_usart2_tx,
+        .hdma_rx = &hdma_usart2_rx,
+    },
     [UART_BUS_2] = {
         .huart = &huart3,
         .hdma_tx = &hdma_usart3_tx,
-        .hdma_rx = &hdma_usart3_rx
+        .hdma_rx = &hdma_usart3_rx,
     },
 };
 
@@ -95,7 +97,7 @@ static uart_bus_t get_bus_from_handle(UART_HandleTypeDef *huart)
  */
 void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle)
 {
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
 
     if (uartHandle->Instance == USART1) {
         /* USART1 clock enable */

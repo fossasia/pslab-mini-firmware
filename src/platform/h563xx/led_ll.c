@@ -32,7 +32,7 @@
  */
 void LED_LL_init(void)
 {
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
 
     /* GPIO ports clock enable. */
     __HAL_RCC_GPIOB_CLK_ENABLE();

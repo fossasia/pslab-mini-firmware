@@ -50,7 +50,7 @@ struct usb_handle_t {
 };
 
 /* Global array to keep track of active USB handles */
-static usb_handle_t *active_handles[USB_INTERFACE_COUNT] = {nullptr};
+static usb_handle_t *active_handles[USB_INTERFACE_COUNT] = { nullptr };
 
 /**
  * @brief Get the number of available USB interfaces.

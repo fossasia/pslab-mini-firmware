@@ -24,9 +24,9 @@ enum { STLINK_UART = 2 };
  * Static variables
  ******************************************************************************/
 
-static uint8_t uart_rx_buffer_data[RX_BUFFER_SIZE] = {0};
-static uint8_t uart_tx_buffer_data[TX_BUFFER_SIZE] = {0};
-static uint8_t usb_rx_buffer_data[RX_BUFFER_SIZE] = {0};
+static uint8_t uart_rx_buffer_data[RX_BUFFER_SIZE] = { 0 };
+static uint8_t uart_tx_buffer_data[TX_BUFFER_SIZE] = { 0 };
+static uint8_t usb_rx_buffer_data[RX_BUFFER_SIZE] = { 0 };
 
 static bool uart_service_requested = false;
 static bool usb_service_requested = false;
@@ -58,14 +58,14 @@ int main(void) // NOLINT
     SYSTEM_init();
 
     // Initialize UART
-    circular_buffer_t uart_rx_buf = {nullptr};
-    circular_buffer_t uart_tx_buf = {nullptr};
+    circular_buffer_t uart_rx_buf = { nullptr };
+    circular_buffer_t uart_tx_buf = { nullptr };
     circular_buffer_init(&uart_rx_buf, uart_rx_buffer_data, RX_BUFFER_SIZE);
     circular_buffer_init(&uart_tx_buf, uart_tx_buffer_data, TX_BUFFER_SIZE);
     uart_handle_t *huart = UART_init(STLINK_UART, &uart_rx_buf, &uart_tx_buf);
 
     // Initialize USB
-    circular_buffer_t usb_rx_buf = {nullptr};
+    circular_buffer_t usb_rx_buf = { nullptr };
     circular_buffer_init(&usb_rx_buf, usb_rx_buffer_data, RX_BUFFER_SIZE);
     usb_handle_t *husb = USB_init(0, &usb_rx_buf);
 
@@ -88,7 +88,7 @@ int main(void) // NOLINT
         if (uart_service_requested) {
             uart_service_requested = false;
             LED_toggle();
-            uint8_t buf[CB_THRESHOLD + 1] = {0};
+            uint8_t buf[CB_THRESHOLD + 1] = { 0 };
             uint32_t bytes_read =
                 UART_read(huart, (uint8_t *)buf, CB_THRESHOLD);
             buf[bytes_read] = '\0';
@@ -103,7 +103,7 @@ int main(void) // NOLINT
         if (usb_service_requested) {
             usb_service_requested = false;
             LED_toggle();
-            uint8_t buf[CB_THRESHOLD + 1] = {0};
+            uint8_t buf[CB_THRESHOLD + 1] = { 0 };
             uint32_t bytes_read = USB_read(husb, buf, CB_THRESHOLD);
             buf[bytes_read] = '\0';
 
