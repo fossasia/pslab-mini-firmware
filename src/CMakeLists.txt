@@ -71,7 +71,6 @@ if(CLANG_TIDY)
         --extra-arg=--target=arm-none-eabi
         --extra-arg=-isystem${ARM_INCLUDE_DIR}
         --extra-arg-before=-Qunused-arguments
-        --fix
     )
 
     set_target_properties(pslab-mini-firmware
