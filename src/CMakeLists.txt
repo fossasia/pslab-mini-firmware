@@ -1,5 +1,4 @@
 add_executable(pslab-mini-firmware)
-set_property(TARGET pslab-mini-firmware PROPERTY C_STANDARD 23)
 
 # Glob all C source files in the current directory and subdirectories
 # for clang-format and clang-tidy

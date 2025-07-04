@@ -12,6 +12,8 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 project(pslab-mini C ASM)
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Platform selection option
 set(PLATFORM "h563xx" CACHE STRING "Target platform")
