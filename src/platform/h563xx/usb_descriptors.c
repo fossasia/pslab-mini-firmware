@@ -23,7 +23,7 @@
 #define LANG ((char const[]){ 0x09, 0x04 }) // English
 #define MANU ("FOSSASIA")
 #define PROD ("Pocket Science Lab")
-#define SERI (NULL) // Unique identifier, calculated at runtime from MCU UID.
+#define SERI (nullptr) // Unique identifier, calculated at runtime from MCU UID.
 
 enum { IDX_LANG, IDX_MANU, IDX_PROD, IDX_SERI, IDX_TOT };
 

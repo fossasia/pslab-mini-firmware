@@ -16,13 +16,13 @@
  * Basic Usage:
  * @code
  * // Initialize USB with handle and buffers
- * usb_handle_t *usb_handle;
- * circular_buffer_t rx_buffer;
+ * USB_Handle *usb_handle;
+ * BUS_CircBuffer rx_buffer;
  * uint8_t rx_data[256];
  *
  * circular_buffer_init(&rx_buffer, rx_data, 256);
  * usb_handle = USB_init(0, &rx_buffer);
- * if (usb_handle == NULL) {
+ * if (usb_handle == nullptr) {
  *     // Initialization failed
  *     return;
  * }
@@ -57,7 +57,7 @@ extern "C" {
 /**
  * @brief USB handle structure
  */
-typedef struct usb_handle_t usb_handle_t;
+typedef struct USB_Handle USB_Handle;
 
 /**
  * @brief Callback function type for USB RX data availability.
@@ -65,8 +65,8 @@ typedef struct usb_handle_t usb_handle_t;
  * @param handle Pointer to USB handle structure
  * @param bytes_available Number of bytes currently available in RX buffer.
  */
-typedef void (*usb_rx_callback_t)(
-    usb_handle_t *handle,
+typedef void (*USB_RxCallback)(
+    USB_Handle *handle,
     uint32_t bytes_available
 );
 
@@ -86,17 +86,17 @@ size_t USB_get_interface_count(void);
  * @param interface USB interface to initialize (0-based index, currently only 0
  * is supported)
  * @param rx_buffer Pointer to pre-allocated RX circular buffer
- * @return Pointer to USB handle on success, NULL on failure (including invalid
+ * @return Pointer to USB handle on success, nullptr on failure (including invalid
  * interface number)
  */
-usb_handle_t *USB_init(size_t interface, circular_buffer_t *rx_buffer);
+USB_Handle *USB_init(size_t interface, BUS_CircBuffer *rx_buffer);
 
 /**
  * @brief Deinitialize the USB interface
  *
  * @param handle Pointer to USB handle structure
  */
-void USB_deinit(usb_handle_t *handle);
+void USB_deinit(USB_Handle *handle);
 
 /**
  * @brief Step the TinyUSB state machine
@@ -105,7 +105,7 @@ void USB_deinit(usb_handle_t *handle);
  *
  * @param handle Pointer to USB handle structure
  */
-void USB_task(usb_handle_t *handle);
+void USB_task(USB_Handle *handle);
 
 /**
  * @brief Check if USB RX data is available
@@ -113,7 +113,7 @@ void USB_task(usb_handle_t *handle);
  * @param handle Pointer to USB handle structure
  * @return true if data is ready to be read, false otherwise
  */
-bool USB_rx_ready(usb_handle_t *handle);
+bool USB_rx_ready(USB_Handle *handle);
 
 /**
  * @brief Get number of bytes available in receive buffer.
@@ -121,7 +121,7 @@ bool USB_rx_ready(usb_handle_t *handle);
  * @param handle Pointer to USB handle structure
  * @return Number of bytes available to read.
  */
-uint32_t USB_rx_available(usb_handle_t *handle);
+uint32_t USB_rx_available(USB_Handle *handle);
 
 /**
  * @brief Read data from USB interface
@@ -131,7 +131,7 @@ uint32_t USB_rx_available(usb_handle_t *handle);
  * @param sz  Maximum number of bytes to read
  * @return Number of bytes actually read
  */
-uint32_t USB_read(usb_handle_t *handle, uint8_t *buf, uint32_t sz);
+uint32_t USB_read(USB_Handle *handle, uint8_t *buf, uint32_t sz);
 
 /**
  * @brief Write data to USB interface
@@ -141,18 +141,18 @@ uint32_t USB_read(usb_handle_t *handle, uint8_t *buf, uint32_t sz);
  * @param sz  Number of bytes to write
  * @return Number of bytes actually written
  */
-uint32_t USB_write(usb_handle_t *handle, uint8_t const *buf, uint32_t sz);
+uint32_t USB_write(USB_Handle *handle, uint8_t const *buf, uint32_t sz);
 
 /**
  * @brief Set RX callback to be triggered when threshold bytes are available.
  *
  * @param handle Pointer to USB handle structure
- * @param callback Function to call when threshold is reached (NULL to disable)
+ * @param callback Function to call when threshold is reached (nullptr to disable)
  * @param threshold Number of bytes that must be available to trigger callback
  */
 void USB_set_rx_callback(
-    usb_handle_t *handle,
-    usb_rx_callback_t callback,
+    USB_Handle *handle,
+    USB_RxCallback callback,
     uint32_t threshold
 );
 
@@ -162,7 +162,7 @@ void USB_set_rx_callback(
  * @param handle Pointer to USB handle structure
  * @return Number of bytes that can still be written to TX buffer.
  */
-uint32_t USB_tx_free_space(usb_handle_t *handle);
+uint32_t USB_tx_free_space(USB_Handle *handle);
 
 /**
  * @brief Check if TX transmission is in progress.
@@ -170,7 +170,7 @@ uint32_t USB_tx_free_space(usb_handle_t *handle);
  * @param handle Pointer to USB handle structure
  * @return true if transmission is ongoing, false otherwise.
  */
-bool USB_tx_busy(usb_handle_t *handle);
+bool USB_tx_busy(USB_Handle *handle);
 
 #ifdef __cplusplus
 }

@@ -24,7 +24,7 @@
 /**
  * @brief USB bus instance enumeration
  */
-typedef enum { USB_BUS_0 = 0, USB_BUS_COUNT = 1 } usb_bus_t;
+typedef enum { USB_BUS_0 = 0, USB_BUS_COUNT = 1 } USB_Bus;
 
 /**
  * @brief Initialize the USB hardware and TinyUSB stack
@@ -34,14 +34,14 @@ typedef enum { USB_BUS_0 = 0, USB_BUS_COUNT = 1 } usb_bus_t;
  *
  * @param bus USB bus instance to initialize
  */
-void USB_LL_init(usb_bus_t bus);
+void USB_LL_init(USB_Bus bus);
 
 /**
  * @brief Deinitialize the USB peripheral
  *
  * @param bus USB bus instance to deinitialize
  */
-void USB_LL_deinit(usb_bus_t bus);
+void USB_LL_deinit(USB_Bus bus);
 
 /**
  * @brief Retrieve the unique device serial as a USB string descriptor
@@ -61,7 +61,7 @@ size_t USB_LL_get_serial(uint16_t desc_str1[], size_t max_chars);
  * @param interface_id USB CDC interface instance
  * @return Number of bytes available in the RX buffer
  */
-uint32_t USB_LL_rx_available(usb_bus_t interface_id);
+uint32_t USB_LL_rx_available(USB_Bus interface_id);
 
 /**
  * @brief Get number of bytes available for writing to USB CDC interface
@@ -69,7 +69,7 @@ uint32_t USB_LL_rx_available(usb_bus_t interface_id);
  * @param interface_id USB CDC interface instance
  * @return Number of bytes that can be written to the TX buffer
  */
-uint32_t USB_LL_tx_available(usb_bus_t interface_id);
+uint32_t USB_LL_tx_available(USB_Bus interface_id);
 
 /**
  * @brief Read data from USB CDC interface
@@ -79,7 +79,7 @@ uint32_t USB_LL_tx_available(usb_bus_t interface_id);
  * @param bufsize Maximum number of bytes to read
  * @return Number of bytes actually read
  */
-uint32_t USB_LL_read(usb_bus_t interface_id, uint8_t *buf, uint32_t bufsize);
+uint32_t USB_LL_read(USB_Bus interface_id, uint8_t *buf, uint32_t bufsize);
 
 /**
  * @brief Write data to USB CDC interface
@@ -90,7 +90,7 @@ uint32_t USB_LL_read(usb_bus_t interface_id, uint8_t *buf, uint32_t bufsize);
  * @return Number of bytes actually written
  */
 uint32_t USB_LL_write(
-    usb_bus_t interface_id,
+    USB_Bus interface_id,
     uint8_t const *buf,
     uint32_t bufsize
 );
@@ -101,7 +101,7 @@ uint32_t USB_LL_write(
  * @param interface_id USB CDC interface instance
  * @return Size of the TX buffer in bytes
  */
-uint32_t USB_LL_tx_bufsize(usb_bus_t interface_id);
+uint32_t USB_LL_tx_bufsize(USB_Bus interface_id);
 
 /**
  * @brief Process USB tasks and handle pending operations
@@ -111,7 +111,7 @@ uint32_t USB_LL_tx_bufsize(usb_bus_t interface_id);
  *
  * @param interface_id USB CDC interface instance
  */
-void USB_LL_task(usb_bus_t interface_id);
+void USB_LL_task(USB_Bus interface_id);
 
 /**
  * @brief Check if USB CDC interface is connected to host
@@ -119,7 +119,7 @@ void USB_LL_task(usb_bus_t interface_id);
  * @param interface_id USB CDC interface instance
  * @return true if connected to host, false otherwise
  */
-bool USB_LL_connected(usb_bus_t interface_id);
+bool USB_LL_connected(USB_Bus interface_id);
 
 /**
  * @brief Flush the USB CDC transmit buffer
@@ -129,6 +129,6 @@ bool USB_LL_connected(usb_bus_t interface_id);
  * @param interface_id USB CDC interface instance
  * @return Number of bytes flushed
  */
-uint32_t USB_LL_tx_flush(usb_bus_t interface_id);
+uint32_t USB_LL_tx_flush(USB_Bus interface_id);
 
 #endif /* PSLAB_USB_LL_H */

@@ -40,17 +40,17 @@ enum { USB_TX_FLUSH_TIMEOUT = 100 };
 /**
  * @brief USB interface handle structure
  */
-struct usb_handle_t {
+struct USB_Handle {
     uint8_t interface_id;
-    circular_buffer_t *rx_buffer;
-    usb_rx_callback_t rx_callback;
+    BUS_CircBuffer *rx_buffer;
+    USB_RxCallback rx_callback;
     uint32_t rx_threshold;
     uint32_t tx_timeout_counter;
     bool initialized;
 };
 
 /* Global array to keep track of active USB handles */
-static usb_handle_t *active_handles[USB_INTERFACE_COUNT] = { nullptr };
+static USB_Handle *active_handles[USB_INTERFACE_COUNT] = { nullptr };
 
 /**
  * @brief Get the number of available USB interfaces.
@@ -63,9 +63,9 @@ size_t USB_get_interface_count(void) { return USB_INTERFACE_COUNT; }
  * @brief Get USB handle from interface ID
  *
  * @param interface_id USB interface ID
- * @return Pointer to handle or NULL if not found
+ * @return Pointer to handle or nullptr if not found
  */
-static usb_handle_t *get_handle_from_interface(uint8_t interface_id)
+static USB_Handle *get_handle_from_interface(uint8_t interface_id)
 {
     if (interface_id >= USB_INTERFACE_COUNT) {
         return nullptr;
@@ -78,7 +78,7 @@ static usb_handle_t *get_handle_from_interface(uint8_t interface_id)
  *
  * @param handle Pointer to USB handle structure
  */
-static uint32_t transfer_from_usb_to_buffer(usb_handle_t *handle)
+static uint32_t transfer_from_usb_to_buffer(USB_Handle *handle)
 {
     if (!handle || !handle->initialized) {
         return 0;
@@ -107,7 +107,7 @@ static uint32_t transfer_from_usb_to_buffer(usb_handle_t *handle)
  * @param handle Pointer to USB handle structure
  * @return true if condition was met and callback called, false otherwise
  */
-static bool check_rx_callback(usb_handle_t *handle)
+static bool check_rx_callback(USB_Handle *handle)
 {
     if (!handle || !handle->initialized) {
         return false;
@@ -133,9 +133,9 @@ static bool check_rx_callback(usb_handle_t *handle)
  *
  * @param interface USB interface to initialize (0-based index)
  * @param rx_buffer Pointer to pre-allocated RX circular buffer
- * @return Pointer to USB handle on success, NULL on failure
+ * @return Pointer to USB handle on success, nullptr on failure
  */
-usb_handle_t *USB_init(size_t interface, circular_buffer_t *rx_buffer)
+USB_Handle *USB_init(size_t interface, BUS_CircBuffer *rx_buffer)
 {
     if (!rx_buffer || interface >= USB_INTERFACE_COUNT) {
         return nullptr;
@@ -144,12 +144,12 @@ usb_handle_t *USB_init(size_t interface, circular_buffer_t *rx_buffer)
     uint8_t interface_id = (uint8_t)interface;
 
     /* Check if interface is already initialized */
-    if (active_handles[interface_id] != NULL) {
+    if (active_handles[interface_id] != nullptr) {
         return nullptr;
     }
 
     /* Allocate handle */
-    usb_handle_t *handle = malloc(sizeof(usb_handle_t));
+    USB_Handle *handle = malloc(sizeof(USB_Handle));
     if (!handle) {
         return nullptr;
     }
@@ -167,7 +167,7 @@ usb_handle_t *USB_init(size_t interface, circular_buffer_t *rx_buffer)
 
     /* Initialize USB hardware only once (for interface 0) */
     if (interface_id == 0) {
-        USB_LL_init((usb_bus_t)interface_id);
+        USB_LL_init((USB_Bus)interface_id);
     }
 
     return handle;
@@ -178,7 +178,7 @@ usb_handle_t *USB_init(size_t interface, circular_buffer_t *rx_buffer)
  *
  * @param handle Pointer to USB handle structure
  */
-void USB_deinit(usb_handle_t *handle)
+void USB_deinit(USB_Handle *handle)
 {
     if (!handle || !handle->initialized) {
         return;
@@ -186,7 +186,7 @@ void USB_deinit(usb_handle_t *handle)
 
     /* Deinitialize USB hardware if this is interface 0 */
     if (handle->interface_id == 0) {
-        USB_LL_deinit((usb_bus_t)handle->interface_id);
+        USB_LL_deinit((USB_Bus)handle->interface_id);
     }
 
     /* Clear from global array */
@@ -208,7 +208,7 @@ void USB_deinit(usb_handle_t *handle)
  *
  * @param handle Pointer to USB handle structure
  */
-void USB_task(usb_handle_t *handle)
+void USB_task(USB_Handle *handle)
 {
     if (!handle || !handle->initialized) {
         return;
@@ -250,7 +250,7 @@ void USB_task(usb_handle_t *handle)
  * @param handle Pointer to USB handle structure
  * @return true if data is ready to be read, false otherwise
  */
-bool USB_rx_ready(usb_handle_t *handle)
+bool USB_rx_ready(USB_Handle *handle)
 {
     if (!handle || !handle->initialized) {
         return false;
@@ -265,7 +265,7 @@ bool USB_rx_ready(usb_handle_t *handle)
  * @param handle Pointer to USB handle structure
  * @return Number of bytes available to read.
  */
-uint32_t USB_rx_available(usb_handle_t *handle)
+uint32_t USB_rx_available(USB_Handle *handle)
 {
     if (!handle || !handle->initialized) {
         return 0;
@@ -287,9 +287,9 @@ uint32_t USB_rx_available(usb_handle_t *handle)
  * @param sz  Maximum number of bytes to read
  * @return Number of bytes actually read
  */
-uint32_t USB_read(usb_handle_t *handle, uint8_t *buf, uint32_t sz)
+uint32_t USB_read(USB_Handle *handle, uint8_t *buf, uint32_t sz)
 {
-    if (!handle || !handle->initialized || buf == NULL || sz == 0) {
+    if (!handle || !handle->initialized || buf == nullptr || sz == 0) {
         return 0;
     }
 
@@ -310,9 +310,9 @@ uint32_t USB_read(usb_handle_t *handle, uint8_t *buf, uint32_t sz)
  * @param sz  Number of bytes to write
  * @return Number of bytes actually written
  */
-uint32_t USB_write(usb_handle_t *handle, uint8_t const *buf, uint32_t sz)
+uint32_t USB_write(USB_Handle *handle, uint8_t const *buf, uint32_t sz)
 {
-    if (!handle || !handle->initialized || buf == NULL || sz == 0) {
+    if (!handle || !handle->initialized || buf == nullptr || sz == 0) {
         return 0;
     }
 
@@ -326,12 +326,12 @@ uint32_t USB_write(usb_handle_t *handle, uint8_t const *buf, uint32_t sz)
  * @brief Set RX callback to be triggered when threshold bytes are available.
  *
  * @param handle Pointer to USB handle structure
- * @param callback Function to call when threshold is reached (NULL to disable)
+ * @param callback Function to call when threshold is reached (nullptr to disable)
  * @param threshold Number of bytes that must be available to trigger callback
  */
 void USB_set_rx_callback(
-    usb_handle_t *handle,
-    usb_rx_callback_t callback,
+    USB_Handle *handle,
+    USB_RxCallback callback,
     uint32_t threshold
 )
 {
@@ -352,7 +352,7 @@ void USB_set_rx_callback(
  * @param handle Pointer to USB handle structure
  * @return Number of bytes that can still be written to TX buffer.
  */
-uint32_t USB_tx_free_space(usb_handle_t *handle)
+uint32_t USB_tx_free_space(USB_Handle *handle)
 {
     if (!handle || !handle->initialized) {
         return 0;
@@ -366,7 +366,7 @@ uint32_t USB_tx_free_space(usb_handle_t *handle)
  * @param handle Pointer to USB handle structure
  * @return true if transmission is ongoing, false otherwise.
  */
-bool USB_tx_busy(usb_handle_t *handle)
+bool USB_tx_busy(USB_Handle *handle)
 {
     if (!handle || !handle->initialized) {
         return false;
@@ -394,7 +394,7 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
     (void)rts; // We're only concerned with DTR
 
     // Find the handle for this interface
-    usb_handle_t *handle = get_handle_from_interface(itf);
+    USB_Handle *handle = get_handle_from_interface(itf);
     if (!handle || !handle->initialized) {
         return;
     }

@@ -14,14 +14,14 @@
  * Basic Usage:
  * @code
  * // Initialize UART with handle and buffers
- * uart_handle_t *uart_handle;
- * circular_buffer_t rx_buffer, tx_buffer;
+ * UART_Handle *uart_handle;
+ * BUS_CircBuffer rx_buffer, tx_buffer;
  * uint8_t rx_data[256], tx_data[256];
  *
  * circular_buffer_init(&rx_buffer, rx_data, 256);
  * circular_buffer_init(&tx_buffer, tx_data, 256);
  * uart_handle = UART_init(0, &rx_buffer, &tx_buffer);
- * if (uart_handle == NULL) {
+ * if (uart_handle == nullptr) {
  *     // Initialization failed
  *     return;
  * }
@@ -34,7 +34,7 @@
  * }
  *
  * // Protocol with header + payload
- * void on_header_ready(uart_handle_t *handle, uint32_t available) {
+ * void on_header_ready(UART_Handle *handle, uint32_t available) {
  *     header_flag = true;  // Signal main loop
  * }
  *
@@ -63,7 +63,7 @@ extern "C" {
 /**
  * @brief UART bus handle structure
  */
-typedef struct uart_handle_t uart_handle_t;
+typedef struct UART_Handle UART_Handle;
 
 /**
  * @brief Callback function type for RX data availability.
@@ -71,8 +71,8 @@ typedef struct uart_handle_t uart_handle_t;
  * @param handle Pointer to UART handle structure
  * @param bytes_available Number of bytes currently available in RX buffer.
  */
-typedef void (*uart_rx_callback_t)(
-    uart_handle_t *handle,
+typedef void (*UART_RxCallback)(
+    UART_Handle *handle,
     uint32_t bytes_available
 );
 
@@ -92,13 +92,13 @@ size_t UART_get_bus_count(void);
  * @param bus UART bus instance to initialize (0-based index)
  * @param rx_buffer Pointer to pre-allocated RX circular buffer
  * @param tx_buffer Pointer to pre-allocated TX circular buffer
- * @return Pointer to UART handle on success, NULL on failure (including invalid
+ * @return Pointer to UART handle on success, nullptr on failure (including invalid
  * bus number)
  */
-uart_handle_t *UART_init(
+UART_Handle *UART_init(
     size_t bus,
-    circular_buffer_t *rx_buffer,
-    circular_buffer_t *tx_buffer
+    BUS_CircBuffer *rx_buffer,
+    BUS_CircBuffer *tx_buffer
 );
 
 /**
@@ -106,7 +106,7 @@ uart_handle_t *UART_init(
  *
  * @param handle Pointer to UART handle structure
  */
-void UART_deinit(uart_handle_t *handle);
+void UART_deinit(UART_Handle *handle);
 
 /**
  * @brief Transmit data over UART.
@@ -116,7 +116,7 @@ void UART_deinit(uart_handle_t *handle);
  * @param sz    Number of bytes to send.
  * @return Number of bytes actually written.
  */
-uint32_t UART_write(uart_handle_t *handle, uint8_t const *txbuf, uint32_t sz);
+uint32_t UART_write(UART_Handle *handle, uint8_t const *txbuf, uint32_t sz);
 
 /**
  * @brief Receive data from UART.
@@ -126,7 +126,7 @@ uint32_t UART_write(uart_handle_t *handle, uint8_t const *txbuf, uint32_t sz);
  * @param sz    Number of bytes to read.
  * @return Number of bytes actually read.
  */
-uint32_t UART_read(uart_handle_t *handle, uint8_t *rxbuf, uint32_t sz);
+uint32_t UART_read(UART_Handle *handle, uint8_t *rxbuf, uint32_t sz);
 
 /**
  * @brief Check if data is available to read from the UART receive buffer.
@@ -137,7 +137,7 @@ uint32_t UART_read(uart_handle_t *handle, uint8_t *rxbuf, uint32_t sz);
  * @param handle Pointer to UART handle structure
  * @return true if at least one byte is available to be read, false otherwise.
  */
-bool UART_rx_ready(uart_handle_t *handle);
+bool UART_rx_ready(UART_Handle *handle);
 
 /**
  * @brief Get number of bytes available in receive buffer.
@@ -145,18 +145,18 @@ bool UART_rx_ready(uart_handle_t *handle);
  * @param handle Pointer to UART handle structure
  * @return Number of bytes available to read.
  */
-uint32_t UART_rx_available(uart_handle_t *handle);
+uint32_t UART_rx_available(UART_Handle *handle);
 
 /**
  * @brief Set RX callback to be triggered when threshold bytes are available.
  *
  * @param handle Pointer to UART handle structure
- * @param callback Function to call when threshold is reached (NULL to disable)
+ * @param callback Function to call when threshold is reached (nullptr to disable)
  * @param threshold Number of bytes that must be available to trigger callback
  */
 void UART_set_rx_callback(
-    uart_handle_t *handle,
-    uart_rx_callback_t callback,
+    UART_Handle *handle,
+    UART_RxCallback callback,
     uint32_t threshold
 );
 
@@ -166,7 +166,7 @@ void UART_set_rx_callback(
  * @param handle Pointer to UART handle structure
  * @return Number of bytes that can still be written to TX buffer.
  */
-uint32_t UART_tx_free_space(uart_handle_t *handle);
+uint32_t UART_tx_free_space(UART_Handle *handle);
 
 /**
  * @brief Check if TX transmission is in progress.
@@ -174,7 +174,7 @@ uint32_t UART_tx_free_space(uart_handle_t *handle);
  * @param handle Pointer to UART handle structure
  * @return true if transmission is ongoing, false otherwise.
  */
-bool UART_tx_busy(uart_handle_t *handle);
+bool UART_tx_busy(UART_Handle *handle);
 
 #ifdef __cplusplus
 }

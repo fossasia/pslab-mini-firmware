@@ -22,6 +22,8 @@
 
 #include "stm32h5xx_hal.h"
 
+enum { SYSTEM_CLOCK_FREQ = 250000000U }; // 250 MHz
+enum { SI_PREFIX_MEGA = 1000000U }; // 1 Mega = 10^6
 /**
  * @brief Configure the system clock to 250 MHz
  *
@@ -54,10 +56,10 @@
  *
  * @return None
  */
-static void system_clock_config(void)
+static void system_clock_config(void)  // NOLINT: readability-function-cognitive-complexity
 {
-    RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
-    RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
+    RCC_OscInitTypeDef osc_init = { 0 };
+    RCC_ClkInitTypeDef clk_init = { 0 };
 
     /* Configure the main internal regulator output voltage. */
     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
@@ -68,21 +70,21 @@ static void system_clock_config(void)
     /* Initializes the RCC Oscillators according to the specified parameters
      * in the RCC_OscInitTypeDef structure.
      */
-    RCC_OscInitStruct.OscillatorType =
+    osc_init.OscillatorType =
         RCC_OSCILLATORTYPE_HSE | RCC_OSCILLATORTYPE_HSI48;
-    RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
-    RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
-    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-    RCC_OscInitStruct.PLL.PLLSource = RCC_PLL1_SOURCE_HSE;
-    RCC_OscInitStruct.PLL.PLLM = 4;   // 8 MHz / 4 = 2 MHz input
-    RCC_OscInitStruct.PLL.PLLN = 250; // 2 MHz * 250 = 500 MHz VCO
-    RCC_OscInitStruct.PLL.PLLP = 2;   // 500 MHz / 2 = 250 MHz system clock
-    RCC_OscInitStruct.PLL.PLLQ = 2;   // 500 MHz / 2 = 250 MHz peripheral clock
-    RCC_OscInitStruct.PLL.PLLR = 2;   // 500 MHz / 2 = 250 MHz peripheral clock
-    RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1_VCIRANGE_1;
-    RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1_VCORANGE_WIDE;
-    RCC_OscInitStruct.PLL.PLLFRACN = 0;
-    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+    osc_init.HSEState = RCC_HSE_BYPASS;
+    osc_init.HSI48State = RCC_HSI48_ON;
+    osc_init.PLL.PLLState = RCC_PLL_ON;
+    osc_init.PLL.PLLSource = RCC_PLL1_SOURCE_HSE;
+    osc_init.PLL.PLLM = 4;   // 8 MHz / 4 = 2 MHz input
+    osc_init.PLL.PLLN = SYSTEM_CLOCK_FREQ / SI_PREFIX_MEGA; // 2 MHz * 250 = 500 MHz VCO
+    osc_init.PLL.PLLP = 2;   // 500 MHz / 2 = 250 MHz system clock
+    osc_init.PLL.PLLQ = 2;   // 500 MHz / 2 = 250 MHz peripheral clock
+    osc_init.PLL.PLLR = 2;   // 500 MHz / 2 = 250 MHz peripheral clock
+    osc_init.PLL.PLLRGE = RCC_PLL1_VCIRANGE_1;
+    osc_init.PLL.PLLVCOSEL = RCC_PLL1_VCORANGE_WIDE;
+    osc_init.PLL.PLLFRACN = 0;
+    if (HAL_RCC_OscConfig(&osc_init) != HAL_OK) {
         /* Clock configuration incorrect or hardware failure. Hang the system to
          * prevent damage.
          */
@@ -94,15 +96,15 @@ static void system_clock_config(void)
     }
 
     /* Initializes the CPU, AHB and APB buses clocks. */
-    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
+    clk_init.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
                                   RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2 |
                                   RCC_CLOCKTYPE_PCLK3;
-    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-    RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-    RCC_ClkInitStruct.APB3CLKDivider = RCC_HCLK_DIV1;
-    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
+    clk_init.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+    clk_init.AHBCLKDivider = RCC_SYSCLK_DIV1;
+    clk_init.APB1CLKDivider = RCC_HCLK_DIV1;
+    clk_init.APB2CLKDivider = RCC_HCLK_DIV1;
+    clk_init.APB3CLKDivider = RCC_HCLK_DIV1;
+    if (HAL_RCC_ClockConfig(&clk_init, FLASH_LATENCY_5) != HAL_OK) {
         /* Clock configuration incorrect or hardware failure. Hang the system to
          * prevent damage.
          */

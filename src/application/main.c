@@ -41,14 +41,14 @@ static bool usb_service_requested = false;
  * Function definitions
  ******************************************************************************/
 
-void uart_cb(uart_handle_t *huart, uint32_t bytes_available)
+void uart_cb(UART_Handle *huart, uint32_t bytes_available)
 {
     (void)huart;
     (void)bytes_available;
     uart_service_requested = true;
 }
 
-void usb_cb(usb_handle_t *husb, uint32_t bytes_available)
+void usb_cb(USB_Handle *husb, uint32_t bytes_available)
 {
     (void)husb;
     (void)bytes_available;
@@ -60,16 +60,16 @@ int main(void) // NOLINT
     SYSTEM_init();
 
     // Initialize UART
-    circular_buffer_t uart_rx_buf = { nullptr };
-    circular_buffer_t uart_tx_buf = { nullptr };
+    BUS_CircBuffer uart_rx_buf = { nullptr };
+    BUS_CircBuffer uart_tx_buf = { nullptr };
     circular_buffer_init(&uart_rx_buf, uart_rx_buffer_data, RX_BUFFER_SIZE);
     circular_buffer_init(&uart_tx_buf, uart_tx_buffer_data, TX_BUFFER_SIZE);
-    uart_handle_t *huart = UART_init(STLINK_UART, &uart_rx_buf, &uart_tx_buf);
+    UART_Handle *huart = UART_init(STLINK_UART, &uart_rx_buf, &uart_tx_buf);
 
     // Initialize USB
-    circular_buffer_t usb_rx_buf = { nullptr };
+    BUS_CircBuffer usb_rx_buf = { nullptr };
     circular_buffer_init(&usb_rx_buf, usb_rx_buffer_data, RX_BUFFER_SIZE);
-    usb_handle_t *husb = USB_init(0, &usb_rx_buf);
+    USB_Handle *husb = USB_init(0, &usb_rx_buf);
 
 #define CB_THRESHOLD                                                           \
     (sizeof("Hello") - 1) // Callback when at least 5 bytes are available
