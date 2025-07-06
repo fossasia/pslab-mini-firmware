@@ -4,6 +4,8 @@ Checks: [
   cert*,
 
   clang-analyzer*,
+  # We use fixed addresses for registers, so this check is not applicable
+  -clang-analyzer-core.FixedAddressDereference,
   # Newlib doesn't have memcpy_s
   -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
 
@@ -86,7 +88,7 @@ CheckOptions:
   - key: readability-identifier-naming.TypedefCase
     value: 'CamelCase'
   - key: readability-identifier-naming.TypedefIgnoredRegexp
-    value: '[A-Z]+_[a-zA-Z0-9]+'
+    value: '[A-Z_]+_[a-zA-Z0-9]+'
   - key: readability-identifier-naming.EnumIgnoredRegexp
     value: '[A-Z]+_[a-zA-Z0-9]+'
   - key: readability-identifier-naming.StructIgnoredRegexp

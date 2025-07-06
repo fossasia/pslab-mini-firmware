@@ -18,9 +18,9 @@
 
 #include "adc_ll.h"
 
-static ADC_HandleTypeDef hadc = { 0 };
+static ADC_HandleTypeDef hadc = { nullptr };
 
-static ADC_ChannelConfTypeDef sConfig = { 0 };
+static ADC_ChannelConfTypeDef s_config = { 0 };
 
 /**
  * @brief Initializes the ADC MSP (MCU Support Package).
@@ -32,7 +32,8 @@ static ADC_ChannelConfTypeDef sConfig = { 0 };
  */
 void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
 {
-    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
+    (void)hadc; // Suppress unused parameter warning
+    GPIO_InitTypeDef gpio_init = { 0 };
 
     // Enable ADC1 clock
     __HAL_RCC_ADC_CLK_ENABLE();
@@ -42,10 +43,10 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
     __HAL_RCC_GPDMA1_CLK_ENABLE();
 
     // Configure GPIO pin for ADC1_IN0 (PA0)
-    GPIO_InitStruct.Pin = GPIO_PIN_0; // PA0
-    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    gpio_init.Pin = GPIO_PIN_0; // PA0
+    gpio_init.Mode = GPIO_MODE_ANALOG;
+    gpio_init.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOA, &gpio_init);
 }
 
 /**
@@ -75,10 +76,10 @@ void ADC_LL_init(void)
     HAL_ADC_Init(&hadc);
 
     // Configure ADC channel
-    sConfig.Channel = ADC_CHANNEL_0; // ADC1_IN0
-    sConfig.Rank = ADC_REGULAR_RANK_1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_640CYCLES_5;
-    HAL_ADC_ConfigChannel(&hadc, &sConfig);
+    s_config.Channel = ADC_CHANNEL_0; // ADC1_IN0
+    s_config.Rank = ADC_REGULAR_RANK_1;
+    s_config.SamplingTime = ADC_SAMPLETIME_640CYCLES_5;
+    HAL_ADC_ConfigChannel(&hadc, &s_config);
 }
 
 /**

@@ -22,7 +22,7 @@ typedef enum {
     UART_BUS_1 = 1,
     UART_BUS_2 = 2,
     UART_BUS_COUNT = 3
-} uart_bus_t;
+} UART_Bus;
 
 /**
  * @brief Initialize the UART peripheral and start DMA-based reception.
@@ -31,14 +31,14 @@ typedef enum {
  * @param rx_buf Pointer to the reception buffer for DMA
  * @param sz Size of the reception buffer in bytes
  */
-void UART_LL_init(uart_bus_t bus, uint8_t *rx_buf, uint32_t sz);
+void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz);
 
 /**
  * @brief Deinitialize the UART peripheral.
  *
  * @param bus UART bus instance to deinitialize
  */
-void UART_LL_deinit(uart_bus_t bus);
+void UART_LL_deinit(UART_Bus bus);
 
 /**
  * @brief Get the current DMA position in the RX buffer.
@@ -46,7 +46,7 @@ void UART_LL_deinit(uart_bus_t bus);
  * @param bus UART bus instance
  * @return The number of bytes received so far in the RX buffer
  */
-uint32_t UART_LL_get_dma_position(uart_bus_t bus);
+uint32_t UART_LL_get_dma_position(UART_Bus bus);
 
 /**
  * @brief Check if a UART TX DMA transfer is currently in progress.
@@ -54,7 +54,7 @@ uint32_t UART_LL_get_dma_position(uart_bus_t bus);
  * @param bus UART bus instance
  * @return true if a transmission is ongoing, false otherwise
  */
-bool UART_LL_tx_busy(uart_bus_t bus);
+bool UART_LL_tx_busy(UART_Bus bus);
 
 /**
  * @brief Start a UART DMA transmission.
@@ -63,15 +63,15 @@ bool UART_LL_tx_busy(uart_bus_t bus);
  * @param buffer Pointer to the data to transmit
  * @param size Number of bytes to transmit
  */
-void UART_LL_start_dma_tx(uart_bus_t bus, uint8_t *buffer, uint32_t size);
+void UART_LL_start_dma_tx(UART_Bus bus, uint8_t *buffer, uint32_t size);
 
 /**
  * @brief Callback function type for completed transmissions
  * @param bus UART bus instance
  * @param bytes_transferred Number of bytes successfully transmitted
  */
-typedef void (*UART_LL_tx_complete_callback_t)(
-    uart_bus_t bus,
+typedef void (*UART_LL_TxCompleteCallback)(
+    UART_Bus bus,
     uint32_t bytes_transferred
 );
 
@@ -79,14 +79,14 @@ typedef void (*UART_LL_tx_complete_callback_t)(
  * @brief Callback function type for completed reception
  * @param bus UART bus instance
  */
-typedef void (*UART_LL_rx_complete_callback_t)(uart_bus_t bus);
+typedef void (*UART_LL_RxCompleteCallback)(UART_Bus bus);
 
 /**
  * @brief Callback function type for UART idle detection
  * @param bus UART bus instance
  * @param dma_pos Current DMA position in reception buffer
  */
-typedef void (*UART_LL_idle_callback_t)(uart_bus_t bus, uint32_t dma_pos);
+typedef void (*UART_LL_IdleCallback)(UART_Bus bus, uint32_t dma_pos);
 
 /**
  * @brief Set the TX complete callback function
@@ -94,8 +94,8 @@ typedef void (*UART_LL_idle_callback_t)(uart_bus_t bus, uint32_t dma_pos);
  * @param callback Callback function to call when TX is complete
  */
 void UART_LL_set_tx_complete_callback(
-    uart_bus_t bus,
-    UART_LL_tx_complete_callback_t callback
+    UART_Bus bus,
+    UART_LL_TxCompleteCallback callback
 );
 
 /**
@@ -104,8 +104,8 @@ void UART_LL_set_tx_complete_callback(
  * @param callback Callback function to call when RX buffer is full
  */
 void UART_LL_set_rx_complete_callback(
-    uart_bus_t bus,
-    UART_LL_rx_complete_callback_t callback
+    UART_Bus bus,
+    UART_LL_RxCompleteCallback callback
 );
 
 /**
@@ -114,8 +114,8 @@ void UART_LL_set_rx_complete_callback(
  * @param callback Callback function to call when idle line is detected
  */
 void UART_LL_set_idle_callback(
-    uart_bus_t bus,
-    UART_LL_idle_callback_t callback
+    UART_Bus bus,
+    UART_LL_IdleCallback callback
 );
 
 #endif /* PSLAB_UART_LL_H */

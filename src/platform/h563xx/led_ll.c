@@ -32,17 +32,17 @@
  */
 void LED_LL_init(void)
 {
-    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
+    GPIO_InitTypeDef gpio_init = { 0 };
 
     /* GPIO ports clock enable. */
     __HAL_RCC_GPIOB_CLK_ENABLE();
 
     /* Configure the LED GPIO pin. */
-    GPIO_InitStruct.Pin = GPIO_PIN_0;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    gpio_init.Pin = GPIO_PIN_0;
+    gpio_init.Mode = GPIO_MODE_OUTPUT_PP;
+    gpio_init.Pull = GPIO_NOPULL;
+    gpio_init.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOB, &gpio_init);
 }
 
 /**
