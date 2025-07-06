@@ -10,7 +10,6 @@
 #ifndef PSLAB_ADC_LL_H
 #define PSLAB_ADC_LL_H
 
-#include <stdbool.h>
 #include <stdint.h>
 
 /**
@@ -18,7 +17,7 @@
  *
  * This function configures the ADC1 peripheral with the specified settings.
  */
-void ADC1_LL_Init(void);
+void ADC_LL_init(void);
 
 /**
  * @brief Deinitializes the ADC peripheral.
@@ -26,7 +25,7 @@ void ADC1_LL_Init(void);
  * This function deinitializes the ADC peripheral and releases any resources
  * used.
  */
-void ADC_LL_DeInit(void);
+void ADC_LL_deinit(void);
 
 /**
  * @brief Starts the ADC conversion.
@@ -34,7 +33,7 @@ void ADC_LL_DeInit(void);
  * This function starts the ADC conversion process. It must be called after
  * the ADC has been initialized and configured.
  */
-void ADC1_Start(void);
+void ADC_LL_start(void);
 
 /**
  * @brief Stops the ADC conversion.
@@ -42,7 +41,7 @@ void ADC1_Start(void);
  * This function stops the ongoing ADC conversion process. It can be called
  * to halt conversions before deinitializing the ADC or when no longer needed.
  */
-void ADC1_Stop(void);
+void ADC_LL_stop(void);
 
 /**
  * @brief Reads the ADC value into the provided buffer.
@@ -53,6 +52,6 @@ void ADC1_Stop(void);
  * @param buffer Pointer to a buffer where the ADC value will be stored.
  * @return The converted ADC value.
  */
-uint32_t ADC_LL_Read(uint32_t *buffer);
+uint32_t ADC_LL_read(uint32_t *buffer);
 
 #endif // ADC_LL_H

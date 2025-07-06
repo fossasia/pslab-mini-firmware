@@ -12,18 +12,15 @@
  * @date 2025-07-02
  */
 
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 
 #include "stm32h5xx_hal.h"
 
 #include "adc_ll.h"
 
-ADC_HandleTypeDef hadc = { 0 };
+static ADC_HandleTypeDef hadc = { 0 };
 
-ADC_ChannelConfTypeDef sConfig = { 0 };
+static ADC_ChannelConfTypeDef sConfig = { 0 };
 
 /**
  * @brief Initializes the ADC MSP (MCU Support Package).
@@ -59,7 +56,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
  * parameters.
  *
  */
-void ADC1_LL_Init(void)
+void ADC_LL_init(void)
 {
     // Initialize the ADC peripheral
     hadc.Instance = ADC1;
@@ -88,7 +85,7 @@ void ADC1_LL_Init(void)
  * @brief Deinitializes the ADC
  *
  */
-void ADC_LL_DeInit(void)
+void ADC_LL_deinit(void)
 {
     // Deinitialize the ADC peripheral
     HAL_ADC_DeInit(&hadc);
@@ -101,7 +98,7 @@ void ADC_LL_DeInit(void)
  * the ADC has been initialized and configured.
  *
  */
-void ADC1_Start(void)
+void ADC_LL_start(void)
 {
     // Start the ADC conversion
     HAL_ADC_Start(&hadc);
@@ -114,13 +111,13 @@ void ADC1_Start(void)
  * to halt conversions before deinitializing the ADC or when no longer needed.
  *
  */
-void ADC1_Stop(void)
+void ADC_LL_stop(void)
 {
     // Stop the ADC conversion
     HAL_ADC_Stop(&hadc);
 }
 
-uint32_t ADC_LL_Read(uint32_t *buffer)
+uint32_t ADC_LL_read(uint32_t *buffer)
 {
     // Start the ADC conversion
     HAL_ADC_Start(&hadc);

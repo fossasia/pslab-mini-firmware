@@ -11,8 +11,6 @@
  * @date 2025-07-02
  */
 
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
 
 #include "adc.h"
@@ -25,10 +23,10 @@
  * It must be called before any ADC operations can be performed.
  *
  */
-void ADC_Init(void)
+void ADC_init(void)
 {
     // Initialize the ADC peripheral
-    ADC1_LL_Init();
+    ADC_LL_init();
 }
 
 /**
@@ -37,10 +35,10 @@ void ADC_Init(void)
  * This function deinitializes the ADC peripheral and releases any resources
  * used. It should be called when the ADC is no longer needed.
  */
-void ADC_DeInit(void)
+void ADC_deinit(void)
 {
     // Deinitialize the ADC peripheral
-    ADC_LL_DeInit();
+    ADC_LL_deinit();
 }
 
 /**
@@ -50,10 +48,10 @@ void ADC_DeInit(void)
  * the ADC has been initialized and configured.
  *
  */
-void ADC_Start(void)
+void ADC_start(void)
 {
     // Start the ADC conversion
-    ADC1_Start();
+    ADC_LL_start();
 }
 
 /**
@@ -63,10 +61,10 @@ void ADC_Start(void)
  * to halt conversions before deinitializing the ADC or when no longer needed.
  *
  */
-void ADC_Stop(void)
+void ADC_stop(void)
 {
     // Stop the ADC conversion
-    ADC1_Stop();
+    ADC_LL_stop();
 }
 
 /**
@@ -75,9 +73,9 @@ void ADC_Stop(void)
  *
  * @param data Pointer to store the converted value.
  */
-uint32_t ADC_Read(uint32_t *data)
+uint32_t ADC_read(uint32_t *data)
 {
-    *data = ADC_LL_Read(data);
+    *data = ADC_LL_read(data);
 
     return *data;
 }

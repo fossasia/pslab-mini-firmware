@@ -78,7 +78,7 @@ int main(void) // NOLINT
 
 #define ADC_STRING_SIZE 26 // Size for ADC value string
     // Initialize ADC
-    ADC_Init();
+    ADC_init();
 
     /* Basic UART/USB/LED example:
      * - Register callbacks for both UART and USB
@@ -102,7 +102,7 @@ int main(void) // NOLINT
             if (strcmp((char *)buf, "Hello") == 0) {
                 uint32_t adc_value = 0;
                 uint32_t temp = 0;
-                adc_value = ADC_Read(&temp);
+                adc_value = ADC_read(&temp);
                 // Convert ADC value to string and send it
                 char adc_str[ADC_STRING_SIZE];
                 (void)snprintf(
