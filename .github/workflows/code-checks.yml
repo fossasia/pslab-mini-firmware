@@ -16,14 +16,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install clang-format
+      - name: Install clang-format & clang-tidy
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-format
+          sudo apt-get install -y clang-format clang-tidy gcc-arm-none-eabi libnewlib-arm-none-eabi
 
       - name: Format code
         run: |
-          mkdir build
+          mkdir -p build
           cd build
           cmake ..
           cmake --build . --target check-format
+
+      - name: Lint code
+        run: |
+          mkdir -p build
+          cd build
+          cmake ..
+          cmake --build . --target lint
