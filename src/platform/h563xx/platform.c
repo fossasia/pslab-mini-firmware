@@ -56,9 +56,9 @@ enum { SI_PREFIX_MEGA = 1000000U }; // 1 Mega = 10^6
  *
  * @return None
  */
-static void system_clock_config(
-    void
-) // NOLINT: readability-function-cognitive-complexity
+
+// NOLINTNEXTLINE: readability-function-cognitive-complexity
+static void system_clock_config(void)
 {
     RCC_OscInitTypeDef osc_init = { 0 };
     RCC_ClkInitTypeDef clk_init = { 0 };
