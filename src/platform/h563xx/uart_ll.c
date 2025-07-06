@@ -100,10 +100,8 @@ static UART_Bus get_bus_from_handle(UART_HandleTypeDef *huart)
  * DMA channels, and interrupts for the UART interface.
  *
  * @param huart UART handle
- */
-void HAL_UART_MspInit(
-    UART_HandleTypeDef *huart
-) // NOLINT: readability-function-cognitive-complexity
+ */ // NOLINTNEXTLINE: readability-function-cognitive-complexity
+void HAL_UART_MspInit(UART_HandleTypeDef *huart)
 {
     GPIO_InitTypeDef gpio_init = { 0 };
 

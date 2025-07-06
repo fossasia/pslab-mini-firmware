@@ -142,8 +142,8 @@ static size_t get_unique_id(uint8_t id[])
 {
     // The ID consists of three 32-bit words, unique to each individual MCU,
     // stored at UID_BASE. They are concatenated to form a 96-bit identifier.
-    uint32_t volatile *stm32_uuid = (uint32_t volatile *)(uintptr_t)
-        UID_BASE; // NOLINT: performance-no-int-to-ptr
+    // NOLINTNEXTLINE: performance-no-int-to-ptr
+    uint32_t volatile *stm32_uuid = (uint32_t volatile *)(uintptr_t)UID_BASE;
     uint32_t *id32 = (uint32_t *)id;
     uint8_t const len = 12;
 
