@@ -77,6 +77,7 @@ if(CLANG_TIDY)
         --extra-arg=-isystem${CMAKE_SOURCE_DIR}/lib/STM32H5_CMSIS_HAL-1.5.0/Drivers/STM32H5xx_HAL_Driver/Inc/Legacy
         --extra-arg=-isystem${CMAKE_SOURCE_DIR}/lib/tinyusb-0.18.0/src
         --extra-arg-before=-Qunused-arguments
+        --warnings-as-errors
         ${ALL_C_SOURCE_FILES}
         COMMENT "Linting code with clang-tidy"
         VERBATIM
