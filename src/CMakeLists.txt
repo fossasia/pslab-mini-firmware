@@ -65,17 +65,21 @@ if(CLANG_TIDY)
         endif(NOT EXISTS ${ARM_INCLUDE_DIR})
     endif(ARM_SYSROOT)
 
-    set(_clang_tidy_cmd
-        clang-tidy
+    add_custom_target(lint
+        COMMAND ${CLANG_TIDY}
+        --quiet
+        -p=${CMAKE_BINARY_DIR}
         --extra-arg=--target=arm-none-eabi
         --extra-arg=-isystem${ARM_INCLUDE_DIR}
+        --extra-arg=-isystem${CMAKE_SOURCE_DIR}/lib/STM32H5_CMSIS_HAL-1.5.0/Drivers/CMSIS/Device/ST/STM32H5xx/Include
+        --extra-arg=-isystem${CMAKE_SOURCE_DIR}/lib/STM32H5_CMSIS_HAL-1.5.0/Drivers/CMSIS/Include
+        --extra-arg=-isystem${CMAKE_SOURCE_DIR}/lib/STM32H5_CMSIS_HAL-1.5.0/Drivers/STM32H5xx_HAL_Driver/Inc
+        --extra-arg=-isystem${CMAKE_SOURCE_DIR}/lib/STM32H5_CMSIS_HAL-1.5.0/Drivers/STM32H5xx_HAL_Driver/Inc/Legacy
+        --extra-arg=-isystem${CMAKE_SOURCE_DIR}/lib/tinyusb-0.18.0/src
         --extra-arg-before=-Qunused-arguments
-    )
-
-    set_target_properties(pslab-mini-firmware
-        PROPERTIES
-            C_CLANG_TIDY
-            "${_clang_tidy_cmd}"
+        ${ALL_C_SOURCE_FILES}
+        COMMENT "Linting code with clang-tidy"
+        VERBATIM
     )
 endif(CLANG_TIDY)
 
