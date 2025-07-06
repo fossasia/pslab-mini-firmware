@@ -326,7 +326,8 @@ uint32_t USB_write(USB_Handle *handle, uint8_t const *buf, uint32_t sz)
  * @brief Set RX callback to be triggered when threshold bytes are available.
  *
  * @param handle Pointer to USB handle structure
- * @param callback Function to call when threshold is reached (nullptr to disable)
+ * @param callback Function to call when threshold is reached (nullptr to
+ *                 disable)
  * @param threshold Number of bytes that must be available to trigger callback
  */
 void USB_set_rx_callback(

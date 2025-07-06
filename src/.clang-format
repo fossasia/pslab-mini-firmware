@@ -52,4 +52,7 @@ InsertTrailingCommas: Wrapped
 
 AllowShortLoopsOnASingleLine: true
 
+# Disable alignment of trailing comments
+AlignTrailingComments: false
+
 BitFieldColonSpacing: Before

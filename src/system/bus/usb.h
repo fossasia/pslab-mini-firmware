@@ -65,10 +65,7 @@ typedef struct USB_Handle USB_Handle;
  * @param handle Pointer to USB handle structure
  * @param bytes_available Number of bytes currently available in RX buffer.
  */
-typedef void (*USB_RxCallback)(
-    USB_Handle *handle,
-    uint32_t bytes_available
-);
+typedef void (*USB_RxCallback)(USB_Handle *handle, uint32_t bytes_available);
 
 /**
  * @brief Get the number of available USB interfaces.
@@ -86,8 +83,8 @@ size_t USB_get_interface_count(void);
  * @param interface USB interface to initialize (0-based index, currently only 0
  * is supported)
  * @param rx_buffer Pointer to pre-allocated RX circular buffer
- * @return Pointer to USB handle on success, nullptr on failure (including invalid
- * interface number)
+ * @return Pointer to USB handle on success, nullptr on failure (including
+ *         invalid interface number)
  */
 USB_Handle *USB_init(size_t interface, BUS_CircBuffer *rx_buffer);
 
@@ -147,7 +144,8 @@ uint32_t USB_write(USB_Handle *handle, uint8_t const *buf, uint32_t sz);
  * @brief Set RX callback to be triggered when threshold bytes are available.
  *
  * @param handle Pointer to USB handle structure
- * @param callback Function to call when threshold is reached (nullptr to disable)
+ * @param callback Function to call when threshold is reached (nullptr to
+ * disable)
  * @param threshold Number of bytes that must be available to trigger callback
  */
 void USB_set_rx_callback(
