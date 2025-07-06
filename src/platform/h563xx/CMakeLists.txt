@@ -1,5 +1,6 @@
 target_sources(pslab-platform
     PRIVATE
+        adc_ll.c
         led_ll.c
         platform.c
         uart_ll.c
@@ -29,6 +30,7 @@ target_link_libraries(pslab-platform
         CMSIS::STM32::H5
         tinyusb
     PRIVATE
+        HAL::STM32::H5::ADCEx
         HAL::STM32::H5::CORTEX
         HAL::STM32::H5::DMAEx
         HAL::STM32::H5::ICACHE
@@ -39,4 +41,5 @@ target_link_libraries(pslab-platform
     # pslab-platform provides newlib for malloc etc.
     INTERFACE
         STM32::NoSys
+        STM32::Nano
 )

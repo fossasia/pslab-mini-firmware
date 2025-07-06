@@ -3,9 +3,11 @@
  *****************************************************************************/
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "adc.h"
 #include "bus.h"
 #include "led.h"
 #include "system.h"
@@ -74,6 +76,10 @@ int main(void) // NOLINT
     UART_set_rx_callback(huart, uart_cb, CB_THRESHOLD);
     USB_set_rx_callback(husb, usb_cb, CB_THRESHOLD);
 
+#define ADC_STRING_SIZE 26 // Size for ADC value string
+    // Initialize ADC
+    ADC_init();
+
     /* Basic UART/USB/LED example:
      * - Register callbacks for both UART and USB
      * - Process incoming bytes when callbacks are triggered
@@ -94,6 +100,19 @@ int main(void) // NOLINT
             buf[bytes_read] = '\0';
 
             if (strcmp((char *)buf, "Hello") == 0) {
+                uint32_t adc_value = 0;
+                uint32_t temp = 0;
+                adc_value = ADC_read(&temp);
+                // Convert ADC value to string and send it
+                char adc_str[ADC_STRING_SIZE];
+                (void)snprintf(
+                    adc_str,
+                    sizeof(adc_str),
+                    "\r\nADC_Value:%lu\r\n",
+                    (unsigned long)adc_value
+                );
+                UART_write(huart, (uint8_t *)adc_str, strlen(adc_str));
+                // Send "World" after ADC value
                 UART_write(huart, (uint8_t *)"World", CB_THRESHOLD);
             } else {
                 UART_write(huart, (uint8_t *)buf, bytes_read);
