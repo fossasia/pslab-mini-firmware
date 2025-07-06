@@ -56,7 +56,9 @@ enum { SI_PREFIX_MEGA = 1000000U }; // 1 Mega = 10^6
  *
  * @return None
  */
-static void system_clock_config(void)  // NOLINT: readability-function-cognitive-complexity
+static void system_clock_config(
+    void
+) // NOLINT: readability-function-cognitive-complexity
 {
     RCC_OscInitTypeDef osc_init = { 0 };
     RCC_ClkInitTypeDef clk_init = { 0 };
@@ -70,17 +72,17 @@ static void system_clock_config(void)  // NOLINT: readability-function-cognitive
     /* Initializes the RCC Oscillators according to the specified parameters
      * in the RCC_OscInitTypeDef structure.
      */
-    osc_init.OscillatorType =
-        RCC_OSCILLATORTYPE_HSE | RCC_OSCILLATORTYPE_HSI48;
+    osc_init.OscillatorType = RCC_OSCILLATORTYPE_HSE | RCC_OSCILLATORTYPE_HSI48;
     osc_init.HSEState = RCC_HSE_BYPASS;
     osc_init.HSI48State = RCC_HSI48_ON;
     osc_init.PLL.PLLState = RCC_PLL_ON;
     osc_init.PLL.PLLSource = RCC_PLL1_SOURCE_HSE;
-    osc_init.PLL.PLLM = 4;   // 8 MHz / 4 = 2 MHz input
-    osc_init.PLL.PLLN = SYSTEM_CLOCK_FREQ / SI_PREFIX_MEGA; // 2 MHz * 250 = 500 MHz VCO
-    osc_init.PLL.PLLP = 2;   // 500 MHz / 2 = 250 MHz system clock
-    osc_init.PLL.PLLQ = 2;   // 500 MHz / 2 = 250 MHz peripheral clock
-    osc_init.PLL.PLLR = 2;   // 500 MHz / 2 = 250 MHz peripheral clock
+    osc_init.PLL.PLLM = 4; // 8 MHz / 4 = 2 MHz input
+    osc_init.PLL.PLLN =
+        SYSTEM_CLOCK_FREQ / SI_PREFIX_MEGA; // 2 MHz * 250 = 500 MHz VCO
+    osc_init.PLL.PLLP = 2; // 500 MHz / 2 = 250 MHz system clock
+    osc_init.PLL.PLLQ = 2; // 500 MHz / 2 = 250 MHz peripheral clock
+    osc_init.PLL.PLLR = 2; // 500 MHz / 2 = 250 MHz peripheral clock
     osc_init.PLL.PLLRGE = RCC_PLL1_VCIRANGE_1;
     osc_init.PLL.PLLVCOSEL = RCC_PLL1_VCORANGE_WIDE;
     osc_init.PLL.PLLFRACN = 0;
@@ -97,8 +99,8 @@ static void system_clock_config(void)  // NOLINT: readability-function-cognitive
 
     /* Initializes the CPU, AHB and APB buses clocks. */
     clk_init.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
-                                  RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2 |
-                                  RCC_CLOCKTYPE_PCLK3;
+                         RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2 |
+                         RCC_CLOCKTYPE_PCLK3;
     clk_init.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
     clk_init.AHBCLKDivider = RCC_SYSCLK_DIV1;
     clk_init.APB1CLKDivider = RCC_HCLK_DIV1;

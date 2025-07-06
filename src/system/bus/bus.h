@@ -35,11 +35,7 @@ typedef struct {
  * @param buffer Memory area to use for the buffer
  * @param size Size of the buffer (should be a power of 2)
  */
-void circular_buffer_init(
-    BUS_CircBuffer *cb,
-    uint8_t *buffer,
-    uint32_t size
-);
+void circular_buffer_init(BUS_CircBuffer *cb, uint8_t *buffer, uint32_t size);
 
 /**
  * @brief Check if circular buffer is empty
@@ -112,11 +108,7 @@ uint32_t circular_buffer_write(
  * @param len Maximum number of bytes to read
  * @return Number of bytes actually read
  */
-uint32_t circular_buffer_read(
-    BUS_CircBuffer *cb,
-    uint8_t *data,
-    uint32_t len
-);
+uint32_t circular_buffer_read(BUS_CircBuffer *cb, uint8_t *data, uint32_t len);
 
 #ifdef __cplusplus
 }

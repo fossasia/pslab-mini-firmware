@@ -140,11 +140,7 @@ uint32_t circular_buffer_write(
  * @param len Maximum number of bytes to read
  * @return Number of bytes actually read
  */
-uint32_t circular_buffer_read(
-    BUS_CircBuffer *cb,
-    uint8_t *data,
-    uint32_t len
-)
+uint32_t circular_buffer_read(BUS_CircBuffer *cb, uint8_t *data, uint32_t len)
 {
     uint32_t bytes_read = 0;
 

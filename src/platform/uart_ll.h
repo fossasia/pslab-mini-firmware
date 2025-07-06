@@ -113,9 +113,6 @@ void UART_LL_set_rx_complete_callback(
  * @param bus UART bus instance
  * @param callback Callback function to call when idle line is detected
  */
-void UART_LL_set_idle_callback(
-    UART_Bus bus,
-    UART_LL_IdleCallback callback
-);
+void UART_LL_set_idle_callback(UART_Bus bus, UART_LL_IdleCallback callback);
 
 #endif /* PSLAB_UART_LL_H */

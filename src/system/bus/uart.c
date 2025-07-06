@@ -348,11 +348,7 @@ uint32_t UART_write(
  *
  * @return Number of bytes actually read.
  */
-uint32_t UART_read(
-    UART_Handle *handle,
-    uint8_t *const rxbuf,
-    uint32_t const sz
-)
+uint32_t UART_read(UART_Handle *handle, uint8_t *const rxbuf, uint32_t const sz)
 {
     if (!handle || !handle->initialized || rxbuf == nullptr || sz == 0) {
         return 0;
@@ -428,7 +424,8 @@ bool UART_tx_busy(UART_Handle *handle)
  * @brief Set RX callback to be triggered when threshold bytes are available.
  *
  * @param handle Pointer to UART handle structure.
- * @param callback Function to call when threshold is reached (nullptr to disable)
+ * @param callback Function to call when threshold is reached (nullptr to
+ * disable)
  * @param threshold Number of bytes that must be available to trigger callback
  */
 void UART_set_rx_callback(

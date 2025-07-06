@@ -101,7 +101,9 @@ static UART_Bus get_bus_from_handle(UART_HandleTypeDef *huart)
  *
  * @param huart UART handle
  */
-void HAL_UART_MspInit(UART_HandleTypeDef *huart) // NOLINT: readability-function-cognitive-complexity
+void HAL_UART_MspInit(
+    UART_HandleTypeDef *huart
+) // NOLINT: readability-function-cognitive-complexity
 {
     GPIO_InitTypeDef gpio_init = { 0 };
 

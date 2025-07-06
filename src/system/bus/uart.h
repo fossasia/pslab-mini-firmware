@@ -71,10 +71,7 @@ typedef struct UART_Handle UART_Handle;
  * @param handle Pointer to UART handle structure
  * @param bytes_available Number of bytes currently available in RX buffer.
  */
-typedef void (*UART_RxCallback)(
-    UART_Handle *handle,
-    uint32_t bytes_available
-);
+typedef void (*UART_RxCallback)(UART_Handle *handle, uint32_t bytes_available);
 
 /**
  * @brief Get the number of available UART bus instances.
@@ -92,8 +89,8 @@ size_t UART_get_bus_count(void);
  * @param bus UART bus instance to initialize (0-based index)
  * @param rx_buffer Pointer to pre-allocated RX circular buffer
  * @param tx_buffer Pointer to pre-allocated TX circular buffer
- * @return Pointer to UART handle on success, nullptr on failure (including invalid
- * bus number)
+ * @return Pointer to UART handle on success, nullptr on failure (including
+ *         invalid bus number)
  */
 UART_Handle *UART_init(
     size_t bus,
@@ -151,7 +148,8 @@ uint32_t UART_rx_available(UART_Handle *handle);
  * @brief Set RX callback to be triggered when threshold bytes are available.
  *
  * @param handle Pointer to UART handle structure
- * @param callback Function to call when threshold is reached (nullptr to disable)
+ * @param callback Function to call when threshold is reached (nullptr to
+ * disable)
  * @param threshold Number of bytes that must be available to trigger callback
  */
 void UART_set_rx_callback(

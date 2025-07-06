@@ -54,9 +54,10 @@ static void crs_enable(void)
     crs_init.ReloadValue = __HAL_RCC_CRS_RELOADVALUE_CALCULATE(
         USB_CRS_FRQ_TARGET, USB_CRS_FRQ_SYNC
     );
-    enum {PCNT = 100 };
+    enum { PCNT = 100 };
     crs_init.ErrorLimitValue =
-        (USB_CRS_FRQ_TARGET / USB_CRS_FRQ_SYNC * USB_CRS_TRIM_STEP / PCNT / PCNT / 2);
+        (USB_CRS_FRQ_TARGET / USB_CRS_FRQ_SYNC * USB_CRS_TRIM_STEP / PCNT /
+         PCNT / 2);
     crs_init.HSI48CalibrationValue = USB_CRS_TRIM_DEFAULT;
 
     HAL_RCCEx_CRSConfig(&crs_init);
@@ -141,7 +142,8 @@ static size_t get_unique_id(uint8_t id[])
 {
     // The ID consists of three 32-bit words, unique to each individual MCU,
     // stored at UID_BASE. They are concatenated to form a 96-bit identifier.
-    uint32_t volatile *stm32_uuid = (uint32_t volatile *)(uintptr_t)UID_BASE; // NOLINT: performance-no-int-to-ptr
+    uint32_t volatile *stm32_uuid = (uint32_t volatile *)(uintptr_t)
+        UID_BASE; // NOLINT: performance-no-int-to-ptr
     uint32_t *id32 = (uint32_t *)id;
     uint8_t const len = 12;
 
@@ -190,11 +192,7 @@ uint32_t USB_LL_tx_available(USB_Bus const interface_id)
     return tud_cdc_n_write_available(interface_id);
 }
 
-uint32_t USB_LL_read(
-    USB_Bus const interface_id,
-    uint8_t *buf,
-    uint32_t bufsize
-)
+uint32_t USB_LL_read(USB_Bus const interface_id, uint8_t *buf, uint32_t bufsize)
 {
     return tud_cdc_n_read(interface_id, buf, bufsize);
 }
