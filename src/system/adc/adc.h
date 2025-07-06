@@ -20,7 +20,6 @@
 #include <stdint.h>
 
 #include "adc_ll.h"
-#include "bus.h"
 
 #ifdef __cplusplus
 extern "C" {

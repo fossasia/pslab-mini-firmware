@@ -23,8 +23,6 @@
 
 ADC_HandleTypeDef hadc = { 0 };
 
-DMA_HandleTypeDef hdma_adc1 = { 0 };
-
 ADC_ChannelConfTypeDef sConfig = { 0 };
 
 /**
@@ -51,33 +49,6 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    // Configure DMA for ADC1
-    hdma_adc1.Instance = GPDMA1_Channel6;
-    hdma_adc1.Init.Request = GPDMA1_REQUEST_ADC1;
-    hdma_adc1.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
-    hdma_adc1.Init.Direction = DMA_PERIPH_TO_MEMORY;
-    hdma_adc1.Init.SrcInc = DMA_SINC_FIXED;
-    hdma_adc1.Init.DestInc = DMA_DINC_INCREMENTED;
-    hdma_adc1.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_WORD;
-    hdma_adc1.Init.DestDataWidth = DMA_DEST_DATAWIDTH_WORD;
-    hdma_adc1.Init.Priority = DMA_LOW_PRIORITY_HIGH_WEIGHT;
-    hdma_adc1.Init.SrcBurstLength = 1;
-    hdma_adc1.Init.DestBurstLength = 1;
-    hdma_adc1.Init.TransferAllocatedPort =
-        (DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT0);
-    hdma_adc1.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
-    hdma_adc1.Init.Mode = DMA_NORMAL;
-    HAL_DMA_Init(&hdma_adc1);
-
-    // Link DMA to ADC
-    __HAL_LINKDMA(hadc, DMA_Handle, hdma_adc1);
-
-    HAL_NVIC_SetPriority(ADC1_IRQn, 4, 1);
-    HAL_NVIC_EnableIRQ(ADC1_IRQn);
-
-    HAL_NVIC_SetPriority(GPDMA1_Channel6_IRQn, 4, 0);
-    HAL_NVIC_EnableIRQ(GPDMA1_Channel6_IRQn);
 }
 
 /**
@@ -104,13 +75,13 @@ void ADC1_LL_Init(void)
     hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
     hadc.Init.ExternalTrigConv = ADC_SOFTWARE_START;
 
+    HAL_ADC_Init(&hadc);
+
     // Configure ADC channel
     sConfig.Channel = ADC_CHANNEL_0; // ADC1_IN0
     sConfig.Rank = ADC_REGULAR_RANK_1;
     sConfig.SamplingTime = ADC_SAMPLETIME_640CYCLES_5;
     HAL_ADC_ConfigChannel(&hadc, &sConfig);
-
-    HAL_ADC_Init(&hadc);
 }
 
 /**
@@ -162,22 +133,4 @@ uint32_t ADC_LL_Read(uint32_t *buffer)
     HAL_ADC_Stop(&hadc); // Stop the ADC conversion
 
     return *buffer; // Return the converted value
-}
-
-/**
- * @brief ADC interrupt handler.
- */
-void ADC1_IRQHandler(void)
-{
-    // Handle ADC interrupt
-    HAL_ADC_IRQHandler(&hadc);
-}
-
-/**
- * @brief DMA interrupt handler for ADC.
- */
-void GPDMA1_Channel6_IRQHandler(void)
-{
-    // Handle DMA interrupt for ADC
-    HAL_DMA_IRQHandler(&hdma_adc1);
 }

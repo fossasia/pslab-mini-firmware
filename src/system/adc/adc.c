@@ -17,7 +17,6 @@
 
 #include "adc.h"
 #include "adc_ll.h"
-#include "bus.h"
 
 /**
  * @brief Initializes the ADC peripheral.

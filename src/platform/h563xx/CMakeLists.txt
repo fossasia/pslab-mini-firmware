@@ -41,4 +41,5 @@ target_link_libraries(pslab-platform
     # pslab-platform provides newlib for malloc etc.
     INTERFACE
         STM32::NoSys
+        STM32::Nano
 )
