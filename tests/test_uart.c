@@ -28,7 +28,7 @@ void setUp(void)
 void tearDown(void)
 {
     // Clean up UART handle if it exists
-    if (test_handle != NULL) {
+    if (test_handle != nullptr) {
         // Set up expectations for deinit - use Ignore to be flexible
         UART_LL_deinit_Ignore();
         UART_LL_set_idle_callback_Ignore();
@@ -36,7 +36,7 @@ void tearDown(void)
         UART_LL_set_tx_complete_callback_Ignore();
         
         UART_deinit(test_handle);
-        test_handle = NULL;
+        test_handle = nullptr;
     }
     
     // Clean up mocks after each test
@@ -68,8 +68,8 @@ void test_UART_init_null_rx_buffer(void)
     size_t bus = 0;
     UART_Handle *handle;
     
-    // Act - pass NULL rx_buffer
-    handle = UART_init(bus, NULL, &tx_buffer);
+    // Act - pass nullptr rx_buffer
+    handle = UART_init(bus, nullptr, &tx_buffer);
     
     // Assert
     TEST_ASSERT_NULL(handle);
@@ -81,8 +81,8 @@ void test_UART_init_null_tx_buffer(void)
     size_t bus = 0;
     UART_Handle *handle;
     
-    // Act - pass NULL tx_buffer
-    handle = UART_init(bus, &rx_buffer, NULL);
+    // Act - pass nullptr tx_buffer
+    handle = UART_init(bus, &rx_buffer, nullptr);
     
     // Assert
     TEST_ASSERT_NULL(handle);
@@ -225,13 +225,13 @@ void test_UART_deinit_with_valid_handle(void)
     
     // Set up expectations for deinit - these MUST be called
     UART_LL_deinit_Expect(UART_BUS_0);
-    UART_LL_set_idle_callback_Expect(UART_BUS_0, NULL);
-    UART_LL_set_rx_complete_callback_Expect(UART_BUS_0, NULL);
-    UART_LL_set_tx_complete_callback_Expect(UART_BUS_0, NULL);
+    UART_LL_set_idle_callback_Expect(UART_BUS_0, nullptr);
+    UART_LL_set_rx_complete_callback_Expect(UART_BUS_0, nullptr);
+    UART_LL_set_tx_complete_callback_Expect(UART_BUS_0, nullptr);
     
     // Act
     UART_deinit(test_handle);
-    test_handle = NULL; // Manually set to NULL since we're testing explicit deinit
+    test_handle = nullptr; // Manually set to nullptr since we're testing explicit deinit
     
     // Assert - Mock verification happens automatically in tearDown()
 }
