@@ -1,0 +1,19 @@
+# CMock Configuration
+:cmock:
+  :mock_prefix: mock_
+  :when_no_prototypes: :warn
+  :enforce_strict_ordering: false
+  :plugins:
+    - :ignore
+  :treat_as:
+    uint8:    HEX8
+    uint16:   HEX16
+    uint32:   HEX32
+    int8:     INT8
+    int16:    INT16
+    int32:    INT32
+
+:unity:
+  :defines:
+    - UNITY_INCLUDE_DOUBLE
+    - UNITY_SUPPORT_64
