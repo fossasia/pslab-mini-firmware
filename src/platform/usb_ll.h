@@ -27,6 +27,17 @@
 typedef enum { USB_BUS_0 = 0, USB_BUS_COUNT = 1 } USB_Bus;
 
 /**
+ * @brief USB line state change callback
+ *
+ * This function is called when the USB line state changes (DTR/RTS).
+ *
+ * @param interface_id USB bus instance
+ * @param dtr Data Terminal Ready state
+ * @param rts Request To Send state
+ */
+typedef void (*USB_LL_LineStateCallback)(USB_Bus const interface_id, bool dtr, bool rts);
+
+/**
  * @brief Initialize the USB hardware and TinyUSB stack
  *
  * Sets up the MCU's USB hardware and initializes the TinyUSB stack for device
@@ -130,5 +141,16 @@ bool USB_LL_connected(USB_Bus interface_id);
  * @return Number of bytes flushed
  */
 uint32_t USB_LL_tx_flush(USB_Bus interface_id);
+
+/**
+ * @brief Set the USB line state change callback
+ *
+ * This function registers a callback to be called when the USB line state
+ * changes (DTR/RTS).
+ *
+ * @param interface_id USB bus instance
+ * @param callback Callback function to be called on line state change
+ */
+void USB_LL_set_line_state_callback(USB_Bus const interface_id, USB_LL_LineStateCallback callback);
 
 #endif /* PSLAB_USB_LL_H */
