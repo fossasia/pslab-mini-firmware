@@ -25,8 +25,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "tusb.h"
-
 #include "bus.h"
 #include "usb.h"
 #include "usb_ll.h"
@@ -84,12 +82,12 @@ static uint32_t transfer_from_usb_to_buffer(USB_Handle *handle)
         return 0;
     }
 
-    uint32_t available = tud_cdc_n_available(handle->interface_id);
+    uint32_t available = USB_LL_rx_available(handle->interface_id);
     uint32_t transferred = 0;
     uint8_t temp = 0;
 
     while (available > 0 && !circular_buffer_is_full(handle->rx_buffer)) {
-        if (tud_cdc_n_read(handle->interface_id, &temp, 1) == 1) {
+        if (USB_LL_read(handle->interface_id, &temp, 1) == 1) {
             circular_buffer_put(handle->rx_buffer, temp);
             transferred++;
             available--;
@@ -123,6 +121,37 @@ static bool check_rx_callback(USB_Handle *handle)
 
     handle->rx_callback(handle, circular_buffer_available(handle->rx_buffer));
     return true;
+}
+
+/**
+ * @brief Act on USB line state change
+ *
+ * This function is called by the backend USB stack when the USB CDC line state
+ * changes. It detects when DTR (Data Terminal Ready) is de-asserted, which
+ * indicates the host has disconnected, and clears the local buffers to prevent
+ * stale data.
+ *
+ * @param itf USB interface number
+ * @param dtr Data Terminal Ready state
+ * @param rts Request To Send state
+ */
+static void line_state_callback(USB_Bus itf, bool dtr, bool rts)
+{
+    (void)rts; // We're only concerned with DTR
+
+    USB_Handle *handle = get_handle_from_interface(itf);
+    if (!handle || !handle->initialized) {
+        return;
+    }
+
+    // When DTR is de-asserted (goes low), the host has disconnected
+    if (!dtr) {
+        // Reset the circular buffer to clear any pending data
+        circular_buffer_reset(handle->rx_buffer);
+
+        // Reset the TX timeout counter
+        handle->tx_timeout_counter = 0;
+    }
 }
 
 /**
@@ -165,10 +194,8 @@ USB_Handle *USB_init(size_t interface, BUS_CircBuffer *rx_buffer)
     /* Store handle in global array */
     active_handles[interface_id] = handle;
 
-    /* Initialize USB hardware only once (for interface 0) */
-    if (interface_id == 0) {
-        USB_LL_init((USB_Bus)interface_id);
-    }
+    USB_LL_init((USB_Bus)interface_id);
+    USB_LL_set_line_state_callback((USB_Bus)interface_id, line_state_callback);
 
     return handle;
 }
@@ -214,15 +241,15 @@ void USB_task(USB_Handle *handle)
         return;
     }
 
-    tud_task();
+    USB_LL_task(handle->interface_id);
 
     // Nothing to do if not connected
-    if (!tud_cdc_n_connected(handle->interface_id)) {
+    if (!USB_LL_connected(handle->interface_id)) {
         return;
     }
 
     // Transfer any available data from the USB FIFO to our circular buffer
-    if (tud_cdc_n_available(handle->interface_id) > 0) {
+    if (USB_LL_rx_available(handle->interface_id) > 0) {
         transfer_from_usb_to_buffer(handle);
     }
 
@@ -231,11 +258,11 @@ void USB_task(USB_Handle *handle)
 
     // Check if there's data in the TX buffer by comparing available space with
     // total size
-    if (tud_cdc_n_write_available(handle->interface_id) <
-        CFG_TUD_CDC_TX_BUFSIZE) {
+    if (USB_LL_tx_available(handle->interface_id) <
+        USB_LL_tx_bufsize(handle->interface_id)) {
         handle->tx_timeout_counter++;
         if (handle->tx_timeout_counter >= USB_TX_FLUSH_TIMEOUT) {
-            tud_cdc_n_write_flush(handle->interface_id);
+            USB_LL_tx_flush(handle->interface_id);
             handle->tx_timeout_counter = 0;
         }
     } else {
@@ -256,7 +283,7 @@ bool USB_rx_ready(USB_Handle *handle)
         return false;
     }
     return (!circular_buffer_is_empty(handle->rx_buffer) ||
-            tud_cdc_n_available(handle->interface_id) > 0) != 0;
+            USB_LL_rx_available(handle->interface_id) > 0) != 0;
 }
 
 /**
@@ -272,7 +299,7 @@ uint32_t USB_rx_available(USB_Handle *handle)
     }
 
     // Make sure we've transferred any available data to our buffer
-    if (tud_cdc_n_available(handle->interface_id) > 0) {
+    if (USB_LL_rx_available(handle->interface_id) > 0) {
         transfer_from_usb_to_buffer(handle);
     }
 
@@ -294,7 +321,7 @@ uint32_t USB_read(USB_Handle *handle, uint8_t *buf, uint32_t sz)
     }
 
     // Make sure we've transferred any available data to our buffer
-    if (tud_cdc_n_available(handle->interface_id) > 0) {
+    if (USB_LL_rx_available(handle->interface_id) > 0) {
         transfer_from_usb_to_buffer(handle);
     }
 
@@ -319,7 +346,7 @@ uint32_t USB_write(USB_Handle *handle, uint8_t const *buf, uint32_t sz)
     // Reset the timeout counter when new data is written
     handle->tx_timeout_counter = 0;
 
-    return tud_cdc_n_write(handle->interface_id, buf, sz);
+    return USB_LL_write(handle->interface_id, buf, sz);
 }
 
 /**
@@ -358,7 +385,7 @@ uint32_t USB_tx_free_space(USB_Handle *handle)
     if (!handle || !handle->initialized) {
         return 0;
     }
-    return tud_cdc_n_write_available(handle->interface_id);
+    return USB_LL_tx_available(handle->interface_id);
 }
 
 /**
@@ -374,38 +401,6 @@ bool USB_tx_busy(USB_Handle *handle)
     }
     // TinyUSB doesn't have a direct way to check if TX is busy,
     // but we can check if the buffer is non-empty
-    return tud_cdc_n_write_available(handle->interface_id) <
-           CFG_TUD_CDC_TX_BUFSIZE;
-}
-
-/**
- * @brief TinyUSB CDC line state change callback
- *
- * This function is called by the TinyUSB stack when the USB CDC line state
- * changes. It detects when DTR (Data Terminal Ready) is de-asserted, which
- * indicates the host has disconnected, and clears the local buffers to prevent
- * stale data.
- *
- * @param itf USB interface number
- * @param dtr Data Terminal Ready state
- * @param rts Request To Send state
- */
-void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
-{
-    (void)rts; // We're only concerned with DTR
-
-    // Find the handle for this interface
-    USB_Handle *handle = get_handle_from_interface(itf);
-    if (!handle || !handle->initialized) {
-        return;
-    }
-
-    // When DTR is de-asserted (goes low), the host has disconnected
-    if (!dtr) {
-        // Reset the circular buffer to clear any pending data
-        circular_buffer_reset(handle->rx_buffer);
-
-        // Reset the TX timeout counter
-        handle->tx_timeout_counter = 0;
-    }
+    return USB_LL_tx_available(handle->interface_id) <
+           USB_LL_tx_bufsize(handle->interface_id);
 }

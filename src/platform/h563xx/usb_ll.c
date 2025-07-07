@@ -33,6 +33,7 @@ enum { USB_IRQ_PRIO = 5 }; // USB DRD FS IRQ priority
 /* USB instance state tracking */
 typedef struct {
     bool initialized;
+    USB_LL_LineStateCallback line_state_callback;
 } USBInstance;
 
 /* Instance array for future multi-controller support */
@@ -226,4 +227,39 @@ void USB_LL_task(USB_Bus const interface_id)
 bool USB_LL_connected(USB_Bus const interface_id)
 {
     return tud_cdc_n_connected(interface_id);
+}
+
+void USB_LL_set_line_state_callback(
+    USB_Bus const interface_id,
+    USB_LL_LineStateCallback callback
+)
+{
+    if (interface_id < USB_BUS_COUNT) {
+        usb_instances[interface_id].line_state_callback = callback;
+    }
+}
+
+/**
+ * @brief TinyUSB CDC line state change callback
+ *
+ * This function is called by the TinyUSB stack when the USB CDC line state
+ * changes.
+ *
+ * @param itf USB interface number
+ * @param dtr Data Terminal Ready state
+ * @param rts Request To Send state
+ */
+void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
+{
+    if (itf < USB_BUS_COUNT) {
+        USBInstance instance = usb_instances[itf];
+
+        if (!instance.initialized) {
+            return;
+        }
+
+        if (instance.line_state_callback) {
+            instance.line_state_callback(itf, dtr, rts);
+        }
+    }
 }
