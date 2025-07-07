@@ -1,11 +1,13 @@
 include("${CMAKE_CURRENT_SOURCE_DIR}/create_test.cmake")
 
+# Unity test framework
 add_library(unity ${CMAKE_CURRENT_SOURCE_DIR}/unity/src/unity.c)
 target_include_directories(unity PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/unity/src/)
 
+# CMock mocking framework
 add_library(cmock ${CMAKE_CURRENT_SOURCE_DIR}/cmock/src/cmock.c)
 target_include_directories(cmock PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cmock/src/)
-target_link_libraries(cmock PRIVATE unity)
+target_link_libraries(cmock unity)
 
 # Generate mocks for UART dependencies
 cmock_generate_mock(mock_uart_ll ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/uart_ll.h)

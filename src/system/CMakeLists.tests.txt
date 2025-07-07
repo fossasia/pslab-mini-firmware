@@ -1,0 +1,5 @@
+# System layer - test build configuration
+
+# Add subdirectories that contain testable code
+add_subdirectory(bus)
+add_subdirectory(adc)

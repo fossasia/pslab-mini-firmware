@@ -1,8 +1,8 @@
-# Application layer - only built for target
+# ADC subsystem - target build configuration
 
 target_sources(pslab-mini-firmware
     PRIVATE
-        main.c
+        adc.c
 )
 
 target_include_directories(pslab-mini-firmware

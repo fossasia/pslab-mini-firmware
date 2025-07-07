@@ -1,17 +1,7 @@
-add_subdirectory(bus)
-add_subdirectory(adc)
+# System layer build delegation
 
-# Only add sources when not building tests
-if(NOT BUILD_TESTS)
-    target_sources(pslab-mini-firmware
-        PRIVATE
-            led.c
-            system.c
-            stubs.c
-    )
-
-    target_include_directories(pslab-mini-firmware
-        PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-    )
+if(BUILD_TESTS)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.tests.txt)
+else()
+    include(${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.target.txt)
 endif()
