@@ -4,10 +4,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-// Define missing CMock global symbols
-int GlobalExpectCount = 0;
-int GlobalVerifyOrder = 0;
-
 // Test fixtures
 static BUS_CircBuffer rx_buffer;
 static BUS_CircBuffer tx_buffer;
@@ -129,7 +125,7 @@ void test_UART_write_with_valid_handle(void)
 
     // Expect the TX functions to be called when data is available
     UART_LL_tx_busy_ExpectAndReturn(UART_BUS_0, false);
-    UART_LL_start_dma_tx_Ignore();
+    UART_LL_start_dma_tx_Expect(UART_BUS_0, test_data, sizeof(test_data));
 
     // Act
     uint32_t bytes_written = UART_write(test_handle, test_data, sizeof(test_data));
@@ -137,6 +133,36 @@ void test_UART_write_with_valid_handle(void)
     // Assert - Initially buffer should be able to accept data
     TEST_ASSERT_GREATER_OR_EQUAL(4, bytes_written);
     TEST_ASSERT_LESS_OR_EQUAL(sizeof(test_data), bytes_written);
+}
+
+void test_UART_write_with_full_buffer(void)
+{
+    // Arrange
+    size_t bus = 0;
+    uint8_t test_data[] = {0x01, 0x02, 0x03, 0x04};
+
+    // Set up expectations for init
+    UART_LL_init_Expect(UART_BUS_0, rx_data, 256);
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    test_handle = UART_init(bus, &rx_buffer, &tx_buffer);
+
+    // Assert that init succeeded
+    TEST_ASSERT_NOT_NULL(test_handle);
+
+    // Advance TX buffer head to simulate a full buffer
+    tx_buffer.head = tx_buffer.size - 1;
+
+    // Simulate TX busy state
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_0, true);
+    
+    // Act
+    uint32_t bytes_written = UART_write(test_handle, test_data, sizeof(test_data));
+
+    // Assert - Should return 0 since buffer is full
+    TEST_ASSERT_EQUAL(0, bytes_written);
 }
 
 void test_UART_write_with_null_handle(void)
@@ -234,4 +260,13 @@ void test_UART_deinit_with_valid_handle(void)
     test_handle = nullptr; // Manually set to nullptr since we're testing explicit deinit
     
     // Assert - Mock verification happens automatically in tearDown()
+}
+
+void test_UART_deinit_with_null_handle(void)
+{
+    // Act
+    UART_deinit(nullptr);
+    
+    // Assert - No crash, no errors
+    TEST_PASS();
 }
