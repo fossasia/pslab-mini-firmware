@@ -229,7 +229,10 @@ bool USB_LL_connected(USB_Bus const interface_id)
     return tud_cdc_n_connected(interface_id);
 }
 
-void USB_LL_set_line_state_callback(USB_Bus const interface_id, USB_LL_LineStateCallback callback)
+void USB_LL_set_line_state_callback(
+    USB_Bus const interface_id,
+    USB_LL_LineStateCallback callback
+)
 {
     if (interface_id < USB_BUS_COUNT) {
         usb_instances[interface_id].line_state_callback = callback;

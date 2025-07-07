@@ -135,7 +135,7 @@ static bool check_rx_callback(USB_Handle *handle)
  * @param dtr Data Terminal Ready state
  * @param rts Request To Send state
  */
-static void line_state_callback(uint8_t itf, bool dtr, bool rts)
+static void line_state_callback(USB_Bus itf, bool dtr, bool rts)
 {
     (void)rts; // We're only concerned with DTR
 
