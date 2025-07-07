@@ -1,0 +1,6 @@
+[submodule "tests/unity"]
+	path = tests/unity
+	url = https://github.com/ThrowTheSwitch/Unity
+[submodule "tests/cmock"]
+	path = tests/cmock
+	url = https://github.com/ThrowTheSwitch/CMock

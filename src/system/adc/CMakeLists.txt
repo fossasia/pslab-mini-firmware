@@ -1,9 +1,7 @@
-target_sources(pslab-mini-firmware
-    PRIVATE
-        adc.c
-)
+# ADC subsystem build delegation
 
-target_include_directories(pslab-mini-firmware
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-)
+if(BUILD_TESTS)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.tests.txt)
+else()
+    include(${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.target.txt)
+endif()

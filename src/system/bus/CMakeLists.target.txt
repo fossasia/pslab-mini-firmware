@@ -1,8 +1,10 @@
-# Application layer - only built for target
+# Bus subsystem - target build configuration
 
 target_sources(pslab-mini-firmware
     PRIVATE
-        main.c
+        bus.c
+        uart.c
+        usb.c
 )
 
 target_include_directories(pslab-mini-firmware

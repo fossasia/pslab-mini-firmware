@@ -1,0 +1,12 @@
+# ADC subsystem - test build configuration
+
+# Create a library for testable ADC components
+add_library(pslab-adc STATIC
+    adc.c
+)
+
+target_include_directories(pslab-adc
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/src/platform  # For platform interface headers
+)

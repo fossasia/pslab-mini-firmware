@@ -1,3 +1,5 @@
+# Platform abstraction layer - only built for target
+
 # Create platform library
 add_library(pslab-platform STATIC)
 
