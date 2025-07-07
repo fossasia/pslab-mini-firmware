@@ -15,6 +15,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      
+      - name: Init submodules
+        run: |
+          git submodule update --init --recursive
 
       - name: Run tests
         run: |
