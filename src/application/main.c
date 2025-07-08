@@ -103,15 +103,7 @@ int main(void) // NOLINT
                 uint32_t adc_value = 0;
                 uint32_t temp = 0;
                 adc_value = ADC_read(&temp);
-                // Convert ADC value to string and send it
-                char adc_str[ADC_STRING_SIZE];
-                (void)snprintf(
-                    adc_str,
-                    sizeof(adc_str),
-                    "\r\nADC_Value:%lu\r\n",
-                    (unsigned long)adc_value
-                );
-                UART_write(huart, (uint8_t *)adc_str, strlen(adc_str));
+                printf("\r\nADC_Value:%lu\r\n", (unsigned long)adc_value);
                 // Send "World" after ADC value
                 UART_write(huart, (uint8_t *)"World", CB_THRESHOLD);
             } else {
