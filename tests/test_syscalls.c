@@ -109,6 +109,19 @@ void test_write_r_invalid_fd(void)
     TEST_ASSERT_EQUAL(EBADF, test_reent._errno);
 }
 
+void test_read_r_null_buffer(void)
+{
+    // Arrange
+    size_t buffer_size = 32;
+
+    // Act
+    _ssize_t result = _read_r(&test_reent, STDIN_FILENO, nullptr, buffer_size);
+
+    // Assert
+    TEST_ASSERT_EQUAL(-1, result);
+    TEST_ASSERT_EQUAL(EFAULT, test_reent._errno);
+}
+
 // Test _read_r function for stdin
 void test_read_r_stdin_success(void)
 {
