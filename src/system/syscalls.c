@@ -60,10 +60,10 @@ static uint8_t rx_data[SYSCALLS_UART_RX_BUFFER_SIZE];
 static uint8_t tx_data[SYSCALLS_UART_TX_BUFFER_SIZE];
 static bool uart_initialized = false;
 
-static int check_args(void const *buf, size_t cnt)
+static int check_args(struct _reent *r, void const *buf, size_t cnt)
 {
     if (buf == nullptr) {
-        errno = EFAULT;
+        r->_errno = EFAULT;
         return -1;
     }
 
@@ -113,10 +113,8 @@ void syscalls_uart_deinit(void)
  */
 _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t cnt)
 {
-    (void)r;
-
     // Check for invalid parameters
-    int ret = check_args(buf, cnt);
+    int ret = check_args(r, buf, cnt);
     if (ret < 1) {
         return ret;
     }
@@ -128,7 +126,7 @@ _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t cnt)
         }
 
         if (uart_handle == nullptr) {
-            errno = EIO;
+            r->_errno = EIO;
             return -1;
         }
 
@@ -140,7 +138,7 @@ _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t cnt)
     (void)fd;
 #endif
 
-    errno = EBADF;
+    r->_errno = EBADF;
     return -1;
 }
 
@@ -152,10 +150,8 @@ _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t cnt)
  */
 _ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t cnt)
 {
-    (void)r;
-
     // Check for invalid parameters
-    int ret = check_args(buf, cnt);
+    int ret = check_args(r, buf, cnt);
     if (ret < 1) {
         return ret;
     }
@@ -167,7 +163,7 @@ _ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t cnt)
         }
 
         if (uart_handle == nullptr) {
-            errno = EIO;
+            r->_errno = EIO;
             return -1;
         }
 
@@ -177,7 +173,7 @@ _ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t cnt)
 
         // If no bytes were written, it likely means the buffer is full
         if (bytes_written == 0 && cnt > 0) {
-            errno = EAGAIN;
+            r->_errno = EAGAIN;
             return -1;
         }
 
@@ -187,7 +183,7 @@ _ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t cnt)
     (void)fd;
 #endif
 
-    errno = EBADF;
+    r->_errno = EBADF;
     return -1;
 }
 
@@ -199,10 +195,8 @@ _ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t cnt)
  */
 int _fstat_r(struct _reent *r, int fd, struct stat *st)
 {
-    (void)r;
-
     if (st == nullptr) {
-        errno = EFAULT;
+        r->_errno = EFAULT;
         return -1;
     }
 
@@ -217,7 +211,7 @@ int _fstat_r(struct _reent *r, int fd, struct stat *st)
     }
 
     // For other file descriptors, return error
-    errno = EBADF;
+    r->_errno = EBADF;
     return -1;
 }
 
@@ -229,14 +223,12 @@ int _fstat_r(struct _reent *r, int fd, struct stat *st)
  */
 int _isatty_r(struct _reent *r, int fd)
 {
-    (void)r;
-
     // stdin, stdout, stderr are treated as terminals
     if (fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO) {
         return 1;
     }
 
     // Other file descriptors are not terminals
-    errno = ENOTTY;
+    r->_errno = ENOTTY;
     return 0;
 }
