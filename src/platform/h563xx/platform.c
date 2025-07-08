@@ -19,11 +19,22 @@
  * @author PSLab Team
  * @date 2025
  */
-
+#include "platform.h"
 #include "stm32h5xx_hal.h"
 
 enum { SYSTEM_CLOCK_FREQ = 250000000U }; // 250 MHz
 enum { SI_PREFIX_MEGA = 1000000U }; // 1 Mega = 10^6
+
+// Define the clock types used in the platform
+// Each type represents a specific clock source or bus clock
+typedef enum {
+    SYS_CLK,
+    AHB_CLK,
+    APB1_CLK,
+    APB2_CLK,
+    APB3_CLK,
+} CLKType;
+
 /**
  * @brief Configure the system clock to 250 MHz
  *
@@ -175,4 +186,47 @@ void SysTick_Handler(void)
 {
     HAL_IncTick();
     HAL_SYSTICK_IRQHandler();
+}
+
+/**
+ * @brief Get the clock speed for a specific clock type
+ *
+ * This function retrieves the clock speed for the specified clock type.
+ * It can be used to determine the frequency of various system clocks such as
+ * the system clock, AHB clock, and APB clocks.
+ *
+ * @param clk_type The type of clock to query (SYS_CLK, AHB_CLK, APB1_CLK,
+ * APB2_CLK, APB3_CLK)
+ *
+ * @return The clock speed in Hz for the specified clock type, or 0 if invalid
+ *         type is provided
+ */
+static uint32_t get_clock_speed(CLKType clk_type)
+{
+    if (clk_type == SYS_CLK) {
+        return HAL_RCC_GetSysClockFreq();
+    } else if (clk_type == AHB_CLK) {
+        return HAL_RCC_GetHCLKFreq();
+    } else if (clk_type == APB1_CLK) {
+        return HAL_RCC_GetPCLK1Freq();
+    } else if (clk_type == APB2_CLK) {
+        return HAL_RCC_GetPCLK2Freq();
+    } else if (clk_type == APB3_CLK) {
+        return HAL_RCC_GetPCLK3Freq();
+    } else {
+        return 0; // Invalid clock type
+    }
+}
+
+uint32_t get_peripheral_clock_speed(PeripheralClock *clock)
+{
+    if (*clock == TIMER2 || *clock == TIMER3 || *clock == TIMER4 ||
+        *clock == TIMER5 || *clock == TIMER6 || *clock == TIMER7) {
+        return get_clock_speed(APB1_CLK); // These timers use APB1 frequency
+    } else if (*clock == TIMER1 || *clock == TIMER8 || *clock == TIMER16 ||
+               *clock == TIMER17 || *clock == TIMER16 || *clock == TIMER17) {
+        return get_clock_speed(APB2_CLK); // These timers use APB2 frequency
+    } else {
+        return 0; // Invalid timer clock
+    }
 }
