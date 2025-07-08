@@ -9,40 +9,31 @@ on:
       - main
 
 jobs:
-  format:
+  code-checks:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: format
+            deps: clang-format
+            target: check-format
+          - name: lint
+            deps: clang-tidy gcc-arm-none-eabi libnewlib-arm-none-eabi
+            target: lint
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install clang-format
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-format 
+          sudo apt-get install -y ${{ matrix.deps }}
 
-      - name: Format code
+      - name: Build and run ${{ matrix.name }}
         run: |
           mkdir -p build
           cd build
           cmake ..
-          cmake --build . --target check-format
-
-  lint:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install clang-tidy
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang-tidy gcc-arm-none-eabi libnewlib-arm-none-eabi
-
-      - name: Lint code
-        run: |
-          mkdir -p build
-          cd build
-          cmake ..
-          cmake --build . --target lint
+          cmake --build . --target ${{ matrix.target }}
