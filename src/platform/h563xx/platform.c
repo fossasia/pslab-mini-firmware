@@ -218,13 +218,13 @@ static uint32_t get_clock_speed(CLKType clk_type)
     }
 }
 
-uint32_t get_peripheral_clock_speed(PeripheralClock *clock)
+uint32_t get_peripheral_clock_speed(PeripheralClock clock)
 {
-    if (*clock == TIMER2 || *clock == TIMER3 || *clock == TIMER4 ||
-        *clock == TIMER5 || *clock == TIMER6 || *clock == TIMER7) {
+    if (clock == TIMER2 || clock == TIMER3 || clock == TIMER4 ||
+        clock == TIMER5 || clock == TIMER6 || clock == TIMER7) {
         return get_clock_speed(APB1_CLK); // These timers use APB1 frequency
-    } else if (*clock == TIMER1 || *clock == TIMER8 || *clock == TIMER16 ||
-               *clock == TIMER17 || *clock == TIMER16 || *clock == TIMER17) {
+    } else if (clock == TIMER1 || clock == TIMER8 || clock == TIMER16 ||
+               clock == TIMER17) {
         return get_clock_speed(APB2_CLK); // These timers use APB2 frequency
     } else {
         return 0; // Invalid timer clock

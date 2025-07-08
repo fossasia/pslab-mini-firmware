@@ -65,6 +65,6 @@ typedef enum {
  * @return The clock speed in Hz for the specified peripheral clock type,
  *         or 0 if an invalid type is provided.
  */
-uint32_t get_peripheral_clock_speed(PeripheralClock *clock);
+uint32_t get_peripheral_clock_speed(PeripheralClock clock);
 
 #endif // PSLAB_LL_PLATFORM_H
