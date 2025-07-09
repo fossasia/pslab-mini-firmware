@@ -41,17 +41,17 @@
 void PLATFORM_init(void);
 
 typedef enum {
-    TIMER1,
-    TIMER2,
-    TIMER3,
-    TIMER4,
-    TIMER5,
-    TIMER6,
-    TIMER7,
-    TIMER8,
-    TIMER16,
-    TIMER17
-} PeripheralClock;
+    PLATFORM_CLOCK_TIMER1,
+    PLATFORM_CLOCK_TIMER2,
+    PLATFORM_CLOCK_TIMER3,
+    PLATFORM_CLOCK_TIMER4,
+    PLATFORM_CLOCK_TIMER5,
+    PLATFORM_CLOCK_TIMER6,
+    PLATFORM_CLOCK_TIMER7,
+    PLATFORM_CLOCK_TIMER8,
+    PLATFORM_CLOCK_TIMER16,
+    PLATFORM_CLOCK_TIMER17
+} PLATFORM_PeripheralClock;
 
 /**
  * @brief Get the clock speed for a specific peripheral clock
@@ -65,6 +65,6 @@ typedef enum {
  * @return The clock speed in Hz for the specified peripheral clock type,
  *         or 0 if an invalid type is provided.
  */
-uint32_t get_peripheral_clock_speed(PeripheralClock clock);
+uint32_t PLATFORM_get_peripheral_clock_speed(PLATFORM_PeripheralClock clock);
 
 #endif // PSLAB_LL_PLATFORM_H
