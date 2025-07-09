@@ -31,3 +31,7 @@ target_compile_definitions(test_syscalls PRIVATE
     SYSCALLS_UART_BUS=0
     SYSCALLS_UART_TX_BUFFER_SIZE=256
 )
+
+# Add circular buffer test (no mocks needed - pure unit test)
+unity_add_test(test_circular_buffer test_circular_buffer.c)
+target_link_libraries(test_circular_buffer pslab-util)
