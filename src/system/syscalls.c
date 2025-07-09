@@ -49,6 +49,7 @@
 
 #if SYSCALLS_UART_BUS >= 0
 #include "bus/uart.h"
+#include "util.h"
 
 #ifndef SYSCALLS_UART_TX_BUFFER_SIZE
 #define SYSCALLS_UART_TX_BUFFER_SIZE 256
