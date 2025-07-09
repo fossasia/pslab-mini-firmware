@@ -9,11 +9,6 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-// Test configuration - define before including syscalls.c
-#define SYSCALLS_UART_BUS 0
-#define SYSCALLS_UART_RX_BUFFER_SIZE 256
-#define SYSCALLS_UART_TX_BUFFER_SIZE 256
-
 // Forward declarations of functions we'll test
 struct _reent;
 struct stat;

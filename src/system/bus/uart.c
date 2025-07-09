@@ -28,8 +28,12 @@
 #include <string.h>
 
 #include "bus.h"
+#include "syscalls_config.h"
 #include "uart.h"
 #include "uart_ll.h"
+
+/* syscalls module sets this when claiming its bus */
+extern bool SYSCALLS_uart_claim;
 
 /**
  * @brief UART bus handle structure
@@ -239,6 +243,14 @@ UART_Handle *UART_init(
     if (!rx_buffer || !tx_buffer || bus >= UART_BUS_COUNT) {
         return nullptr;
     }
+
+    /* Check if syscalls is claiming the UART */
+    #if defined (SYSCALLS_UART_BUS) && SYSCALLS_UART_BUS >= 0
+    if (bus == SYSCALLS_UART_BUS && !SYSCALLS_uart_claim) {
+        /* Only syscalls can claim this bus */
+        return nullptr;
+    }
+    #endif
 
     UART_Bus bus_id = (UART_Bus)bus;
 

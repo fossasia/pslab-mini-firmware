@@ -60,6 +60,9 @@ static uint8_t rx_data[SYSCALLS_UART_RX_BUFFER_SIZE];
 static uint8_t tx_data[SYSCALLS_UART_TX_BUFFER_SIZE];
 static bool uart_initialized = false;
 
+// Set to tell UART driver that syscalls is claiming the UART bus
+bool SYSCALLS_uart_claim = false;
+
 static int check_args(struct _reent *r, void const *buf, size_t cnt)
 {
     if (buf == nullptr) {
@@ -87,7 +90,9 @@ static void syscalls_uart_init(void)
     circular_buffer_init(&rx_buffer, rx_data, SYSCALLS_UART_RX_BUFFER_SIZE);
     circular_buffer_init(&tx_buffer, tx_data, SYSCALLS_UART_TX_BUFFER_SIZE);
 
+    SYSCALLS_uart_claim = true; // Claim UART for syscalls
     uart_handle = UART_init(SYSCALLS_UART_BUS, &rx_buffer, &tx_buffer);
+    SYSCALLS_uart_claim = false; // Prevent further claims
     uart_initialized = true;
 }
 

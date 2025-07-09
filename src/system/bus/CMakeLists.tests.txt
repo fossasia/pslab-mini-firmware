@@ -10,4 +10,5 @@ target_include_directories(pslab-bus
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/src/platform  # For platform interface headers
+        ${CMAKE_SOURCE_DIR}/src/system
 )
