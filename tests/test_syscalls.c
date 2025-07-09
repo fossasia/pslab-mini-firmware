@@ -114,7 +114,21 @@ void test_read_r_null_buffer(void)
 
     // Assert
     TEST_ASSERT_EQUAL(-1, result);
-    TEST_ASSERT_EQUAL(ENOSYS, test_reent._errno); // Reads not supported
+    TEST_ASSERT_EQUAL(EFAULT, test_reent._errno); // Null buffer should return EFAULT
+}
+
+// Test _read_r function with zero-length read (should succeed)
+void test_read_r_zero_length(void)
+{
+    // Arrange
+    uint8_t read_buffer[32];
+
+    // Act
+    _ssize_t result = _read_r(&test_reent, STDIN_FILENO, read_buffer, 0);
+
+    // Assert
+    TEST_ASSERT_EQUAL(0, result); // Zero-length reads should always succeed
+    TEST_ASSERT_EQUAL(0, test_reent._errno);
 }
 
 // Test _read_r function for stdin (should fail - reads not supported)

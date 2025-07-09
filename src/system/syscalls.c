@@ -118,13 +118,23 @@ void syscalls_uart_deinit(void)
  * @brief Read data from file descriptor (stub - reads not supported)
  *
  * Since UART is used only for write-only logging/debugging,
- * reading is not implemented.
+ * reading is not implemented. However, 0-length reads always succeed
+ * per POSIX semantics.
  */
 _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t cnt)
 {
     (void)fd;
-    (void)buf;
-    (void)cnt;
+
+    // POSIX: reading 0 bytes should always succeed
+    if (cnt == 0) {
+        return 0;
+    }
+
+    // Check for null buffer
+    if (buf == nullptr) {
+        r->_errno = EFAULT;
+        return -1;
+    }
 
     r->_errno = ENOSYS; // Function not implemented
     return -1;
