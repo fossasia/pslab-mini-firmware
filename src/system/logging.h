@@ -18,10 +18,10 @@
 // Log levels
 typedef enum {
     LOG_LEVEL_ERROR = 0,
-    LOG_LEVEL_WARN  = 1,
-    LOG_LEVEL_INFO  = 2,
+    LOG_LEVEL_WARN = 1,
+    LOG_LEVEL_INFO = 2,
     LOG_LEVEL_DEBUG = 3
-} log_level_t;
+} LOG_Level;
 
 // Default log level (can be overridden via preprocessor)
 #ifndef LOG_LEVEL
@@ -37,37 +37,37 @@ typedef enum {
 #endif
 
 // Core logging macros
-#define LOG_ERROR(fmt, ...) \
-    do { \
-        if (LOG_LEVEL >= LOG_LEVEL_ERROR) { \
-            LOG_TIMESTAMP(); \
-            printf("[ERROR] " fmt "\n", ##__VA_ARGS__); \
-            fflush(stdout); \
-        } \
+#define LOG_ERROR(fmt, ...)                                                    \
+    do {                                                                       \
+        if (LOG_LEVEL >= LOG_LEVEL_ERROR) {                                    \
+            LOG_TIMESTAMP();                                                   \
+            printf("[ERROR] " fmt "\n", ##__VA_ARGS__);                        \
+            (void)fflush(stdout);                                              \
+        }                                                                      \
     } while (0)
 
-#define LOG_WARN(fmt, ...) \
-    do { \
-        if (LOG_LEVEL >= LOG_LEVEL_WARN) { \
-            LOG_TIMESTAMP(); \
-            printf("[WARN]  " fmt "\n", ##__VA_ARGS__); \
-        } \
+#define LOG_WARN(fmt, ...)                                                     \
+    do {                                                                       \
+        if (LOG_LEVEL >= LOG_LEVEL_WARN) {                                     \
+            LOG_TIMESTAMP();                                                   \
+            printf("[WARN]  " fmt "\n", ##__VA_ARGS__);                        \
+        }                                                                      \
     } while (0)
 
-#define LOG_INFO(fmt, ...) \
-    do { \
-        if (LOG_LEVEL >= LOG_LEVEL_INFO) { \
-            LOG_TIMESTAMP(); \
-            printf("[INFO]  " fmt "\n", ##__VA_ARGS__); \
-        } \
+#define LOG_INFO(fmt, ...)                                                     \
+    do {                                                                       \
+        if (LOG_LEVEL >= LOG_LEVEL_INFO) {                                     \
+            LOG_TIMESTAMP();                                                   \
+            printf("[INFO]  " fmt "\n", ##__VA_ARGS__);                        \
+        }                                                                      \
     } while (0)
 
-#define LOG_DEBUG(fmt, ...) \
-    do { \
-        if (LOG_LEVEL >= LOG_LEVEL_DEBUG) { \
-            LOG_TIMESTAMP(); \
-            printf("[DEBUG] " fmt "\n", ##__VA_ARGS__); \
-        } \
+#define LOG_DEBUG(fmt, ...)                                                    \
+    do {                                                                       \
+        if (LOG_LEVEL >= LOG_LEVEL_DEBUG) {                                    \
+            LOG_TIMESTAMP();                                                   \
+            printf("[DEBUG] " fmt "\n", ##__VA_ARGS__);                        \
+        }                                                                      \
     } while (0)
 
 // Convenience macros for common patterns
@@ -75,5 +75,18 @@ typedef enum {
 #define LOG_DEINIT(subsystem) LOG_INFO("Deinitializing " subsystem)
 #define LOG_FUNCTION_ENTRY() LOG_DEBUG("Entering %s", __func__)
 #define LOG_FUNCTION_EXIT() LOG_DEBUG("Exiting %s", __func__)
+
+/**
+ * @brief Platform logging service - forwards platform log messages to system
+ * logging
+ *
+ * The platform layer writes to a ring buffer and sets a service request flag.
+ * This function checks the flag and forwards any pending messages to the
+ * main logging system.
+ *
+ * This function should be called periodically by the application main loop
+ * or from a timer interrupt.
+ */
+void LOG_service_platform(void);
 
 #endif // LOGGING_H
