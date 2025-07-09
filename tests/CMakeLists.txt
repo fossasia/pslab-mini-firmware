@@ -29,6 +29,5 @@ target_include_directories(test_syscalls PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tes
 # Define configuration for testing
 target_compile_definitions(test_syscalls PRIVATE
     SYSCALLS_UART_BUS=0
-    SYSCALLS_UART_RX_BUFFER_SIZE=256
     SYSCALLS_UART_TX_BUFFER_SIZE=256
 )

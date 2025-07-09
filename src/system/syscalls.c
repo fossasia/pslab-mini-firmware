@@ -1,16 +1,17 @@
 /**
  * @file syscalls.c
- * @brief System call implementations for newlib using UART
+ * @brief System call implementations for newlib using UART (write-only)
  *
  * This file provides implementations for system calls that newlib requires
- * for stdio functionality, using the UART API for I/O operations.
+ * for stdio functionality, using the UART API for write-only I/O operations.
  *
  * Implemented syscalls:
- * - _read_r: Read from stdin via UART
+ * - _read_r: Stub that returns ENOSYS (reads not supported)
  * - _write_r: Write to stdout/stderr via UART
- * - _fstat_r: File status (stub - identifies stdin/stdout/stderr as character
- *   devices)
- * - _isatty_r: Terminal check (stub - treats stdin/stdout/stderr as terminals)
+ * - _fstat_r: File status (stub - identifies stdout/stderr as character
+ *   devices, stdin as invalid)
+ * - _isatty_r: Terminal check (stub - treats stdout/stderr as terminals,
+ *   stdin as not a terminal)
  *
  * The UART bus used for I/O can be configured via the SYSCALLS_UART_BUS
  * preprocessor macro:
@@ -18,13 +19,16 @@
  * - Define SYSCALLS_UART_BUS as -1 or leave undefined to disable UART I/O
  *   (functions will be no-ops returning error codes)
  *
- * Buffer sizes for RX/TX can be configured via:
- * - SYSCALLS_UART_RX_BUFFER_SIZE (default: 256)
+ * Buffer size for TX can be configured via:
  * - SYSCALLS_UART_TX_BUFFER_SIZE (default: 256)
+ *
+ * Note: RX functionality is not implemented as this is designed for
+ * write-only logging and debugging output. A minimal 1-byte RX buffer
+ * is allocated to satisfy the UART driver requirements, but reads will
+ * always return ENOSYS.
  *
  * Example configuration:
  * #define SYSCALLS_UART_BUS 0
- * #define SYSCALLS_UART_RX_BUFFER_SIZE 512
  * #define SYSCALLS_UART_TX_BUFFER_SIZE 512
  */
 
@@ -45,13 +49,12 @@
 #include "bus/bus.h"
 #include "bus/uart.h"
 
-#ifndef SYSCALLS_UART_RX_BUFFER_SIZE
-#define SYSCALLS_UART_RX_BUFFER_SIZE 256
-#endif
-
 #ifndef SYSCALLS_UART_TX_BUFFER_SIZE
 #define SYSCALLS_UART_TX_BUFFER_SIZE 256
 #endif
+
+// Minimal RX buffer (required by UART driver)
+#define SYSCALLS_UART_RX_BUFFER_SIZE 1
 
 // Static buffers and handle for UART I/O
 static UART_Handle *g_uart_handle = nullptr;
@@ -111,39 +114,18 @@ void syscalls_uart_deinit(void)
 #endif /* SYSCALLS_UART_BUS >= 0 */
 
 /**
- * @brief Read data from file descriptor
+ * @brief Read data from file descriptor (stub - reads not supported)
  *
- * For stdin (fd 0), reads from UART if enabled, otherwise returns error.
- * For other file descriptors, returns error.
+ * Since UART is used only for write-only logging/debugging,
+ * reading is not implemented.
  */
 _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t cnt)
 {
-    // Check for invalid parameters
-    int ret = check_args(r, buf, cnt);
-    if (ret < 1) {
-        return ret;
-    }
-
-#if SYSCALLS_UART_BUS >= 0
-    if (fd == STDIN_FILENO) {
-        if (!g_uart_initialized) {
-            syscalls_uart_init();
-        }
-
-        if (g_uart_handle == nullptr) {
-            r->_errno = EIO;
-            return -1;
-        }
-
-        // Non-blocking read from UART
-        uint32_t bytes_read = UART_read(g_uart_handle, (uint8_t *)buf, cnt);
-        return (_ssize_t)bytes_read;
-    }
-#else
     (void)fd;
-#endif
+    (void)buf;
+    (void)cnt;
 
-    r->_errno = EBADF;
+    r->_errno = ENOSYS; // Function not implemented
     return -1;
 }
 
@@ -195,8 +177,8 @@ _ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t cnt)
 /**
  * @brief Get file status (stub implementation)
  *
- * This is a stub implementation that identifies stdin/stdout/stderr as
- * character devices and returns an error for other file descriptors.
+ * Since stdin reads are not supported, only stdout/stderr are treated as
+ * character devices. stdin returns an error.
  */
 int _fstat_r(struct _reent *r, int fd, struct stat *st)
 {
@@ -208,14 +190,14 @@ int _fstat_r(struct _reent *r, int fd, struct stat *st)
     // Clear the stat structure
     memset(st, 0, sizeof(struct stat));
 
-    // For stdin, stdout, stderr - treat as character device
-    if (fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO) {
+    // Only stdout and stderr are valid - stdin reads not supported
+    if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
         st->st_mode = S_IFCHR; // Character device
         st->st_size = 0;
         return 0;
     }
 
-    // For other file descriptors, return error
+    // stdin and other file descriptors return error
     r->_errno = EBADF;
     return -1;
 }
@@ -223,17 +205,17 @@ int _fstat_r(struct _reent *r, int fd, struct stat *st)
 /**
  * @brief Check if file descriptor is a terminal (stub implementation)
  *
- * This stub implementation returns 1 (true) for stdin/stdout/stderr
- * and 0 (false) for other file descriptors.
+ * Since stdin reads are not supported, only stdout/stderr are treated as
+ * terminals. stdin returns 0 (not a terminal).
  */
 int _isatty_r(struct _reent *r, int fd)
 {
-    // stdin, stdout, stderr are treated as terminals
-    if (fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO) {
+    // Only stdout and stderr are treated as terminals
+    if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
         return 1;
     }
 
-    // Other file descriptors are not terminals
+    // stdin (not readable) and other file descriptors are not terminals
     r->_errno = ENOTTY;
     return 0;
 }

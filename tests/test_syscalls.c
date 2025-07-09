@@ -114,31 +114,22 @@ void test_read_r_null_buffer(void)
 
     // Assert
     TEST_ASSERT_EQUAL(-1, result);
-    TEST_ASSERT_EQUAL(EFAULT, test_reent._errno);
+    TEST_ASSERT_EQUAL(ENOSYS, test_reent._errno); // Reads not supported
 }
 
-// Test _read_r function for stdin
-void test_read_r_stdin_success(void)
+// Test _read_r function for stdin (should fail - reads not supported)
+void test_read_r_stdin_not_supported(void)
 {
     // Arrange
     uint8_t read_buffer[32];
     size_t buffer_size = sizeof(read_buffer);
 
-    // Set up expectations for UART initialization
-    UART_LL_init_Ignore();
-    UART_LL_set_idle_callback_Ignore();
-    UART_LL_set_rx_complete_callback_Ignore();
-    UART_LL_set_tx_complete_callback_Ignore();
-
-    // Set up expectations for read operation (no data available)
-    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_0, 0);
-
     // Act
     _ssize_t result = _read_r(&test_reent, STDIN_FILENO, read_buffer, buffer_size);
 
     // Assert
-    TEST_ASSERT_EQUAL(0, result); // No data available initially
-    TEST_ASSERT_EQUAL(0, test_reent._errno);
+    TEST_ASSERT_EQUAL(-1, result); // Should fail
+    TEST_ASSERT_EQUAL(ENOSYS, test_reent._errno); // Function not implemented
 }
 
 // Test _read_r function with invalid file descriptor
@@ -154,31 +145,7 @@ void test_read_r_invalid_fd(void)
 
     // Assert
     TEST_ASSERT_EQUAL(-1, result);
-    TEST_ASSERT_EQUAL(EBADF, test_reent._errno);
-}
-
-// Test _read_r function with data available
-void test_read_r_stdin_with_data(void)
-{
-    // Arrange
-    uint8_t read_buffer[32];
-    size_t buffer_size = sizeof(read_buffer);
-
-    // Set up expectations for UART initialization
-    UART_LL_init_Ignore();
-    UART_LL_set_idle_callback_Ignore();
-    UART_LL_set_rx_complete_callback_Ignore();
-    UART_LL_set_tx_complete_callback_Ignore();
-
-    // Simulate data in the RX buffer by setting up DMA position
-    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_0, 5); // 5 bytes received
-
-    // Act
-    _ssize_t result = _read_r(&test_reent, STDIN_FILENO, read_buffer, buffer_size);
-
-    // Assert
-    TEST_ASSERT_GREATER_THAN(0, result); // Should read some bytes
-    TEST_ASSERT_EQUAL(0, test_reent._errno);
+    TEST_ASSERT_EQUAL(ENOSYS, test_reent._errno); // All reads not supported
 }
 
 // Test with TX buffer full scenario
@@ -255,8 +222,8 @@ void test_multiple_writes(void)
     TEST_ASSERT_EQUAL(0, test_reent._errno);
 }
 
-// Test _fstat_r function for stdin
-void test_fstat_r_stdin_success(void)
+// Test _fstat_r function for stdin (should fail - reads not supported)
+void test_fstat_r_stdin_not_supported(void)
 {
     // Arrange
     struct stat st;
@@ -265,10 +232,8 @@ void test_fstat_r_stdin_success(void)
     int result = _fstat_r(&test_reent, STDIN_FILENO, &st);
 
     // Assert
-    TEST_ASSERT_EQUAL(0, result);
-    TEST_ASSERT_EQUAL(S_IFCHR, st.st_mode); // Should be character device
-    TEST_ASSERT_EQUAL(0, st.st_size);
-    TEST_ASSERT_EQUAL(0, test_reent._errno);
+    TEST_ASSERT_EQUAL(-1, result); // Should fail
+    TEST_ASSERT_EQUAL(EBADF, test_reent._errno); // Bad file descriptor
 }
 
 // Test _fstat_r function for stdout
@@ -329,15 +294,15 @@ void test_fstat_r_null_stat(void)
     TEST_ASSERT_EQUAL(EFAULT, test_reent._errno);
 }
 
-// Test _isatty_r function for stdin
-void test_isatty_r_stdin_is_tty(void)
+// Test _isatty_r function for stdin (should fail - reads not supported)
+void test_isatty_r_stdin_not_tty(void)
 {
     // Act
     int result = _isatty_r(&test_reent, STDIN_FILENO);
 
     // Assert
-    TEST_ASSERT_EQUAL(1, result); // Should return 1 (true)
-    TEST_ASSERT_EQUAL(0, test_reent._errno);
+    TEST_ASSERT_EQUAL(0, result); // Should return 0 (false)
+    TEST_ASSERT_EQUAL(ENOTTY, test_reent._errno);
 }
 
 // Test _isatty_r function for stdout
