@@ -37,7 +37,7 @@ typedef struct {
 } USBInstance;
 
 /* Instance array for future multi-controller support */
-static USBInstance usb_instances[USB_BUS_COUNT] = { 0 };
+static USBInstance g_usb_instances[USB_BUS_COUNT] = { 0 };
 
 /**
  * @brief Enable USB clock recovery system
@@ -66,7 +66,7 @@ static void crs_enable(void)
 
 void USB_LL_init(USB_Bus bus)
 {
-    if (bus >= USB_BUS_COUNT || usb_instances[bus].initialized) {
+    if (bus >= USB_BUS_COUNT || g_usb_instances[bus].initialized) {
         return;
     }
 
@@ -110,7 +110,7 @@ void USB_LL_init(USB_Bus bus)
         crs_enable();
     }
 
-    usb_instances[bus].initialized = true;
+    g_usb_instances[bus].initialized = true;
 }
 
 /**
@@ -120,7 +120,7 @@ void USB_LL_init(USB_Bus bus)
  */
 void USB_LL_deinit(USB_Bus bus)
 {
-    if (bus >= USB_BUS_COUNT || !usb_instances[bus].initialized) {
+    if (bus >= USB_BUS_COUNT || !g_usb_instances[bus].initialized) {
         return;
     }
 
@@ -136,7 +136,7 @@ void USB_LL_deinit(USB_Bus bus)
     // Disable USB power
     HAL_PWREx_DisableVddUSB();
 
-    usb_instances[bus].initialized = false;
+    g_usb_instances[bus].initialized = false;
 }
 
 static size_t get_unique_id(uint8_t id[])
@@ -235,7 +235,7 @@ void USB_LL_set_line_state_callback(
 )
 {
     if (interface_id < USB_BUS_COUNT) {
-        usb_instances[interface_id].line_state_callback = callback;
+        g_usb_instances[interface_id].line_state_callback = callback;
     }
 }
 
@@ -252,7 +252,7 @@ void USB_LL_set_line_state_callback(
 void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 {
     if (itf < USB_BUS_COUNT) {
-        USBInstance instance = usb_instances[itf];
+        USBInstance instance = g_usb_instances[itf];
 
         if (!instance.initialized) {
             return;

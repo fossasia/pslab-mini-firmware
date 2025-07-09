@@ -11,26 +11,21 @@
 #include "bus.h"
 #include "led.h"
 #include "system.h"
-#include "uart.h"
 #include "usb.h"
 
 /*****************************************************************************
  * Macros
  ******************************************************************************/
 
-enum { RX_BUFFER_SIZE = 256, TX_BUFFER_SIZE = 256 };
-
-enum { STLINK_UART = 2 };
+// Callback when at least 5 bytes are available
+#define CB_THRESHOLD (sizeof("Hello") - 1)
+enum { RX_BUFFER_SIZE = 256 };
 
 /*****************************************************************************
  * Static variables
  ******************************************************************************/
 
-static uint8_t uart_rx_buffer_data[RX_BUFFER_SIZE] = { 0 };
-static uint8_t uart_tx_buffer_data[TX_BUFFER_SIZE] = { 0 };
 static uint8_t usb_rx_buffer_data[RX_BUFFER_SIZE] = { 0 };
-
-static bool uart_service_requested = false;
 static bool usb_service_requested = false;
 
 /*****************************************************************************
@@ -40,13 +35,6 @@ static bool usb_service_requested = false;
 /******************************************************************************
  * Function definitions
  ******************************************************************************/
-
-void uart_cb(UART_Handle *huart, uint32_t bytes_available)
-{
-    (void)huart;
-    (void)bytes_available;
-    uart_service_requested = true;
-}
 
 void usb_cb(USB_Handle *husb, uint32_t bytes_available)
 {
@@ -59,64 +47,30 @@ int main(void) // NOLINT
 {
     SYSTEM_init();
 
-    // Initialize UART
-    BUS_CircBuffer uart_rx_buf = { nullptr };
-    BUS_CircBuffer uart_tx_buf = { nullptr };
-    circular_buffer_init(&uart_rx_buf, uart_rx_buffer_data, RX_BUFFER_SIZE);
-    circular_buffer_init(&uart_tx_buf, uart_tx_buffer_data, TX_BUFFER_SIZE);
-    UART_Handle *huart = UART_init(STLINK_UART, &uart_rx_buf, &uart_tx_buf);
-
     // Initialize USB
     BUS_CircBuffer usb_rx_buf = { nullptr };
     circular_buffer_init(&usb_rx_buf, usb_rx_buffer_data, RX_BUFFER_SIZE);
     USB_Handle *husb = USB_init(0, &usb_rx_buf);
 
-#define CB_THRESHOLD                                                           \
-    (sizeof("Hello") - 1) // Callback when at least 5 bytes are available
-    UART_set_rx_callback(huart, uart_cb, CB_THRESHOLD);
     USB_set_rx_callback(husb, usb_cb, CB_THRESHOLD);
 
-#define ADC_STRING_SIZE 26 // Size for ADC value string
     // Initialize ADC
     ADC_init();
 
-    /* Basic UART/USB/LED example:
-     * - Register callbacks for both UART and USB
-     * - Process incoming bytes when callbacks are triggered
+    /* Basic USB/LED example:
+     * - Process incoming bytes when USB callback is triggered
      * - If a byte is received, toggle the LED
-     * - Try to read five bytes (this may timeout)
      * - If the read bytes equal "Hello", then respond "World"
      * - Otherwise echo back what was received
+     * - Use printf for debugging output to UART
      */
     while (1) {
         USB_task(husb);
 
-        if (uart_service_requested) {
-            uart_service_requested = false;
-            LED_toggle();
-            uint8_t buf[CB_THRESHOLD + 1] = { 0 };
-            uint32_t bytes_read =
-                UART_read(huart, (uint8_t *)buf, CB_THRESHOLD);
-            buf[bytes_read] = '\0';
-
-            if (strcmp((char *)buf, "Hello") == 0) {
-                uint32_t adc_value = 0;
-                uint32_t temp = 0;
-                adc_value = ADC_read(&temp);
-                // Convert ADC value to string and send it
-                char adc_str[ADC_STRING_SIZE];
-                (void)snprintf(
-                    adc_str,
-                    sizeof(adc_str),
-                    "\r\nADC_Value:%lu\r\n",
-                    (unsigned long)adc_value
-                );
-                UART_write(huart, (uint8_t *)adc_str, strlen(adc_str));
-                // Send "World" after ADC value
-                UART_write(huart, (uint8_t *)"World", CB_THRESHOLD);
-            } else {
-                UART_write(huart, (uint8_t *)buf, bytes_read);
-            }
+        // Log system status periodically (optional)
+        static uint32_t log_counter = 0;
+        if (++log_counter % 1000000 == 0) {
+            printf("System running, USB active\r\n");
         }
 
         if (usb_service_requested) {

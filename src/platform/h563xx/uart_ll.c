@@ -45,34 +45,34 @@ typedef struct {
 } UARTInstance;
 
 /* HAL UART handles */
-static UART_HandleTypeDef huart1 = { nullptr };
-static UART_HandleTypeDef huart2 = { nullptr };
-static UART_HandleTypeDef huart3 = { nullptr };
+static UART_HandleTypeDef g_huart1 = { nullptr };
+static UART_HandleTypeDef g_huart2 = { nullptr };
+static UART_HandleTypeDef g_huart3 = { nullptr };
 
 /* DMA handles */
-static DMA_HandleTypeDef hdma_usart1_tx = { nullptr };
-static DMA_HandleTypeDef hdma_usart1_rx = { nullptr };
-static DMA_HandleTypeDef hdma_usart2_tx = { nullptr };
-static DMA_HandleTypeDef hdma_usart2_rx = { nullptr };
-static DMA_HandleTypeDef hdma_usart3_tx = { nullptr };
-static DMA_HandleTypeDef hdma_usart3_rx = { nullptr };
+static DMA_HandleTypeDef g_hdma_usart1_tx = { nullptr };
+static DMA_HandleTypeDef g_hdma_usart1_rx = { nullptr };
+static DMA_HandleTypeDef g_hdma_usart2_tx = { nullptr };
+static DMA_HandleTypeDef g_hdma_usart2_rx = { nullptr };
+static DMA_HandleTypeDef g_hdma_usart3_tx = { nullptr };
+static DMA_HandleTypeDef g_hdma_usart3_rx = { nullptr };
 
 /* Instance array */
-static UARTInstance uart_instances[UART_BUS_COUNT] = {
+static UARTInstance g_uart_instances[UART_BUS_COUNT] = {
     [UART_BUS_0] = {
-        .huart = &huart1,
-        .hdma_tx = &hdma_usart1_tx,
-        .hdma_rx = &hdma_usart1_rx,
+        .huart = &g_huart1,
+        .hdma_tx = &g_hdma_usart1_tx,
+        .hdma_rx = &g_hdma_usart1_rx,
     },
     [UART_BUS_1] = {
-        .huart = &huart2,
-        .hdma_tx = &hdma_usart2_tx,
-        .hdma_rx = &hdma_usart2_rx,
+        .huart = &g_huart2,
+        .hdma_tx = &g_hdma_usart2_tx,
+        .hdma_rx = &g_hdma_usart2_rx,
     },
     [UART_BUS_2] = {
-        .huart = &huart3,
-        .hdma_tx = &hdma_usart3_tx,
-        .hdma_rx = &hdma_usart3_rx,
+        .huart = &g_huart3,
+        .hdma_tx = &g_hdma_usart3_tx,
+        .hdma_rx = &g_hdma_usart3_rx,
     },
 };
 
@@ -120,42 +120,42 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
         HAL_GPIO_Init(GPIOA, &gpio_init);
 
         /* Configure DMA for TX */
-        hdma_usart1_tx.Instance = GPDMA1_Channel0;
-        hdma_usart1_tx.Init.Request = GPDMA1_REQUEST_USART1_TX;
-        hdma_usart1_tx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
-        hdma_usart1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
-        hdma_usart1_tx.Init.SrcInc = DMA_SINC_INCREMENTED;
-        hdma_usart1_tx.Init.DestInc = DMA_DINC_FIXED;
-        hdma_usart1_tx.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
-        hdma_usart1_tx.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
-        hdma_usart1_tx.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
-        hdma_usart1_tx.Init.SrcBurstLength = 1;
-        hdma_usart1_tx.Init.DestBurstLength = 1;
-        hdma_usart1_tx.Init.TransferAllocatedPort =
+        g_hdma_usart1_tx.Instance = GPDMA1_Channel0;
+        g_hdma_usart1_tx.Init.Request = GPDMA1_REQUEST_USART1_TX;
+        g_hdma_usart1_tx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+        g_hdma_usart1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
+        g_hdma_usart1_tx.Init.SrcInc = DMA_SINC_INCREMENTED;
+        g_hdma_usart1_tx.Init.DestInc = DMA_DINC_FIXED;
+        g_hdma_usart1_tx.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
+        g_hdma_usart1_tx.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+        g_hdma_usart1_tx.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
+        g_hdma_usart1_tx.Init.SrcBurstLength = 1;
+        g_hdma_usart1_tx.Init.DestBurstLength = 1;
+        g_hdma_usart1_tx.Init.TransferAllocatedPort =
             (DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT0);
-        hdma_usart1_tx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
-        hdma_usart1_tx.Init.Mode = DMA_NORMAL;
-        HAL_DMA_Init(&hdma_usart1_tx);
-        __HAL_LINKDMA(huart, hdmatx, hdma_usart1_tx);
+        g_hdma_usart1_tx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+        g_hdma_usart1_tx.Init.Mode = DMA_NORMAL;
+        HAL_DMA_Init(&g_hdma_usart1_tx);
+        __HAL_LINKDMA(huart, hdmatx, g_hdma_usart1_tx);
 
         /* Configure DMA for RX */
-        hdma_usart1_rx.Instance = GPDMA1_Channel1;
-        hdma_usart1_rx.Init.Request = GPDMA1_REQUEST_USART1_RX;
-        hdma_usart1_rx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
-        hdma_usart1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
-        hdma_usart1_rx.Init.SrcInc = DMA_SINC_FIXED;
-        hdma_usart1_rx.Init.DestInc = DMA_DINC_INCREMENTED;
-        hdma_usart1_rx.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
-        hdma_usart1_rx.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
-        hdma_usart1_rx.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
-        hdma_usart1_rx.Init.SrcBurstLength = 1;
-        hdma_usart1_rx.Init.DestBurstLength = 1;
-        hdma_usart1_rx.Init.TransferAllocatedPort =
+        g_hdma_usart1_rx.Instance = GPDMA1_Channel1;
+        g_hdma_usart1_rx.Init.Request = GPDMA1_REQUEST_USART1_RX;
+        g_hdma_usart1_rx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+        g_hdma_usart1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
+        g_hdma_usart1_rx.Init.SrcInc = DMA_SINC_FIXED;
+        g_hdma_usart1_rx.Init.DestInc = DMA_DINC_INCREMENTED;
+        g_hdma_usart1_rx.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
+        g_hdma_usart1_rx.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+        g_hdma_usart1_rx.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
+        g_hdma_usart1_rx.Init.SrcBurstLength = 1;
+        g_hdma_usart1_rx.Init.DestBurstLength = 1;
+        g_hdma_usart1_rx.Init.TransferAllocatedPort =
             (DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT0);
-        hdma_usart1_rx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
-        hdma_usart1_rx.Init.Mode = DMA_NORMAL;
-        HAL_DMA_Init(&hdma_usart1_rx);
-        __HAL_LINKDMA(huart, hdmarx, hdma_usart1_rx);
+        g_hdma_usart1_rx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+        g_hdma_usart1_rx.Init.Mode = DMA_NORMAL;
+        HAL_DMA_Init(&g_hdma_usart1_rx);
+        __HAL_LINKDMA(huart, hdmarx, g_hdma_usart1_rx);
 
         /* UART interrupt init */
         HAL_NVIC_SetPriority(USART1_IRQn, UART_IRQ_PRIO, 0);
@@ -181,42 +181,42 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
         HAL_GPIO_Init(GPIOA, &gpio_init);
 
         /* Configure DMA for TX */
-        hdma_usart2_tx.Instance = GPDMA1_Channel2;
-        hdma_usart2_tx.Init.Request = GPDMA1_REQUEST_USART2_TX;
-        hdma_usart2_tx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
-        hdma_usart2_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
-        hdma_usart2_tx.Init.SrcInc = DMA_SINC_INCREMENTED;
-        hdma_usart2_tx.Init.DestInc = DMA_DINC_FIXED;
-        hdma_usart2_tx.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
-        hdma_usart2_tx.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
-        hdma_usart2_tx.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
-        hdma_usart2_tx.Init.SrcBurstLength = 1;
-        hdma_usart2_tx.Init.DestBurstLength = 1;
-        hdma_usart2_tx.Init.TransferAllocatedPort =
+        g_hdma_usart2_tx.Instance = GPDMA1_Channel2;
+        g_hdma_usart2_tx.Init.Request = GPDMA1_REQUEST_USART2_TX;
+        g_hdma_usart2_tx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+        g_hdma_usart2_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
+        g_hdma_usart2_tx.Init.SrcInc = DMA_SINC_INCREMENTED;
+        g_hdma_usart2_tx.Init.DestInc = DMA_DINC_FIXED;
+        g_hdma_usart2_tx.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
+        g_hdma_usart2_tx.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+        g_hdma_usart2_tx.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
+        g_hdma_usart2_tx.Init.SrcBurstLength = 1;
+        g_hdma_usart2_tx.Init.DestBurstLength = 1;
+        g_hdma_usart2_tx.Init.TransferAllocatedPort =
             (DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT0);
-        hdma_usart2_tx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
-        hdma_usart2_tx.Init.Mode = DMA_NORMAL;
-        HAL_DMA_Init(&hdma_usart2_tx);
-        __HAL_LINKDMA(huart, hdmatx, hdma_usart2_tx);
+        g_hdma_usart2_tx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+        g_hdma_usart2_tx.Init.Mode = DMA_NORMAL;
+        HAL_DMA_Init(&g_hdma_usart2_tx);
+        __HAL_LINKDMA(huart, hdmatx, g_hdma_usart2_tx);
 
         /* Configure DMA for RX */
-        hdma_usart2_rx.Instance = GPDMA1_Channel3;
-        hdma_usart2_rx.Init.Request = GPDMA1_REQUEST_USART2_RX;
-        hdma_usart2_rx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
-        hdma_usart2_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
-        hdma_usart2_rx.Init.SrcInc = DMA_SINC_FIXED;
-        hdma_usart2_rx.Init.DestInc = DMA_DINC_INCREMENTED;
-        hdma_usart2_rx.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
-        hdma_usart2_rx.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
-        hdma_usart2_rx.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
-        hdma_usart2_rx.Init.SrcBurstLength = 1;
-        hdma_usart2_rx.Init.DestBurstLength = 1;
-        hdma_usart2_rx.Init.TransferAllocatedPort =
+        g_hdma_usart2_rx.Instance = GPDMA1_Channel3;
+        g_hdma_usart2_rx.Init.Request = GPDMA1_REQUEST_USART2_RX;
+        g_hdma_usart2_rx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+        g_hdma_usart2_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
+        g_hdma_usart2_rx.Init.SrcInc = DMA_SINC_FIXED;
+        g_hdma_usart2_rx.Init.DestInc = DMA_DINC_INCREMENTED;
+        g_hdma_usart2_rx.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
+        g_hdma_usart2_rx.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+        g_hdma_usart2_rx.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
+        g_hdma_usart2_rx.Init.SrcBurstLength = 1;
+        g_hdma_usart2_rx.Init.DestBurstLength = 1;
+        g_hdma_usart2_rx.Init.TransferAllocatedPort =
             (DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT0);
-        hdma_usart2_rx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
-        hdma_usart2_rx.Init.Mode = DMA_NORMAL;
-        HAL_DMA_Init(&hdma_usart2_rx);
-        __HAL_LINKDMA(huart, hdmarx, hdma_usart2_rx);
+        g_hdma_usart2_rx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+        g_hdma_usart2_rx.Init.Mode = DMA_NORMAL;
+        HAL_DMA_Init(&g_hdma_usart2_rx);
+        __HAL_LINKDMA(huart, hdmarx, g_hdma_usart2_rx);
 
         /* UART interrupt init */
         HAL_NVIC_SetPriority(USART2_IRQn, UART_IRQ_PRIO, 0);
@@ -242,42 +242,42 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
         HAL_GPIO_Init(GPIOD, &gpio_init);
 
         /* Configure DMA for TX */
-        hdma_usart3_tx.Instance = GPDMA1_Channel4;
-        hdma_usart3_tx.Init.Request = GPDMA1_REQUEST_USART3_TX;
-        hdma_usart3_tx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
-        hdma_usart3_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
-        hdma_usart3_tx.Init.SrcInc = DMA_SINC_INCREMENTED;
-        hdma_usart3_tx.Init.DestInc = DMA_DINC_FIXED;
-        hdma_usart3_tx.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
-        hdma_usart3_tx.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
-        hdma_usart3_tx.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
-        hdma_usart3_tx.Init.SrcBurstLength = 1;
-        hdma_usart3_tx.Init.DestBurstLength = 1;
-        hdma_usart3_tx.Init.TransferAllocatedPort =
+        g_hdma_usart3_tx.Instance = GPDMA1_Channel4;
+        g_hdma_usart3_tx.Init.Request = GPDMA1_REQUEST_USART3_TX;
+        g_hdma_usart3_tx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+        g_hdma_usart3_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
+        g_hdma_usart3_tx.Init.SrcInc = DMA_SINC_INCREMENTED;
+        g_hdma_usart3_tx.Init.DestInc = DMA_DINC_FIXED;
+        g_hdma_usart3_tx.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
+        g_hdma_usart3_tx.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+        g_hdma_usart3_tx.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
+        g_hdma_usart3_tx.Init.SrcBurstLength = 1;
+        g_hdma_usart3_tx.Init.DestBurstLength = 1;
+        g_hdma_usart3_tx.Init.TransferAllocatedPort =
             (DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT0);
-        hdma_usart3_tx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
-        hdma_usart3_tx.Init.Mode = DMA_NORMAL;
-        HAL_DMA_Init(&hdma_usart3_tx);
-        __HAL_LINKDMA(huart, hdmatx, hdma_usart3_tx);
+        g_hdma_usart3_tx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+        g_hdma_usart3_tx.Init.Mode = DMA_NORMAL;
+        HAL_DMA_Init(&g_hdma_usart3_tx);
+        __HAL_LINKDMA(huart, hdmatx, g_hdma_usart3_tx);
 
         /* Configure DMA for RX */
-        hdma_usart3_rx.Instance = GPDMA1_Channel5;
-        hdma_usart3_rx.Init.Request = GPDMA1_REQUEST_USART3_RX;
-        hdma_usart3_rx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
-        hdma_usart3_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
-        hdma_usart3_rx.Init.SrcInc = DMA_SINC_FIXED;
-        hdma_usart3_rx.Init.DestInc = DMA_DINC_INCREMENTED;
-        hdma_usart3_rx.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
-        hdma_usart3_rx.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
-        hdma_usart3_rx.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
-        hdma_usart3_rx.Init.SrcBurstLength = 1;
-        hdma_usart3_rx.Init.DestBurstLength = 1;
-        hdma_usart3_rx.Init.TransferAllocatedPort =
+        g_hdma_usart3_rx.Instance = GPDMA1_Channel5;
+        g_hdma_usart3_rx.Init.Request = GPDMA1_REQUEST_USART3_RX;
+        g_hdma_usart3_rx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+        g_hdma_usart3_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
+        g_hdma_usart3_rx.Init.SrcInc = DMA_SINC_FIXED;
+        g_hdma_usart3_rx.Init.DestInc = DMA_DINC_INCREMENTED;
+        g_hdma_usart3_rx.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
+        g_hdma_usart3_rx.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+        g_hdma_usart3_rx.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
+        g_hdma_usart3_rx.Init.SrcBurstLength = 1;
+        g_hdma_usart3_rx.Init.DestBurstLength = 1;
+        g_hdma_usart3_rx.Init.TransferAllocatedPort =
             (DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT0);
-        hdma_usart3_rx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
-        hdma_usart3_rx.Init.Mode = DMA_NORMAL;
-        HAL_DMA_Init(&hdma_usart3_rx);
-        __HAL_LINKDMA(huart, hdmarx, hdma_usart3_rx);
+        g_hdma_usart3_rx.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+        g_hdma_usart3_rx.Init.Mode = DMA_NORMAL;
+        HAL_DMA_Init(&g_hdma_usart3_rx);
+        __HAL_LINKDMA(huart, hdmarx, g_hdma_usart3_rx);
 
         /* UART interrupt init */
         HAL_NVIC_SetPriority(USART3_IRQn, UART_IRQ_PRIO, 0);
@@ -299,11 +299,11 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
  */
 void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz)
 {
-    if (bus >= UART_BUS_COUNT || uart_instances[bus].initialized) {
+    if (bus >= UART_BUS_COUNT || g_uart_instances[bus].initialized) {
         return;
     }
 
-    UARTInstance *instance = &uart_instances[bus];
+    UARTInstance *instance = &g_uart_instances[bus];
 
     /* Configure UART instance based on bus */
     if (bus == UART_BUS_0) {
@@ -351,11 +351,11 @@ void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz)
  */
 void UART_LL_deinit(UART_Bus bus)
 {
-    if (bus >= UART_BUS_COUNT || !uart_instances[bus].initialized) {
+    if (bus >= UART_BUS_COUNT || !g_uart_instances[bus].initialized) {
         return;
     }
 
-    UARTInstance *instance = &uart_instances[bus];
+    UARTInstance *instance = &g_uart_instances[bus];
 
     /* Disable interrupts */
     if (bus == UART_BUS_0) {
@@ -389,11 +389,11 @@ void UART_LL_deinit(UART_Bus bus)
  */
 void UART_LL_start_dma_tx(UART_Bus bus, uint8_t *buffer, uint32_t size)
 {
-    if (bus >= UART_BUS_COUNT || !uart_instances[bus].initialized) {
+    if (bus >= UART_BUS_COUNT || !g_uart_instances[bus].initialized) {
         return;
     }
 
-    UARTInstance *instance = &uart_instances[bus];
+    UARTInstance *instance = &g_uart_instances[bus];
     instance->tx_in_progress = true;
     instance->tx_dma_size = size;
     HAL_UART_Transmit_DMA(instance->huart, buffer, size);
@@ -407,11 +407,11 @@ void UART_LL_start_dma_tx(UART_Bus bus, uint8_t *buffer, uint32_t size)
  */
 uint32_t UART_LL_get_dma_position(UART_Bus bus)
 {
-    if (bus >= UART_BUS_COUNT || !uart_instances[bus].initialized) {
+    if (bus >= UART_BUS_COUNT || !g_uart_instances[bus].initialized) {
         return 0;
     }
 
-    UARTInstance *instance = &uart_instances[bus];
+    UARTInstance *instance = &g_uart_instances[bus];
     return instance->rx_buffer_size - __HAL_DMA_GET_COUNTER(instance->hdma_rx);
 }
 
@@ -423,11 +423,11 @@ uint32_t UART_LL_get_dma_position(UART_Bus bus)
  */
 bool UART_LL_tx_busy(UART_Bus bus)
 {
-    if (bus >= UART_BUS_COUNT || !uart_instances[bus].initialized) {
+    if (bus >= UART_BUS_COUNT || !g_uart_instances[bus].initialized) {
         return false;
     }
 
-    return uart_instances[bus].tx_in_progress;
+    return g_uart_instances[bus].tx_in_progress;
 }
 
 /**
@@ -443,7 +443,7 @@ void UART_LL_set_tx_complete_callback(
     if (bus >= UART_BUS_COUNT) {
         return;
     }
-    uart_instances[bus].tx_complete_callback = callback;
+    g_uart_instances[bus].tx_complete_callback = callback;
 }
 
 /**
@@ -459,7 +459,7 @@ void UART_LL_set_rx_complete_callback(
     if (bus >= UART_BUS_COUNT) {
         return;
     }
-    uart_instances[bus].rx_complete_callback = callback;
+    g_uart_instances[bus].rx_complete_callback = callback;
 }
 
 /**
@@ -472,7 +472,7 @@ void UART_LL_set_idle_callback(UART_Bus bus, UART_LL_IdleCallback callback)
     if (bus >= UART_BUS_COUNT) {
         return;
     }
-    uart_instances[bus].idle_callback = callback;
+    g_uart_instances[bus].idle_callback = callback;
 }
 
 /**
@@ -487,7 +487,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
         return;
     }
 
-    UARTInstance *instance = &uart_instances[bus];
+    UARTInstance *instance = &g_uart_instances[bus];
     instance->tx_in_progress = false;
 
     /* Notify the hardware-independent layer */
@@ -508,7 +508,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         return;
     }
 
-    UARTInstance *instance = &uart_instances[bus];
+    UARTInstance *instance = &g_uart_instances[bus];
 
     /* Restart DMA reception */
     HAL_UART_Receive_DMA(
@@ -532,7 +532,7 @@ static void uart_irq_handler(UART_HandleTypeDef *huart)
         return;
     }
 
-    UARTInstance *instance = &uart_instances[bus];
+    UARTInstance *instance = &g_uart_instances[bus];
 
     /* Check for idle line detection */
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_IDLE) != RESET) {
@@ -554,44 +554,44 @@ static void uart_irq_handler(UART_HandleTypeDef *huart)
 /**
  * @brief USART1 interrupt handler
  */
-void USART1_IRQHandler(void) { uart_irq_handler(&huart1); }
+void USART1_IRQHandler(void) { uart_irq_handler(&g_huart1); }
 
 /**
  * @brief USART2 interrupt handler
  */
-void USART2_IRQHandler(void) { uart_irq_handler(&huart2); }
+void USART2_IRQHandler(void) { uart_irq_handler(&g_huart2); }
 
 /**
  * @brief USART3 interrupt handler
  */
-void USART3_IRQHandler(void) { uart_irq_handler(&huart3); }
+void USART3_IRQHandler(void) { uart_irq_handler(&g_huart3); }
 
 /**
  * @brief GPDMA1 Channel0 interrupt handler (USART1 TX)
  */
-void GPDMA1_Channel0_IRQHandler(void) { HAL_DMA_IRQHandler(&hdma_usart1_tx); }
+void GPDMA1_Channel0_IRQHandler(void) { HAL_DMA_IRQHandler(&g_hdma_usart1_tx); }
 
 /**
  * @brief GPDMA1 Channel1 interrupt handler (USART1 RX)
  */
-void GPDMA1_Channel1_IRQHandler(void) { HAL_DMA_IRQHandler(&hdma_usart1_rx); }
+void GPDMA1_Channel1_IRQHandler(void) { HAL_DMA_IRQHandler(&g_hdma_usart1_rx); }
 
 /**
  * @brief GPDMA1 Channel2 interrupt handler (USART2 TX)
  */
-void GPDMA1_Channel2_IRQHandler(void) { HAL_DMA_IRQHandler(&hdma_usart2_tx); }
+void GPDMA1_Channel2_IRQHandler(void) { HAL_DMA_IRQHandler(&g_hdma_usart2_tx); }
 
 /**
  * @brief GPDMA1 Channel3 interrupt handler (USART2 RX)
  */
-void GPDMA1_Channel3_IRQHandler(void) { HAL_DMA_IRQHandler(&hdma_usart2_rx); }
+void GPDMA1_Channel3_IRQHandler(void) { HAL_DMA_IRQHandler(&g_hdma_usart2_rx); }
 
 /**
  * @brief GPDMA1 Channel4 interrupt handler (USART3 TX)
  */
-void GPDMA1_Channel4_IRQHandler(void) { HAL_DMA_IRQHandler(&hdma_usart3_tx); }
+void GPDMA1_Channel4_IRQHandler(void) { HAL_DMA_IRQHandler(&g_hdma_usart3_tx); }
 
 /**
  * @brief GPDMA1 Channel5 interrupt handler (USART3 RX)
  */
-void GPDMA1_Channel5_IRQHandler(void) { HAL_DMA_IRQHandler(&hdma_usart3_rx); }
+void GPDMA1_Channel5_IRQHandler(void) { HAL_DMA_IRQHandler(&g_hdma_usart3_rx); }

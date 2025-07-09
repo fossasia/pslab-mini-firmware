@@ -18,9 +18,9 @@
 
 #include "adc_ll.h"
 
-static ADC_HandleTypeDef hadc = { nullptr };
+static ADC_HandleTypeDef g_hadc = { nullptr };
 
-static ADC_ChannelConfTypeDef s_config = { 0 };
+static ADC_ChannelConfTypeDef g_config = { 0 };
 
 /**
  * @brief Initializes the ADC MSP (MCU Support Package).
@@ -60,26 +60,26 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
 void ADC_LL_init(void)
 {
     // Initialize the ADC peripheral
-    hadc.Instance = ADC1;
-    hadc.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
-    hadc.Init.Resolution = ADC_RESOLUTION_12B;
-    hadc.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-    hadc.Init.ScanConvMode = DISABLE;
-    hadc.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
-    hadc.Init.LowPowerAutoWait = DISABLE;
-    hadc.Init.ContinuousConvMode = DISABLE;
-    hadc.Init.NbrOfConversion = 1;
-    hadc.Init.DiscontinuousConvMode = DISABLE;
-    hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-    hadc.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+    g_hadc.Instance = ADC1;
+    g_hadc.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+    g_hadc.Init.Resolution = ADC_RESOLUTION_12B;
+    g_hadc.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+    g_hadc.Init.ScanConvMode = DISABLE;
+    g_hadc.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+    g_hadc.Init.LowPowerAutoWait = DISABLE;
+    g_hadc.Init.ContinuousConvMode = DISABLE;
+    g_hadc.Init.NbrOfConversion = 1;
+    g_hadc.Init.DiscontinuousConvMode = DISABLE;
+    g_hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+    g_hadc.Init.ExternalTrigConv = ADC_SOFTWARE_START;
 
-    HAL_ADC_Init(&hadc);
+    HAL_ADC_Init(&g_hadc);
 
     // Configure ADC channel
-    s_config.Channel = ADC_CHANNEL_0; // ADC1_IN0
-    s_config.Rank = ADC_REGULAR_RANK_1;
-    s_config.SamplingTime = ADC_SAMPLETIME_640CYCLES_5;
-    HAL_ADC_ConfigChannel(&hadc, &s_config);
+    g_config.Channel = ADC_CHANNEL_0; // ADC1_IN0
+    g_config.Rank = ADC_REGULAR_RANK_1;
+    g_config.SamplingTime = ADC_SAMPLETIME_640CYCLES_5;
+    HAL_ADC_ConfigChannel(&g_hadc, &g_config);
 }
 
 /**
@@ -89,7 +89,7 @@ void ADC_LL_init(void)
 void ADC_LL_deinit(void)
 {
     // Deinitialize the ADC peripheral
-    HAL_ADC_DeInit(&hadc);
+    HAL_ADC_DeInit(&g_hadc);
 }
 
 /**
@@ -102,7 +102,7 @@ void ADC_LL_deinit(void)
 void ADC_LL_start(void)
 {
     // Start the ADC conversion
-    HAL_ADC_Start(&hadc);
+    HAL_ADC_Start(&g_hadc);
 }
 
 /**
@@ -115,20 +115,20 @@ void ADC_LL_start(void)
 void ADC_LL_stop(void)
 {
     // Stop the ADC conversion
-    HAL_ADC_Stop(&hadc);
+    HAL_ADC_Stop(&g_hadc);
 }
 
 uint32_t ADC_LL_read(uint32_t *buffer)
 {
     // Start the ADC conversion
-    HAL_ADC_Start(&hadc);
+    HAL_ADC_Start(&g_hadc);
 
-    HAL_ADC_PollForConversion(&hadc, HAL_MAX_DELAY);
+    HAL_ADC_PollForConversion(&g_hadc, HAL_MAX_DELAY);
 
     // Read the converted value
-    *buffer = HAL_ADC_GetValue(&hadc);
+    *buffer = HAL_ADC_GetValue(&g_hadc);
 
-    HAL_ADC_Stop(&hadc); // Stop the ADC conversion
+    HAL_ADC_Stop(&g_hadc); // Stop the ADC conversion
 
     return *buffer; // Return the converted value
 }
