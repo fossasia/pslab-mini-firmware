@@ -18,6 +18,8 @@
 
 #include "adc_ll.h"
 
+enum { ADC_IRQ_PRIORITY = 2 }; // ADC interrupt priority
+
 static ADC_HandleTypeDef hadc = { nullptr };
 
 static ADC_ChannelConfTypeDef s_config = { 0 };
@@ -39,14 +41,16 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
     __HAL_RCC_ADC_CLK_ENABLE();
     // Enable GPIOA clock
     __HAL_RCC_GPIOA_CLK_ENABLE();
-    // Enable GPDMA1 clock
-    __HAL_RCC_GPDMA1_CLK_ENABLE();
 
     // Configure GPIO pin for ADC1_IN0 (PA0)
     gpio_init.Pin = GPIO_PIN_0; // PA0
     gpio_init.Mode = GPIO_MODE_ANALOG;
     gpio_init.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &gpio_init);
+
+    // Enable ADC1 interrupt
+    HAL_NVIC_SetPriority(ADC1_IRQn, ADC_IRQ_PRIORITY, 0);
+    HAL_NVIC_EnableIRQ(ADC1_IRQn);
 }
 
 /**
@@ -61,7 +65,8 @@ void ADC_LL_init(void)
 {
     // Initialize the ADC peripheral
     hadc.Instance = ADC1;
-    hadc.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+    hadc.Init.ClockPrescaler =
+        ADC_CLOCK_SYNC_PCLK_DIV1; // ADC clock and prescaler
     hadc.Init.Resolution = ADC_RESOLUTION_12B;
     hadc.Init.DataAlign = ADC_DATAALIGN_RIGHT;
     hadc.Init.ScanConvMode = DISABLE;
@@ -70,16 +75,28 @@ void ADC_LL_init(void)
     hadc.Init.ContinuousConvMode = DISABLE;
     hadc.Init.NbrOfConversion = 1;
     hadc.Init.DiscontinuousConvMode = DISABLE;
-    hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-    hadc.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+    hadc.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T6_TRGO;
+    hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
+    hadc.Init.SamplingMode = ADC_SAMPLING_MODE_NORMAL;
+    hadc.Init.DMAContinuousRequests = DISABLE;
+    hadc.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+    hadc.Init.OversamplingMode = DISABLE;
 
     HAL_ADC_Init(&hadc);
 
     // Configure ADC channel
     s_config.Channel = ADC_CHANNEL_0; // ADC1_IN0
     s_config.Rank = ADC_REGULAR_RANK_1;
-    s_config.SamplingTime = ADC_SAMPLETIME_640CYCLES_5;
+    s_config.SamplingTime = ADC_SAMPLETIME_12CYCLES_5;
+    s_config.SingleDiff = ADC_SINGLE_ENDED; // Single-ended input
+    s_config.OffsetNumber = ADC_OFFSET_NONE;
+    s_config.Offset = 0;
     HAL_ADC_ConfigChannel(&hadc, &s_config);
+
+    // Calibration with error handling
+    if (HAL_ADCEx_Calibration_Start(&hadc, ADC_SINGLE_ENDED) != HAL_OK) {
+        return;
+    }; // Calibration
 }
 
 /**
@@ -102,7 +119,7 @@ void ADC_LL_deinit(void)
 void ADC_LL_start(void)
 {
     // Start the ADC conversion
-    HAL_ADC_Start(&hadc);
+    HAL_ADC_Start_IT(&hadc);
 }
 
 /**
@@ -115,13 +132,13 @@ void ADC_LL_start(void)
 void ADC_LL_stop(void)
 {
     // Stop the ADC conversion
-    HAL_ADC_Stop(&hadc);
+    HAL_ADC_Stop_IT(&hadc);
 }
 
 uint32_t ADC_LL_read(uint32_t *buffer)
 {
     // Start the ADC conversion
-    HAL_ADC_Start(&hadc);
+    ADC_LL_start();
 
     HAL_ADC_PollForConversion(&hadc, HAL_MAX_DELAY);
 
@@ -132,3 +149,8 @@ uint32_t ADC_LL_read(uint32_t *buffer)
 
     return *buffer; // Return the converted value
 }
+
+/**
+ * @brief ADC interrupt handler
+ */
+void ADC1_IRQHandler(void) { HAL_ADC_IRQHandler(&hadc); }

@@ -13,8 +13,16 @@
 
 #include <stdint.h>
 
+#include "../timer/tim.h"
 #include "adc.h"
 #include "adc_ll.h"
+
+/**********************************************************************
+ * Macros
+ **********************************************************************/
+
+enum { ADC1_TIM = 0 }; // Timer used for ADC1 conversions
+enum { ADC1_TIM_Frequency = 25000 }; // ADC1 timer frequency in Hz
 
 /**
  * @brief Initializes the ADC peripheral.
@@ -25,6 +33,29 @@
  */
 void ADC_init(void)
 {
+    // Initialize the timer used for ADC conversions
+    TIM_Init(
+        ADC1_TIM, ADC1_TIM_Frequency
+    ); // Set the timer frequency to 25000 Hz to enable sampling at 1KSPS
+    /*
+    Explanation for 25khz to achieve 1KSPS:
+    The peripheral clock for the ADC is set to 250MHz.
+    and at 25khz of timer frequency, the period and prescaler values are
+    calculated as follows:
+    - Prescaler = Default Prescaler Value = 0
+    - Period = 10000 - 1 = 9999
+
+    Also the ADC is running at 25khz
+    and for 12 bit conversion, the ADC takes 12.5 clock cycles to complete SAR.
+    and another 12.5 clock cycles for sampling time.
+    So, the total time taken for one conversion is 25 clock cycles.
+    Therefore, the ADC can perform 25000 / 25 = 1000 conversions per second
+    (1KSPS). Hence, the timer frequency is set to 25khz to achieve 1KSPS
+    sampling rate. This allows the ADC to sample at a rate of 1KSPS (1000
+    samples per second). The timer is used to trigger the ADC conversions at
+    this rate. The ADC will be configured to use this timer for triggering
+    conversions.
+    */
     // Initialize the ADC peripheral
     ADC_LL_init();
 }
@@ -37,6 +68,7 @@ void ADC_init(void)
  */
 void ADC_deinit(void)
 {
+    TIM_Stop(ADC1_TIM); // Stop the timer used for ADC conversions
     // Deinitialize the ADC peripheral
     ADC_LL_deinit();
 }
