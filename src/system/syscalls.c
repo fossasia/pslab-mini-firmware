@@ -68,7 +68,7 @@ static bool g_uart_initialized = false;
 bool g_SYSCALLS_uart_claim = false;
 
 // Set to tell UART driver that syscalls is claiming the UART bus
-bool SYSCALLS_uart_claim = false;
+bool g_SYSCALLS_uart_claim = false;
 
 static int check_args(struct _reent *r, void const *buf, size_t cnt)
 {
