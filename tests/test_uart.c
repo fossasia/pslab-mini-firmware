@@ -4,6 +4,7 @@
 #include "uart.h"
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 // Test fixtures
 static BUS_CircBuffer g_rx_buffer;
@@ -18,8 +19,8 @@ bool g_SYSCALLS_uart_claim = false;
 void setUp(void)
 {
     // Initialize buffers for each test
-    circular_buffer_init(&g_rx_buffer, g_rx_data, 256);
-    circular_buffer_init(&g_tx_buffer, g_tx_data, 256);
+    circular_buffer_init(&g_rx_buffer, g_rx_data, sizeof(g_rx_data));
+    circular_buffer_init(&g_tx_buffer, g_tx_data, sizeof(g_tx_data));
 
     // Initialize mocks
     mock_uart_ll_Init();
@@ -50,7 +51,7 @@ void test_UART_init_success(void)
     size_t bus = 0;
 
     // Set expectations for UART_LL calls - use Ignore for callbacks to avoid linking issues
-    UART_LL_init_Expect(UART_BUS_0, g_rx_data, 256);
+    UART_LL_init_Expect(UART_BUS_0, g_rx_data, sizeof(g_rx_data));
     UART_LL_set_idle_callback_Ignore();
     UART_LL_set_rx_complete_callback_Ignore();
     UART_LL_set_tx_complete_callback_Ignore();
@@ -107,7 +108,7 @@ void test_UART_init_syscalls_bus(void)
     size_t bus = SYSCALLS_UART_BUS;
 
     // Set up expectations for init
-    UART_LL_init_Expect(SYSCALLS_UART_BUS, g_rx_data, 256);
+    UART_LL_init_Expect(SYSCALLS_UART_BUS, g_rx_data, sizeof(g_rx_data));
     UART_LL_set_idle_callback_Ignore();
     UART_LL_set_rx_complete_callback_Ignore();
     UART_LL_set_tx_complete_callback_Ignore();
@@ -135,7 +136,7 @@ void test_UART_write_with_valid_handle(void)
     uint8_t test_data[] = {0x01, 0x02, 0x03, 0x04};
 
     // Set up expectations for init
-    UART_LL_init_Expect(UART_BUS_0, g_rx_data, 256);
+    UART_LL_init_Expect(UART_BUS_0, g_rx_data, sizeof(g_rx_data));
     UART_LL_set_idle_callback_Ignore();
     UART_LL_set_rx_complete_callback_Ignore();
     UART_LL_set_tx_complete_callback_Ignore();
@@ -164,7 +165,7 @@ void test_UART_write_with_full_buffer(void)
     uint8_t test_data[] = {0x01, 0x02, 0x03, 0x04};
 
     // Set up expectations for init
-    UART_LL_init_Expect(UART_BUS_0, g_rx_data, 256);
+    UART_LL_init_Expect(UART_BUS_0, g_rx_data, sizeof(g_rx_data));
     UART_LL_set_idle_callback_Ignore();
     UART_LL_set_rx_complete_callback_Ignore();
     UART_LL_set_tx_complete_callback_Ignore();
@@ -185,6 +186,41 @@ void test_UART_write_with_full_buffer(void)
 
     // Assert - Should return 0 since buffer is full
     TEST_ASSERT_EQUAL(0, bytes_written);
+}
+
+void test_UART_write_with_nearly_full_buffer(void)
+{
+    // Arrange
+    size_t bus = 0;
+    uint8_t test_data[] = {0x01, 0x02, 0x03, 0x04};
+    uint8_t fill_data[252]; // Fill buffer to near capacity: 255 - 3 = 252 bytes
+
+    // Set up expectations for init
+    UART_LL_init_Expect(UART_BUS_0, g_rx_data, sizeof(g_rx_data));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    g_test_handle = UART_init(bus, &g_rx_buffer, &g_tx_buffer);
+
+    // Assert that init succeeded
+    TEST_ASSERT_NOT_NULL(g_test_handle);
+
+    // Fill the buffer to near capacity (252 bytes), leaving room for only 3 more bytes
+    memset(fill_data, 0xAA, sizeof(fill_data));
+    uint32_t fill_written = circular_buffer_write(&g_tx_buffer, fill_data, sizeof(fill_data));
+    TEST_ASSERT_EQUAL(sizeof(fill_data), fill_written);
+
+    // Simulate TX not busy state
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_0, false);
+    // When transmission starts, it should send all 255 bytes (252 + 3) that are in the buffer
+    UART_LL_start_dma_tx_Expect(UART_BUS_0, g_tx_data, 255);
+
+    // Act
+    uint32_t bytes_written = UART_write(g_test_handle, test_data, sizeof(test_data));
+
+    // Assert - Should write 3 bytes since that's all that fits
+    TEST_ASSERT_EQUAL(3, bytes_written);
 }
 
 void test_UART_write_with_null_handle(void)
@@ -221,6 +257,35 @@ void test_UART_read_with_valid_handle(void)
 
     // Assert
     TEST_ASSERT_EQUAL(0, bytes_read); // Buffer is empty initially
+}
+
+void test_UART_read_with_data_available(void)
+{
+    // Arrange
+    size_t bus = 0;
+    uint8_t read_buffer[10];
+    uint8_t test_data[] = {0x01, 0x02, 0x03, 0x04};
+
+    // Set up expectations for init
+    UART_LL_init_Expect(UART_BUS_0, g_rx_data, 256);
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    // Mock DMA position to simulate data available
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_0, sizeof(test_data));
+
+    g_test_handle = UART_init(bus, &g_rx_buffer, &g_tx_buffer);
+
+    // Simulate data in the RX buffer
+    circular_buffer_write(&g_rx_buffer, test_data, sizeof(test_data));
+
+    // Act
+    uint32_t bytes_read = UART_read(g_test_handle, read_buffer, sizeof(read_buffer));
+
+    // Assert - Should read the available data
+    TEST_ASSERT_EQUAL(sizeof(test_data), bytes_read);
+    TEST_ASSERT_EQUAL_MEMORY(test_data, read_buffer, bytes_read);
 }
 
 void test_UART_read_with_null_handle(void)
