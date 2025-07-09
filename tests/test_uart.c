@@ -16,6 +16,9 @@ static UART_Handle *g_test_handle;
 // This flag is normally set by syscalls.c when claiming the UART bus
 bool g_SYSCALLS_uart_claim = false;
 
+// This flag is normally set by syscalls.c when claiming the UART bus
+bool SYSCALLS_uart_claim = false;
+
 void setUp(void)
 {
     // Initialize buffers for each test
