@@ -25,9 +25,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "bus.h"
 #include "usb.h"
 #include "usb_ll.h"
+#include "util.h"
 
 /* Maximum number of USB interfaces */
 #define USB_INTERFACE_COUNT USB_BUS_COUNT
@@ -40,7 +40,7 @@ enum { USB_TX_FLUSH_TIMEOUT = 100 };
  */
 struct USB_Handle {
     uint8_t interface_id;
-    BUS_CircBuffer *rx_buffer;
+    CircularBuffer *rx_buffer;
     USB_RxCallback rx_callback;
     uint32_t rx_threshold;
     uint32_t tx_timeout_counter;
@@ -164,7 +164,7 @@ static void line_state_callback(USB_Bus itf, bool dtr, bool rts)
  * @param rx_buffer Pointer to pre-allocated RX circular buffer
  * @return Pointer to USB handle on success, nullptr on failure
  */
-USB_Handle *USB_init(size_t interface, BUS_CircBuffer *rx_buffer)
+USB_Handle *USB_init(size_t interface, CircularBuffer *rx_buffer)
 {
     if (!rx_buffer || interface >= USB_INTERFACE_COUNT) {
         return nullptr;

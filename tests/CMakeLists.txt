@@ -14,14 +14,14 @@ cmock_generate_mock(mock_uart_ll ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/uar
 
 # Add UART test
 cmock_add_test(test_uart test_uart.c mock_uart_ll)
-target_link_libraries(test_uart pslab-bus)
+target_link_libraries(test_uart pslab-bus pslab-util)
 
 # Add syscalls test (reuses uart_ll mock and tests real syscalls.c)
 cmock_add_test(test_syscalls test_syscalls.c mock_uart_ll)
 # Include the actual syscalls.c implementation
 target_sources(test_syscalls PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src/system/syscalls.c)
 target_sources(test_syscalls PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_headers/reent-stub.c)
-target_link_libraries(test_syscalls pslab-bus)
+target_link_libraries(test_syscalls pslab-bus pslab-util)
 
 # Add test-specific include directory BEFORE system includes to override headers
 target_include_directories(test_syscalls PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_headers)

@@ -47,8 +47,8 @@
 #endif
 
 #if SYSCALLS_UART_BUS >= 0
-#include "bus/bus.h"
 #include "bus/uart.h"
+#include "util.h"
 
 #ifndef SYSCALLS_UART_TX_BUFFER_SIZE
 #define SYSCALLS_UART_TX_BUFFER_SIZE 256
@@ -59,7 +59,7 @@
 
 // Static buffers and handle for UART I/O
 static UART_Handle *g_uart_handle = nullptr;
-static BUS_CircBuffer g_rx_buffer, g_tx_buffer;
+static CircularBuffer g_rx_buffer, g_tx_buffer;
 static uint8_t g_rx_data[SYSCALLS_UART_RX_BUFFER_SIZE];
 static uint8_t g_tx_data[SYSCALLS_UART_TX_BUFFER_SIZE];
 static bool g_uart_initialized = false;

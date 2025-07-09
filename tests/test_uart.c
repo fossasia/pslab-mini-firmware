@@ -7,8 +7,8 @@
 #include <string.h>
 
 // Test fixtures
-static BUS_CircBuffer g_rx_buffer;
-static BUS_CircBuffer g_tx_buffer;
+static CircularBuffer g_rx_buffer;
+static CircularBuffer g_tx_buffer;
 static uint8_t g_rx_data[256];
 static uint8_t g_tx_data[256];
 static UART_Handle *g_test_handle;

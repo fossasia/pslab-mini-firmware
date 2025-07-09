@@ -2,7 +2,6 @@
 
 target_sources(pslab-mini-firmware
     PRIVATE
-        bus.c
         uart.c
         usb.c
 )
