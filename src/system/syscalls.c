@@ -4,6 +4,7 @@
  *
  * This file provides implementations for system calls that newlib requires
  * for stdio functionality, using the UART API for write-only I/O operations.
+ * Writes are non-blocking.
  *
  * Implemented syscalls:
  * - _read_r: Stub that returns ENOSYS (reads not supported)
