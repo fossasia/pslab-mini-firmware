@@ -54,14 +54,14 @@
 #endif
 
 // Static buffers and handle for UART I/O
-static UART_Handle *uart_handle = nullptr;
-static BUS_CircBuffer rx_buffer, tx_buffer;
-static uint8_t rx_data[SYSCALLS_UART_RX_BUFFER_SIZE];
-static uint8_t tx_data[SYSCALLS_UART_TX_BUFFER_SIZE];
-static bool uart_initialized = false;
+static UART_Handle *g_uart_handle = nullptr;
+static BUS_CircBuffer g_rx_buffer, g_tx_buffer;
+static uint8_t g_rx_data[SYSCALLS_UART_RX_BUFFER_SIZE];
+static uint8_t g_tx_data[SYSCALLS_UART_TX_BUFFER_SIZE];
+static bool g_uart_initialized = false;
 
 // Set to tell UART driver that syscalls is claiming the UART bus
-bool SYSCALLS_uart_claim = false;
+bool g_SYSCALLS_uart_claim = false;
 
 static int check_args(struct _reent *r, void const *buf, size_t cnt)
 {
@@ -83,17 +83,17 @@ static int check_args(struct _reent *r, void const *buf, size_t cnt)
  */
 static void syscalls_uart_init(void)
 {
-    if (uart_initialized) {
+    if (g_uart_initialized) {
         return;
     }
 
-    circular_buffer_init(&rx_buffer, rx_data, SYSCALLS_UART_RX_BUFFER_SIZE);
-    circular_buffer_init(&tx_buffer, tx_data, SYSCALLS_UART_TX_BUFFER_SIZE);
+    circular_buffer_init(&g_rx_buffer, g_rx_data, SYSCALLS_UART_RX_BUFFER_SIZE);
+    circular_buffer_init(&g_tx_buffer, g_tx_data, SYSCALLS_UART_TX_BUFFER_SIZE);
 
-    SYSCALLS_uart_claim = true; // Claim UART for syscalls
-    uart_handle = UART_init(SYSCALLS_UART_BUS, &rx_buffer, &tx_buffer);
-    SYSCALLS_uart_claim = false; // Prevent further claims
-    uart_initialized = true;
+    g_SYSCALLS_uart_claim = true; // Claim UART for syscalls
+    g_uart_handle = UART_init(SYSCALLS_UART_BUS, &g_rx_buffer, &g_tx_buffer);
+    g_SYSCALLS_uart_claim = false; // Prevent further claims
+    g_uart_initialized = true;
 }
 
 /**
@@ -101,11 +101,11 @@ static void syscalls_uart_init(void)
  */
 void syscalls_uart_deinit(void)
 {
-    if (uart_handle != nullptr) {
-        UART_deinit(uart_handle);
-        uart_handle = nullptr;
+    if (g_uart_handle != nullptr) {
+        UART_deinit(g_uart_handle);
+        g_uart_handle = nullptr;
     }
-    uart_initialized = false;
+    g_uart_initialized = false;
 }
 
 #endif /* SYSCALLS_UART_BUS >= 0 */
@@ -126,17 +126,17 @@ _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t cnt)
 
 #if SYSCALLS_UART_BUS >= 0
     if (fd == STDIN_FILENO) {
-        if (!uart_initialized) {
+        if (!g_uart_initialized) {
             syscalls_uart_init();
         }
 
-        if (uart_handle == nullptr) {
+        if (g_uart_handle == nullptr) {
             r->_errno = EIO;
             return -1;
         }
 
         // Non-blocking read from UART
-        uint32_t bytes_read = UART_read(uart_handle, (uint8_t *)buf, cnt);
+        uint32_t bytes_read = UART_read(g_uart_handle, (uint8_t *)buf, cnt);
         return (_ssize_t)bytes_read;
     }
 #else
@@ -163,18 +163,18 @@ _ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t cnt)
 
 #if SYSCALLS_UART_BUS >= 0
     if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
-        if (!uart_initialized) {
+        if (!g_uart_initialized) {
             syscalls_uart_init();
         }
 
-        if (uart_handle == nullptr) {
+        if (g_uart_handle == nullptr) {
             r->_errno = EIO;
             return -1;
         }
 
         // Write to UART
         uint32_t bytes_written =
-            UART_write(uart_handle, (uint8_t const *)buf, cnt);
+            UART_write(g_uart_handle, (uint8_t const *)buf, cnt);
 
         // If no bytes were written, it likely means the buffer is full
         if (bytes_written == 0 && cnt > 0) {

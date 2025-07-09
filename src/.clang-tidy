@@ -75,7 +75,7 @@ CheckOptions:
   # Public functions have capitalized prefix
   - key: readability-identifier-naming.GlobalFunctionCase
     value: 'aNy_CasE'
-  # Interrupt service routines
+  # PIC24 Interrupt service routines
   - key: readability-identifier-naming.GlobalFunctionIgnoredRegexp
     value: '_[A-Z0-9]+Interrupt'
   - key: readability-identifier-naming.VariableCase
@@ -83,6 +83,12 @@ CheckOptions:
   # Register names
   - key: readability-identifier-naming.VariableIgnoredRegexp
     value: '[A-Z][A-Z0-9]+(bits)?'
+  - key: readability-identifier-naming.GlobalVariableCase
+    value: 'lower_case'
+  - key: readability-identifier-naming.GlobalVariablePrefix
+    value: 'g_'
+  - key: readability-identifier-naming.GlobalVariableIgnoredRegexp
+    value: '(g_)[A-Z_]+[a-z0-9_]+'
   - key: readability-identifier-naming.StructCase
     value: 'CamelCase'
   - key: readability-identifier-naming.TypedefCase

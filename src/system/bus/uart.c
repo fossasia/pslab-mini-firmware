@@ -33,7 +33,7 @@
 #include "uart_ll.h"
 
 /* syscalls module sets this when claiming its bus */
-extern bool SYSCALLS_uart_claim;
+extern bool g_SYSCALLS_uart_claim;
 
 /**
  * @brief UART bus handle structure
@@ -49,7 +49,7 @@ struct UART_Handle {
 };
 
 /* Global array to keep track of active UART handles */
-static UART_Handle *active_handles[UART_BUS_COUNT] = { nullptr };
+static UART_Handle *g_active_handles[UART_BUS_COUNT] = { nullptr };
 
 /**
  * @brief Get the number of available UART bus instances.
@@ -69,7 +69,7 @@ static UART_Handle *get_handle_from_bus(UART_Bus bus)
     if (bus >= UART_BUS_COUNT) {
         return nullptr;
     }
-    return active_handles[bus];
+    return g_active_handles[bus];
 }
 
 /**
@@ -244,18 +244,18 @@ UART_Handle *UART_init(
         return nullptr;
     }
 
-    /* Check if syscalls is claiming the UART */
-    #if defined (SYSCALLS_UART_BUS) && SYSCALLS_UART_BUS >= 0
-    if (bus == SYSCALLS_UART_BUS && !SYSCALLS_uart_claim) {
+/* Check if syscalls is claiming the UART */
+#if defined(SYSCALLS_UART_BUS) && SYSCALLS_UART_BUS >= 0
+    if (bus == SYSCALLS_UART_BUS && !g_SYSCALLS_uart_claim) {
         /* Only syscalls can claim this bus */
         return nullptr;
     }
-    #endif
+#endif
 
     UART_Bus bus_id = (UART_Bus)bus;
 
     /* Check if bus is already initialized */
-    if (active_handles[bus_id] != nullptr) {
+    if (g_active_handles[bus_id] != nullptr) {
         return nullptr;
     }
 
@@ -282,7 +282,7 @@ UART_Handle *UART_init(
 
     /* Mark as initialized and register in active handles */
     handle->initialized = true;
-    active_handles[bus_id] = handle;
+    g_active_handles[bus_id] = handle;
 
     return handle;
 }
@@ -307,7 +307,7 @@ void UART_deinit(UART_Handle *handle)
     UART_LL_set_tx_complete_callback(handle->bus_id, nullptr);
 
     /* Remove from active handles */
-    active_handles[handle->bus_id] = nullptr;
+    g_active_handles[handle->bus_id] = nullptr;
 
     /* Mark as uninitialized */
     handle->initialized = false;

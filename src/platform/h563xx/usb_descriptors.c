@@ -59,7 +59,7 @@ uint8_t const g_DESC_CONFIGURATION[] = {
 };
 
 // String descriptors
-char const *string_desc_arr[] = { LANG, MANU, PROD, SERI };
+char const *g_string_desc_arr[] = { LANG, MANU, PROD, SERI };
 
 uint8_t const *tud_descriptor_device_cb(void)
 {
@@ -93,10 +93,10 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
         break;
     case IDX_LANG:
         len = 1;
-        memcpy(_desc_str + 1, string_desc_arr[index], 2 * len);
+        memcpy(_desc_str + 1, g_string_desc_arr[index], 2 * len);
         break;
     default:
-        char const *str = string_desc_arr[index];
+        char const *str = g_string_desc_arr[index];
         len = strlen(str);
         // Convert ASCII string into UTF-16
         for (size_t i = 0; i < len; ++i) {

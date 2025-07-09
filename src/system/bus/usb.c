@@ -48,7 +48,7 @@ struct USB_Handle {
 };
 
 /* Global array to keep track of active USB handles */
-static USB_Handle *active_handles[USB_INTERFACE_COUNT] = { nullptr };
+static USB_Handle *g_active_handles[USB_INTERFACE_COUNT] = { nullptr };
 
 /**
  * @brief Get the number of available USB interfaces.
@@ -68,7 +68,7 @@ static USB_Handle *get_handle_from_interface(uint8_t interface_id)
     if (interface_id >= USB_INTERFACE_COUNT) {
         return nullptr;
     }
-    return active_handles[interface_id];
+    return g_active_handles[interface_id];
 }
 
 /**
@@ -173,7 +173,7 @@ USB_Handle *USB_init(size_t interface, BUS_CircBuffer *rx_buffer)
     uint8_t interface_id = (uint8_t)interface;
 
     /* Check if interface is already initialized */
-    if (active_handles[interface_id] != nullptr) {
+    if (g_active_handles[interface_id] != nullptr) {
         return nullptr;
     }
 
@@ -192,7 +192,7 @@ USB_Handle *USB_init(size_t interface, BUS_CircBuffer *rx_buffer)
     handle->initialized = true;
 
     /* Store handle in global array */
-    active_handles[interface_id] = handle;
+    g_active_handles[interface_id] = handle;
 
     USB_LL_init((USB_Bus)interface_id);
     USB_LL_set_line_state_callback((USB_Bus)interface_id, line_state_callback);
@@ -218,7 +218,7 @@ void USB_deinit(USB_Handle *handle)
 
     /* Clear from global array */
     if (handle->interface_id < USB_INTERFACE_COUNT) {
-        active_handles[handle->interface_id] = nullptr;
+        g_active_handles[handle->interface_id] = nullptr;
     }
 
     /* Mark as uninitialized */
