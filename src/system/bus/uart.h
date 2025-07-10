@@ -15,7 +15,7 @@
  * @code
  * // Initialize UART with handle and buffers
  * UART_Handle *uart_handle;
- * BUS_CircBuffer rx_buffer, tx_buffer;
+ * CircularBuffer rx_buffer, tx_buffer;
  * uint8_t rx_data[256], tx_data[256];
  *
  * circular_buffer_init(&rx_buffer, rx_data, 256);
@@ -51,7 +51,7 @@
 #ifndef UART_H
 #define UART_H
 
-#include "bus.h"
+#include "util.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -94,8 +94,8 @@ size_t UART_get_bus_count(void);
  */
 UART_Handle *UART_init(
     size_t bus,
-    BUS_CircBuffer *rx_buffer,
-    BUS_CircBuffer *tx_buffer
+    CircularBuffer *rx_buffer,
+    CircularBuffer *tx_buffer
 );
 
 /**

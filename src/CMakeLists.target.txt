@@ -11,11 +11,13 @@ target_include_directories(pslab-mini-firmware
 add_subdirectory(application)
 add_subdirectory(system)
 add_subdirectory(platform)
+add_subdirectory(util)
 
 # Link the platform library
 target_link_libraries(pslab-mini-firmware
     PRIVATE
         pslab-platform
+        pslab-util
 )
 
 # Add platform-specific linker script

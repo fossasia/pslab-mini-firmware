@@ -8,10 +8,10 @@
 #include <string.h>
 
 #include "adc.h"
-#include "bus.h"
 #include "led.h"
 #include "system.h"
 #include "usb.h"
+#include "util.h"
 
 /*****************************************************************************
  * Macros
@@ -48,7 +48,7 @@ int main(void) // NOLINT
     SYSTEM_init();
 
     // Initialize USB
-    BUS_CircBuffer usb_rx_buf = { nullptr };
+    CircularBuffer usb_rx_buf;
     circular_buffer_init(&usb_rx_buf, usb_rx_buffer_data, RX_BUFFER_SIZE);
     USB_Handle *husb = USB_init(0, &usb_rx_buf);
 

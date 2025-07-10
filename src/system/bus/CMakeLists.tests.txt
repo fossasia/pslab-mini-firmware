@@ -2,8 +2,11 @@
 
 # Create a library for testable bus components
 add_library(pslab-bus STATIC
-    bus.c
     uart.c
+)
+
+target_link_libraries(pslab-bus PRIVATE
+    pslab-util
 )
 
 target_include_directories(pslab-bus

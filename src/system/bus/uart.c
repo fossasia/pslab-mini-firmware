@@ -27,10 +27,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "bus.h"
 #include "syscalls_config.h"
 #include "uart.h"
 #include "uart_ll.h"
+#include "util.h"
 
 /* syscalls module sets this when claiming its bus */
 extern bool g_SYSCALLS_uart_claim;
@@ -40,8 +40,8 @@ extern bool g_SYSCALLS_uart_claim;
  */
 struct UART_Handle {
     UART_Bus bus_id;
-    BUS_CircBuffer *rx_buffer;
-    BUS_CircBuffer *tx_buffer;
+    CircularBuffer *rx_buffer;
+    CircularBuffer *tx_buffer;
     uint32_t volatile rx_dma_head;
     UART_RxCallback rx_callback;
     uint32_t rx_threshold;
@@ -236,8 +236,8 @@ static void tx_complete_callback(UART_Bus bus, uint32_t bytes_transferred)
  */
 UART_Handle *UART_init(
     size_t bus,
-    BUS_CircBuffer *rx_buffer,
-    BUS_CircBuffer *tx_buffer
+    CircularBuffer *rx_buffer,
+    CircularBuffer *tx_buffer
 )
 {
     if (!rx_buffer || !tx_buffer || bus >= UART_BUS_COUNT) {

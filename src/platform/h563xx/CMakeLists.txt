@@ -22,10 +22,8 @@ target_compile_definitions(pslab-platform
 )
 
 target_link_libraries(pslab-platform
-    PUBLIC
-        # Propagate STM32H5 dependency to consumers to ensure correct build flags
-        CMSIS::STM32::H5
     PRIVATE
+        CMSIS::STM32::H5
         HAL::STM32::H5::ADCEx
         HAL::STM32::H5::CORTEX
         HAL::STM32::H5::DMAEx
@@ -41,6 +39,6 @@ target_link_libraries(pslab-platform
         STM32::Nano
         # Force inclusion of specific USB callback symbols
         "-Wl,--undefined=tud_descriptor_device_cb"
-        "-Wl,--undefined=tud_descriptor_configuration_cb" 
+        "-Wl,--undefined=tud_descriptor_configuration_cb"
         "-Wl,--undefined=tud_descriptor_string_cb"
 )

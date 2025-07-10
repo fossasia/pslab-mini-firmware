@@ -17,7 +17,7 @@
  * @code
  * // Initialize USB with handle and buffers
  * USB_Handle *usb_handle;
- * BUS_CircBuffer rx_buffer;
+ * CircularBuffer rx_buffer;
  * uint8_t rx_data[256];
  *
  * circular_buffer_init(&rx_buffer, rx_data, 256);
@@ -45,7 +45,7 @@
 #ifndef PSLAB_USB_H
 #define PSLAB_USB_H
 
-#include "bus.h"
+#include "util.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -86,7 +86,7 @@ size_t USB_get_interface_count(void);
  * @return Pointer to USB handle on success, nullptr on failure (including
  *         invalid interface number)
  */
-USB_Handle *USB_init(size_t interface, BUS_CircBuffer *rx_buffer);
+USB_Handle *USB_init(size_t interface, CircularBuffer *rx_buffer);
 
 /**
  * @brief Deinitialize the USB interface

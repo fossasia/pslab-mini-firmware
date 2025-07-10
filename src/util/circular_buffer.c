@@ -1,29 +1,39 @@
 /**
- * @file bus.c
- * @brief Common utilities for bus interfaces (UART, USB, etc.)
+ * @file circular_buffer.c
+ * @brief Circular buffer implementation for PSLab mini firmware
  *
- * This module provides shared functionality for various bus interfaces,
- * including circular buffer implementations and utility functions.
+ * This module provides a circular buffer implementation for the PSLab firmware,
+ * allowing for efficient data storage and retrieval in a fixed-size buffer.
  */
 
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "bus.h"
+#include "util.h"
 
 /**
  * @brief Initialize a circular buffer
  *
  * @param cb Pointer to circular buffer structure
  * @param buffer Memory area to use for the buffer
- * @param size Size of the buffer (should be a power of 2)
+ * @param size Size of the buffer (must be a power of 2)
  */
-void circular_buffer_init(BUS_CircBuffer *cb, uint8_t *buffer, uint32_t size)
+void circular_buffer_init(CircularBuffer *cb, uint8_t *buffer, uint32_t size)
 {
+    // Require power of two size
+    if ((size == 0) || (size & (size - 1)) != 0) {
+        cb->buffer = nullptr; // Invalid size
+        cb->head = 0;
+        cb->tail = 0;
+        cb->size = 0;
+        cb->mask = 0;
+        return;
+    }
     cb->buffer = buffer;
     cb->head = 0;
     cb->tail = 0;
     cb->size = size;
+    cb->mask = size - 1; // Mask for bitwise operations
 }
 
 /**
@@ -32,7 +42,7 @@ void circular_buffer_init(BUS_CircBuffer *cb, uint8_t *buffer, uint32_t size)
  * @param cb Pointer to circular buffer structure
  * @return true if buffer is empty, false otherwise
  */
-bool circular_buffer_is_empty(BUS_CircBuffer *cb)
+bool circular_buffer_is_empty(CircularBuffer *cb)
 {
     return cb->head == cb->tail;
 }
@@ -43,9 +53,9 @@ bool circular_buffer_is_empty(BUS_CircBuffer *cb)
  * @param cb Pointer to circular buffer structure
  * @return true if buffer is full, false otherwise
  */
-bool circular_buffer_is_full(BUS_CircBuffer *cb)
+bool circular_buffer_is_full(CircularBuffer *cb)
 {
-    return ((cb->head + 1) % cb->size) == cb->tail;
+    return ((cb->head + 1) & cb->mask) == cb->tail;
 }
 
 /**
@@ -54,12 +64,9 @@ bool circular_buffer_is_full(BUS_CircBuffer *cb)
  * @param cb Pointer to circular buffer structure
  * @return Number of bytes available
  */
-uint32_t circular_buffer_available(BUS_CircBuffer *cb)
+uint32_t circular_buffer_available(CircularBuffer *cb)
 {
-    if (cb->head >= cb->tail) {
-        return cb->head - cb->tail;
-    }
-    return cb->size - cb->tail + cb->head;
+    return (cb->head - cb->tail) & cb->mask;
 }
 
 /**
@@ -69,14 +76,14 @@ uint32_t circular_buffer_available(BUS_CircBuffer *cb)
  * @param data Byte to put into buffer
  * @return true if successful, false if buffer is full
  */
-bool circular_buffer_put(BUS_CircBuffer *cb, uint8_t data)
+bool circular_buffer_put(CircularBuffer *cb, uint8_t data)
 {
     if (circular_buffer_is_full(cb)) {
         return false;
     }
 
     cb->buffer[cb->head] = data;
-    cb->head = (cb->head + 1) % cb->size;
+    cb->head = (cb->head + 1) & cb->mask;
     return true;
 }
 
@@ -87,14 +94,14 @@ bool circular_buffer_put(BUS_CircBuffer *cb, uint8_t data)
  * @param data Pointer to store the read byte
  * @return true if successful, false if buffer is empty
  */
-bool circular_buffer_get(BUS_CircBuffer *cb, uint8_t *data)
+bool circular_buffer_get(CircularBuffer *cb, uint8_t *data)
 {
     if (circular_buffer_is_empty(cb)) {
         return false;
     }
 
     *data = cb->buffer[cb->tail];
-    cb->tail = (cb->tail + 1) % cb->size;
+    cb->tail = (cb->tail + 1) & cb->mask;
     return true;
 }
 
@@ -103,7 +110,7 @@ bool circular_buffer_get(BUS_CircBuffer *cb, uint8_t *data)
  *
  * @param cb Pointer to circular buffer structure
  */
-void circular_buffer_reset(BUS_CircBuffer *cb) { cb->head = cb->tail = 0; }
+void circular_buffer_reset(CircularBuffer *cb) { cb->head = cb->tail = 0; }
 
 /**
  * @brief Write multiple bytes to circular buffer
@@ -114,7 +121,7 @@ void circular_buffer_reset(BUS_CircBuffer *cb) { cb->head = cb->tail = 0; }
  * @return Number of bytes actually written
  */
 uint32_t circular_buffer_write(
-    BUS_CircBuffer *cb,
+    CircularBuffer *cb,
     uint8_t const *data,
     uint32_t len
 )
@@ -140,7 +147,7 @@ uint32_t circular_buffer_write(
  * @param len Maximum number of bytes to read
  * @return Number of bytes actually read
  */
-uint32_t circular_buffer_read(BUS_CircBuffer *cb, uint8_t *data, uint32_t len)
+uint32_t circular_buffer_read(CircularBuffer *cb, uint8_t *data, uint32_t len)
 {
     uint32_t bytes_read = 0;
 
@@ -153,4 +160,15 @@ uint32_t circular_buffer_read(BUS_CircBuffer *cb, uint8_t *data, uint32_t len)
     }
 
     return bytes_read;
+}
+
+/**
+ * @brief Get free space in circular buffer
+ *
+ * @param cb Pointer to circular buffer structure
+ * @return Number of bytes free in the buffer
+ */
+uint32_t circular_buffer_free_space(CircularBuffer *cb)
+{
+    return (cb->size - 1) - ((cb->head - cb->tail) & cb->mask);
 }
