@@ -66,8 +66,6 @@ int main(void) // NOLINT
      */
     while (1) {
         USB_task(husb);
-        uint8_t buf[CB_THRESHOLD + 1] = { 0 };
-        uint32_t bytes_read = 0;
 
         // Log system status periodically (optional)
         static uint32_t log_counter = 0;

@@ -40,6 +40,7 @@
 #include <unistd.h>
 
 #include "syscalls_config.h"
+#include "util.h"
 
 // Only include UART headers if UART I/O is enabled
 #ifndef SYSCALLS_UART_BUS
@@ -48,7 +49,6 @@
 
 #if SYSCALLS_UART_BUS >= 0
 #include "bus/uart.h"
-#include "util.h"
 
 #ifndef SYSCALLS_UART_TX_BUFFER_SIZE
 #define SYSCALLS_UART_TX_BUFFER_SIZE 256
@@ -63,9 +63,6 @@ static CircularBuffer g_rx_buffer, g_tx_buffer;
 static uint8_t g_rx_data[SYSCALLS_UART_RX_BUFFER_SIZE];
 static uint8_t g_tx_data[SYSCALLS_UART_TX_BUFFER_SIZE];
 static bool g_uart_initialized = false;
-
-// Set to tell UART driver that syscalls is claiming the UART bus
-bool g_SYSCALLS_uart_claim = false;
 
 // Set to tell UART driver that syscalls is claiming the UART bus
 bool g_SYSCALLS_uart_claim = false;
