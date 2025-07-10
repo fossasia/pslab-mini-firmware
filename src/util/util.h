@@ -26,6 +26,7 @@ typedef struct {
     uint32_t volatile head;
     uint32_t volatile tail;
     uint32_t size;
+    uint32_t mask; // mask for power-of-two optimization
 } CircularBuffer;
 
 /**

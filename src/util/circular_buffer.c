@@ -16,14 +16,24 @@
  *
  * @param cb Pointer to circular buffer structure
  * @param buffer Memory area to use for the buffer
- * @param size Size of the buffer (should be a power of 2)
+ * @param size Size of the buffer (must be a power of 2)
  */
 void circular_buffer_init(CircularBuffer *cb, uint8_t *buffer, uint32_t size)
 {
+    // Require power of two size
+    if ((size == 0) || (size & (size - 1)) != 0) {
+        cb->buffer = nullptr; // Invalid size
+        cb->head = 0;
+        cb->tail = 0;
+        cb->size = 0;
+        cb->mask = 0;
+        return;
+    }
     cb->buffer = buffer;
     cb->head = 0;
     cb->tail = 0;
     cb->size = size;
+    cb->mask = size - 1; // Mask for bitwise operations
 }
 
 /**
@@ -45,7 +55,7 @@ bool circular_buffer_is_empty(CircularBuffer *cb)
  */
 bool circular_buffer_is_full(CircularBuffer *cb)
 {
-    return ((cb->head + 1) % cb->size) == cb->tail;
+    return ((cb->head + 1) & cb->mask) == cb->tail;
 }
 
 /**
@@ -56,10 +66,7 @@ bool circular_buffer_is_full(CircularBuffer *cb)
  */
 uint32_t circular_buffer_available(CircularBuffer *cb)
 {
-    if (cb->head >= cb->tail) {
-        return cb->head - cb->tail;
-    }
-    return cb->size - cb->tail + cb->head;
+    return (cb->head - cb->tail) & cb->mask;
 }
 
 /**
@@ -76,7 +83,7 @@ bool circular_buffer_put(CircularBuffer *cb, uint8_t data)
     }
 
     cb->buffer[cb->head] = data;
-    cb->head = (cb->head + 1) % cb->size;
+    cb->head = (cb->head + 1) & cb->mask;
     return true;
 }
 
@@ -94,7 +101,7 @@ bool circular_buffer_get(CircularBuffer *cb, uint8_t *data)
     }
 
     *data = cb->buffer[cb->tail];
-    cb->tail = (cb->tail + 1) % cb->size;
+    cb->tail = (cb->tail + 1) & cb->mask;
     return true;
 }
 
@@ -163,8 +170,5 @@ uint32_t circular_buffer_read(CircularBuffer *cb, uint8_t *data, uint32_t len)
  */
 uint32_t circular_buffer_free_space(CircularBuffer *cb)
 {
-    if (cb->head >= cb->tail) {
-        return cb->size - (cb->head - cb->tail) - 1;
-    }
-    return cb->tail - cb->head - 1;
+    return (cb->size - 1) - ((cb->head - cb->tail) & cb->mask);
 }
