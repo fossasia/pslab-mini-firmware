@@ -51,6 +51,20 @@ void test_circular_buffer_is_empty_when_initialized(void)
     TEST_ASSERT_EQUAL_UINT32(15, circular_buffer_free_space(&g_test_buffer)); // size - 1
 }
 
+// Test that non-power-of-two size results in unusable buffer
+void test_circular_buffer_init_non_power_of_two_size(void)
+{
+    CircularBuffer cb;
+    uint8_t buffer[30]; // Not a power of two
+
+    circular_buffer_init(&cb, buffer, sizeof(buffer));
+
+    TEST_ASSERT_NULL(cb.buffer); // Should not initialize properly
+    TEST_ASSERT_EQUAL_UINT32(0, cb.head);
+    TEST_ASSERT_EQUAL_UINT32(0, cb.tail);
+    TEST_ASSERT_EQUAL_UINT32(0, cb.size);
+}
+
 // Test single byte operations
 void test_circular_buffer_put_get_single_byte(void)
 {
