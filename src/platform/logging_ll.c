@@ -59,7 +59,8 @@ void LOG_LL_write(LOG_LL_Level level, char const *format, ...)
     va_start(args, format);
     int formatted_length =
         vsnprintf(entry.message, sizeof(entry.message), format, args);
-    va_end(args); // NOLINT: clang-analyzer-valist.Uninitialized (false positive)
+    // NOLINTNEXTLINE: clang-analyzer-valist.Uninitialized (false positive)
+    va_end(args);
 
     if (formatted_length < 0) {
         return; /* Formatting error */
