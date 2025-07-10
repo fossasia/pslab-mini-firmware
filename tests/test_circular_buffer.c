@@ -207,6 +207,25 @@ void test_circular_buffer_write_insufficient_space(void)
     TEST_ASSERT_TRUE(circular_buffer_is_full(&g_test_buffer));
 }
 
+// Test multi-byte write which fits exactly
+void test_circular_buffer_write_exact_fit(void)
+{
+    uint8_t write_data[15]; // Exactly buffer size - 1
+    uint32_t bytes_written;
+    uint8_t i;
+
+    // Initialize write data
+    for (i = 0; i < sizeof(write_data); i++) {
+        write_data[i] = i;
+    }
+
+    bytes_written = circular_buffer_write(&g_test_buffer, write_data, sizeof(write_data));
+
+    // Should write exactly 15 bytes
+    TEST_ASSERT_EQUAL_UINT32(15, bytes_written);
+    TEST_ASSERT_TRUE(circular_buffer_is_full(&g_test_buffer));
+}
+
 // Test multi-byte read operation
 void test_circular_buffer_read_multiple_bytes(void)
 {
