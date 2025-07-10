@@ -99,17 +99,13 @@ bool LOG_LL_read_entry(LOG_LL_Entry *entry);
 /**
  * @brief Convenience macros for platform logging
  */
-#define LOG_LL_ERROR(fmt, ...)                                           \
-    LOG_LL_write(LOG_LL_ERROR, fmt, ##__VA_ARGS__)
+#define LOG_LL_ERROR(fmt, ...) LOG_LL_write(LOG_LL_ERROR, fmt, ##__VA_ARGS__)
 
-#define LOG_LL_WARN(fmt, ...)                                            \
-    LOG_LL_write(LOG_LL_WARN, fmt, ##__VA_ARGS__)
+#define LOG_LL_WARN(fmt, ...) LOG_LL_write(LOG_LL_WARN, fmt, ##__VA_ARGS__)
 
-#define LOG_LL_INFO(fmt, ...)                                            \
-    LOG_LL_write(LOG_LL_INFO, fmt, ##__VA_ARGS__)
+#define LOG_LL_INFO(fmt, ...) LOG_LL_write(LOG_LL_INFO, fmt, ##__VA_ARGS__)
 
-#define LOG_LL_DEBUG(fmt, ...)                                           \
-    LOG_LL_write(LOG_LL_DEBUG, fmt, ##__VA_ARGS__)
+#define LOG_LL_DEBUG(fmt, ...) LOG_LL_write(LOG_LL_DEBUG, fmt, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 }

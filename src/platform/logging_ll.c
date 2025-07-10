@@ -35,9 +35,7 @@ static bool g_LOG_LL_initialized = false;
 void LOG_LL_init(void)
 {
     circular_buffer_init(
-        &g_LOG_LL_buffer,
-        g_LOG_LL_buffer_data,
-        LOG_LL_BUFFER_SIZE
+        &g_LOG_LL_buffer, g_LOG_LL_buffer_data, LOG_LL_BUFFER_SIZE
     );
     g_LOG_LL_service_request = false;
     g_LOG_LL_initialized = true;
@@ -61,7 +59,7 @@ void LOG_LL_write(LOG_LL_Level level, char const *format, ...)
     va_start(args, format);
     int formatted_length =
         vsnprintf(entry.message, sizeof(entry.message), format, args);
-    va_end(args);
+    va_end(args); // NOLINT: clang-analyzer-valist.Uninitialized (false positive)
 
     if (formatted_length < 0) {
         return; /* Formatting error */
@@ -83,9 +81,7 @@ void LOG_LL_write(LOG_LL_Level level, char const *format, ...)
             &g_LOG_LL_buffer, (uint8_t *)&entry.level, sizeof(entry.level)
         );
         circular_buffer_write(
-            &g_LOG_LL_buffer,
-            (uint8_t *)&entry.length,
-            sizeof(entry.length)
+            &g_LOG_LL_buffer, (uint8_t *)&entry.length, sizeof(entry.length)
         );
         circular_buffer_write(
             &g_LOG_LL_buffer, (uint8_t *)entry.message, entry.length + 1
@@ -117,14 +113,10 @@ bool LOG_LL_read_entry(LOG_LL_Entry *entry)
 
     /* Read level and length first */
     if (circular_buffer_read(
-            &g_LOG_LL_buffer,
-            (uint8_t *)&entry->level,
-            sizeof(entry->level)
+            &g_LOG_LL_buffer, (uint8_t *)&entry->level, sizeof(entry->level)
         ) != sizeof(entry->level) ||
         circular_buffer_read(
-            &g_LOG_LL_buffer,
-            (uint8_t *)&entry->length,
-            sizeof(entry->length)
+            &g_LOG_LL_buffer, (uint8_t *)&entry->length, sizeof(entry->length)
         ) != sizeof(entry->length)) {
         return false;
     }
