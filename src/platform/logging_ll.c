@@ -27,7 +27,7 @@ uint8_t g_LOG_LL_buffer_data[LOG_LL_BUFFER_SIZE];
 /**
  * @brief Internal state
  */
-static bool g_LOG_LL_initialized = false;
+static bool g_initialized = false;
 
 /**
  * @brief Initialize platform logging
@@ -38,7 +38,7 @@ void LOG_LL_init(void)
         &g_LOG_LL_buffer, g_LOG_LL_buffer_data, LOG_LL_BUFFER_SIZE
     );
     g_LOG_LL_service_request = false;
-    g_LOG_LL_initialized = true;
+    g_initialized = true;
 }
 
 /**
@@ -46,7 +46,7 @@ void LOG_LL_init(void)
  */
 void LOG_LL_write(LOG_LL_Level level, char const *format, ...)
 {
-    if (!g_LOG_LL_initialized) {
+    if (!g_initialized) {
         return;
     }
 
