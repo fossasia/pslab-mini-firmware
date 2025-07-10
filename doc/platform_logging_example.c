@@ -13,24 +13,24 @@
 /* Platform layer example (in any platform source file) */
 #ifdef PLATFORM_LAYER_EXAMPLE
 
-#include "platform_logging.h"
+#include "logging_ll.h"
 
 void some_platform_function(void)
 {
     /* Initialize platform logging once at startup */
-    PLATFORM_log_init();
+    LOG_LL_init();
 
     /* Use platform logging throughout platform layer */
-    PLATFORM_LOG_INFO("Platform initialization started");
+    LOG_LL_write(LOG_LL_INFO, "Platform initialization started");
 
     int status = some_hardware_init();
     if (status != 0) {
-        PLATFORM_LOG_ERROR("Hardware init failed with status %d", status);
+        LOG_LL_write(LOG_LL_ERROR, "Hardware init failed with status %d", status);
         return;
     }
 
-    PLATFORM_LOG_DEBUG("Register value: 0x%X", read_register(0x1000));
-    PLATFORM_LOG_INFO("Platform initialization completed successfully");
+    LOG_LL_write(LOG_LL_DEBUG, "Register value: 0x%X", read_register(0x1000));
+    LOG_LL_write(LOG_LL_INFO, "Platform initialization completed successfully");
 }
 
 #endif /* PLATFORM_LAYER_EXAMPLE */
@@ -74,8 +74,8 @@ void SysTick_Handler(void)
  * Example output:
  *
  * [INFO]  System startup
- * [INFO][PLATFORM] Platform initialization started
- * [ERROR][PLATFORM] Hardware init failed with status -1
- * [DEBUG][PLATFORM] Register value: 0xDEADBEEF
- * [INFO][PLATFORM] Platform initialization completed successfully
+ * [INFO]  [LL] Platform initialization started
+ * [ERROR] [LL] Hardware init failed with status -1
+ * [DEBUG] [LL] Register value: 0xDEADBEEF
+ * [INFO]  [LL] Platform initialization completed successfully
  */
