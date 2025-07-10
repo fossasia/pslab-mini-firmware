@@ -1,5 +1,5 @@
 /**
- * @file platform_logging.h
+ * @file logging_ll.h
  * @brief Platform-layer logging interface (buffer-based, no stdio)
  *
  * This module provides logging for the platform layer which:
@@ -16,8 +16,8 @@
  * @date 2025-07-09
  */
 
-#ifndef PLATFORM_LOGGING_H
-#define PLATFORM_LOGGING_H
+#ifndef LOGGING_LL_H
+#define LOGGING_LL_H
 
 #include "util.h"
 #include <stdbool.h>
@@ -32,45 +32,45 @@ extern "C" {
  * @brief Platform log levels (matches system logging levels)
  */
 typedef enum {
-    PLATFORM_LOG_ERROR = 0,
-    PLATFORM_LOG_WARN = 1,
-    PLATFORM_LOG_INFO = 2,
-    PLATFORM_LOG_DEBUG = 3
-} PLATFORM_LogLevel;
+    LOG_LL_ERROR = 0,
+    LOG_LL_WARN = 1,
+    LOG_LL_INFO = 2,
+    LOG_LL_DEBUG = 3
+} LOG_LL_Level;
 
 /**
  * @brief Platform log buffer configuration
  */
-#ifndef PLATFORM_LOG_BUFFER_SIZE
-#define PLATFORM_LOG_BUFFER_SIZE 512 /* Adjust based on memory constraints */
+#ifndef LOG_LL_BUFFER_SIZE
+#define LOG_LL_BUFFER_SIZE 512 /* Adjust based on memory constraints */
 #endif
 
-#ifndef PLATFORM_LOG_MAX_MESSAGE_SIZE
-#define PLATFORM_LOG_MAX_MESSAGE_SIZE 128 /* Max size per log message */
+#ifndef LOG_LL_MAX_MESSAGE_SIZE
+#define LOG_LL_MAX_MESSAGE_SIZE 128 /* Max size per log message */
 #endif
 
 /**
  * @brief Platform log message structure
  */
 typedef struct {
-    PLATFORM_LogLevel level;
+    LOG_LL_Level level;
     uint16_t length;
-    char message[PLATFORM_LOG_MAX_MESSAGE_SIZE];
-} PLATFORM_LogEntry;
+    char message[LOG_LL_MAX_MESSAGE_SIZE];
+} LOG_LL_Entry;
 
 /**
  * @brief Global variables exposed to system layer
  * These are defined in platform_logging.c and accessed as externs by system
  * layer
  */
-extern bool volatile g_platform_log_service_request;
-extern CircularBuffer g_platform_log_buffer;
-extern uint8_t g_platform_log_buffer_data[PLATFORM_LOG_BUFFER_SIZE];
+extern bool volatile g_LOG_LL_service_request;
+extern CircularBuffer g_LOG_LL_buffer;
+extern uint8_t g_LOG_LL_buffer_data[LOG_LL_BUFFER_SIZE];
 
 /**
  * @brief Initialize platform logging
  */
-void PLATFORM_log_init(void);
+void LOG_LL_init(void);
 
 /**
  * @brief Write a log message to the platform buffer
@@ -79,14 +79,14 @@ void PLATFORM_log_init(void);
  * @param format Printf-style format string
  * @param ... Variable arguments
  */
-void PLATFORM_log_write(PLATFORM_LogLevel level, char const *format, ...);
+void LOG_LL_write(LOG_LL_Level level, char const *format, ...);
 
 /**
  * @brief Get the number of bytes available in the log buffer
  *
  * @return Number of bytes available for reading
  */
-size_t PLATFORM_log_available(void);
+size_t LOG_LL_available(void);
 
 /**
  * @brief Read a log entry from the buffer
@@ -94,25 +94,25 @@ size_t PLATFORM_log_available(void);
  * @param entry Pointer to entry structure to fill
  * @return true if entry was read successfully, false if buffer is empty
  */
-bool platform_log_read_entry(PLATFORM_LogEntry *entry);
+bool LOG_LL_read_entry(LOG_LL_Entry *entry);
 
 /**
  * @brief Convenience macros for platform logging
  */
-#define PLATFORM_LOG_ERROR(fmt, ...)                                           \
-    PLATFORM_log_write(PLATFORM_LOG_ERROR, fmt, ##__VA_ARGS__)
+#define LOG_LL_ERROR(fmt, ...)                                           \
+    LOG_LL_write(LOG_LL_ERROR, fmt, ##__VA_ARGS__)
 
-#define PLATFORM_LOG_WARN(fmt, ...)                                            \
-    PLATFORM_log_write(PLATFORM_LOG_WARN, fmt, ##__VA_ARGS__)
+#define LOG_LL_WARN(fmt, ...)                                            \
+    LOG_LL_write(LOG_LL_WARN, fmt, ##__VA_ARGS__)
 
-#define PLATFORM_LOG_INFO(fmt, ...)                                            \
-    PLATFORM_log_write(PLATFORM_LOG_INFO, fmt, ##__VA_ARGS__)
+#define LOG_LL_INFO(fmt, ...)                                            \
+    LOG_LL_write(LOG_LL_INFO, fmt, ##__VA_ARGS__)
 
-#define PLATFORM_LOG_DEBUG(fmt, ...)                                           \
-    PLATFORM_log_write(PLATFORM_LOG_DEBUG, fmt, ##__VA_ARGS__)
+#define LOG_LL_DEBUG(fmt, ...)                                           \
+    LOG_LL_write(LOG_LL_DEBUG, fmt, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* PLATFORM_LOGGING_H */
+#endif /* LOGGING_LL_H */

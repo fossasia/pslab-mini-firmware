@@ -11,7 +11,7 @@
  * @date 2025-07-09
  */
 
-#include "platform_logging.h"
+#include "logging_ll.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -20,40 +20,40 @@
  * @brief Global log buffer and state variables
  * These are accessed by the system layer as externs
  */
-bool volatile g_platform_log_service_request = false;
-CircularBuffer g_platform_log_buffer;
-uint8_t g_platform_log_buffer_data[PLATFORM_LOG_BUFFER_SIZE];
+bool volatile g_LOG_LL_service_request = false;
+CircularBuffer g_LOG_LL_buffer;
+uint8_t g_LOG_LL_buffer_data[LOG_LL_BUFFER_SIZE];
 
 /**
  * @brief Internal state
  */
-static bool g_platform_log_initialized = false;
+static bool g_LOG_LL_initialized = false;
 
 /**
  * @brief Initialize platform logging
  */
-void PLATFORM_log_init(void)
+void LOG_LL_init(void)
 {
     circular_buffer_init(
-        &g_platform_log_buffer,
-        g_platform_log_buffer_data,
-        PLATFORM_LOG_BUFFER_SIZE
+        &g_LOG_LL_buffer,
+        g_LOG_LL_buffer_data,
+        LOG_LL_BUFFER_SIZE
     );
-    g_platform_log_service_request = false;
-    g_platform_log_initialized = true;
+    g_LOG_LL_service_request = false;
+    g_LOG_LL_initialized = true;
 }
 
 /**
  * @brief Write a log message to the platform buffer
  */
-void PLATFORM_log_write(PLATFORM_LogLevel level, char const *format, ...)
+void LOG_LL_write(LOG_LL_Level level, char const *format, ...)
 {
-    if (!g_platform_log_initialized) {
+    if (!g_LOG_LL_initialized) {
         return;
     }
 
     /* Prepare log entry */
-    PLATFORM_LogEntry entry;
+    LOG_LL_Entry entry;
     entry.level = level;
 
     /* Format the message */
@@ -77,22 +77,22 @@ void PLATFORM_log_write(PLATFORM_LogLevel level, char const *format, ...)
         sizeof(entry.level) + sizeof(entry.length) + entry.length + 1;
 
     /* Check if we have enough space */
-    if (circular_buffer_free_space(&g_platform_log_buffer) >= entry_size) {
+    if (circular_buffer_free_space(&g_LOG_LL_buffer) >= entry_size) {
         /* Write entry to buffer */
         circular_buffer_write(
-            &g_platform_log_buffer, (uint8_t *)&entry.level, sizeof(entry.level)
+            &g_LOG_LL_buffer, (uint8_t *)&entry.level, sizeof(entry.level)
         );
         circular_buffer_write(
-            &g_platform_log_buffer,
+            &g_LOG_LL_buffer,
             (uint8_t *)&entry.length,
             sizeof(entry.length)
         );
         circular_buffer_write(
-            &g_platform_log_buffer, (uint8_t *)entry.message, entry.length + 1
+            &g_LOG_LL_buffer, (uint8_t *)entry.message, entry.length + 1
         );
 
         /* Signal system layer that service is needed */
-        g_platform_log_service_request = true;
+        g_LOG_LL_service_request = true;
     }
     /* If write fails, message is dropped (acceptable for logging) */
 }
@@ -100,29 +100,29 @@ void PLATFORM_log_write(PLATFORM_LogLevel level, char const *format, ...)
 /**
  * @brief Get the number of bytes available in the log buffer
  */
-size_t PLATFORM_log_available(void)
+size_t LOG_LL_available(void)
 {
-    return circular_buffer_available(&g_platform_log_buffer);
+    return circular_buffer_available(&g_LOG_LL_buffer);
 }
 
 /**
  * @brief Read a log entry from the buffer
  */
-bool platform_log_read_entry(PLATFORM_LogEntry *entry)
+bool LOG_LL_read_entry(LOG_LL_Entry *entry)
 {
-    if (!entry || circular_buffer_available(&g_platform_log_buffer) <
+    if (!entry || circular_buffer_available(&g_LOG_LL_buffer) <
                       sizeof(entry->level) + sizeof(entry->length)) {
         return false;
     }
 
     /* Read level and length first */
     if (circular_buffer_read(
-            &g_platform_log_buffer,
+            &g_LOG_LL_buffer,
             (uint8_t *)&entry->level,
             sizeof(entry->level)
         ) != sizeof(entry->level) ||
         circular_buffer_read(
-            &g_platform_log_buffer,
+            &g_LOG_LL_buffer,
             (uint8_t *)&entry->length,
             sizeof(entry->length)
         ) != sizeof(entry->length)) {
@@ -135,14 +135,14 @@ bool platform_log_read_entry(PLATFORM_LogEntry *entry)
     }
 
     /* Check if we have enough data for the message */
-    if (circular_buffer_available(&g_platform_log_buffer) < entry->length + 1) {
+    if (circular_buffer_available(&g_LOG_LL_buffer) < entry->length + 1) {
         /* Not enough data, this shouldn't happen but handle gracefully */
         return false;
     }
 
     /* Read the message */
     if (circular_buffer_read(
-            &g_platform_log_buffer, (uint8_t *)entry->message, entry->length + 1
+            &g_LOG_LL_buffer, (uint8_t *)entry->message, entry->length + 1
         ) != entry->length + 1) {
         return false;
     }

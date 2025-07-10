@@ -2,7 +2,7 @@
 
 add_library(pslab-logging STATIC
     logging.c
-    ../platform/platform_logging.c
+    ../platform/logging_ll.c
 )
 target_link_libraries(pslab-logging
     PRIVATE

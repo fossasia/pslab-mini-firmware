@@ -22,8 +22,8 @@
 
 #include "stm32h5xx_hal.h"
 
+#include "logging_ll.h"
 #include "platform.h"
-#include "platform_logging.h"
 
 enum { SYSTEM_CLOCK_FREQ = 250000000U }; // 250 MHz
 enum { SI_PREFIX_MEGA = 1000000U }; // 1 Mega = 10^6
@@ -148,8 +148,8 @@ void PLATFORM_init(void)
 {
     HAL_Init();
     system_clock_config();
-    PLATFORM_log_init();
-    PLATFORM_LOG_INFO("Platform hardware initialized");
+    LOG_LL_init();
+    LOG_LL_INFO("Platform hardware initialized");
 }
 
 /**

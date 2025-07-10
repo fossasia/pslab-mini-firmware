@@ -12,26 +12,7 @@
 #include <stdint.h>
 
 #include "logging.h"
-#include "platform_logging.h"
-
-/**
- * @brief Convert platform log level to system log level
- */
-static char const *get_level_string(int platform_level)
-{
-    switch (platform_level) {
-    case PLATFORM_LOG_ERROR:
-        return "ERROR";
-    case PLATFORM_LOG_WARN:
-        return "WARN";
-    case PLATFORM_LOG_INFO:
-        return "INFO";
-    case PLATFORM_LOG_DEBUG:
-        return "DEBUG";
-    default:
-        return "UNKNOWN";
-    }
-}
+#include "logging_ll.h"
 
 /**
  * @brief Service platform logging - forward messages to system logging
@@ -39,49 +20,36 @@ static char const *get_level_string(int platform_level)
 void LOG_service_platform(void)
 {
     /* Quick check without expensive operations */
-    if (!g_platform_log_service_request) {
+    if (!g_LOG_LL_service_request) {
         return;
     }
 
-    PLATFORM_LogEntry entry;
-    bool processed_any = false;
+    LOG_LL_Entry entry;
 
     /* Process all available platform log entries */
-    while (platform_log_read_entry(&entry)) {
-        processed_any = true;
-
+    while (LOG_LL_read_entry(&entry)) {
         /* Forward to appropriate system log level */
         switch (entry.level) {
-        case PLATFORM_LOG_ERROR:
-            LOG_ERROR(
-                "[%s]PLATFORM: %s", get_level_string(entry.level), entry.message
-            );
+        case LOG_LL_ERROR:
+            LOG_ERROR("[LL] %s", entry.message);
             break;
 
-        case PLATFORM_LOG_WARN:
-            LOG_WARN(
-                "[%s]PLATFORM: %s", get_level_string(entry.level), entry.message
-            );
+        case LOG_LL_WARN:
+            LOG_WARN("[LL] %s", entry.message);
             break;
 
-        case PLATFORM_LOG_INFO:
-            LOG_INFO(
-                "[%s]PLATFORM: %s", get_level_string(entry.level), entry.message
-            );
+        case LOG_LL_INFO:
+            LOG_INFO("[LL] %s", entry.message);
             break;
 
         default:
             /* Unknown level, fallthrough to debug */
-        case PLATFORM_LOG_DEBUG:
-            LOG_DEBUG(
-                "[%s]PLATFORM: %s", get_level_string(entry.level), entry.message
-            );
+        case LOG_LL_DEBUG:
+            LOG_DEBUG("[LL] %s", entry.message);
             break;
         }
     }
 
-    /* Clear service request flag only after processing all messages */
-    if (processed_any) {
-        g_platform_log_service_request = false;
-    }
+    /* Clear service request flag after processing all messages */
+    g_LOG_LL_service_request = false;
 }
