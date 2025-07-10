@@ -41,7 +41,7 @@ typedef enum {
     do {                                                                       \
         if (LOG_LEVEL >= LOG_LEVEL_ERROR) {                                    \
             LOG_TIMESTAMP();                                                   \
-            printf("[ERROR] " fmt "\n", ##__VA_ARGS__);                        \
+            printf("[ERROR] " fmt "\r\n", ##__VA_ARGS__);                      \
             (void)fflush(stdout);                                              \
         }                                                                      \
     } while (0)
@@ -50,7 +50,7 @@ typedef enum {
     do {                                                                       \
         if (LOG_LEVEL >= LOG_LEVEL_WARN) {                                     \
             LOG_TIMESTAMP();                                                   \
-            printf("[WARN]  " fmt "\n", ##__VA_ARGS__);                        \
+            printf("[WARN]  " fmt "\r\n", ##__VA_ARGS__);                      \
         }                                                                      \
     } while (0)
 
@@ -58,7 +58,7 @@ typedef enum {
     do {                                                                       \
         if (LOG_LEVEL >= LOG_LEVEL_INFO) {                                     \
             LOG_TIMESTAMP();                                                   \
-            printf("[INFO]  " fmt "\n", ##__VA_ARGS__);                        \
+            printf("[INFO]  " fmt "\r\n", ##__VA_ARGS__);                      \
         }                                                                      \
     } while (0)
 
@@ -66,7 +66,7 @@ typedef enum {
     do {                                                                       \
         if (LOG_LEVEL >= LOG_LEVEL_DEBUG) {                                    \
             LOG_TIMESTAMP();                                                   \
-            printf("[DEBUG] " fmt "\n", ##__VA_ARGS__);                        \
+            printf("[DEBUG] " fmt "\r\n", ##__VA_ARGS__);                      \
         }                                                                      \
     } while (0)
 
