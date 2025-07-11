@@ -4,6 +4,12 @@ add_executable(pslab-mini-firmware)
 target_sources(pslab-mini-firmware
     PRIVATE
         main.c
+        protocol.c
+)
+
+target_link_libraries(pslab-mini-firmware
+    PRIVATE
+        scpi-parser
 )
 
 target_include_directories(pslab-mini-firmware
