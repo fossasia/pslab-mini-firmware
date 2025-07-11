@@ -1,2 +1,3 @@
 add_subdirectory(CException-1.3.4)
+add_subdirectory(scpi-parser-2.3)
 add_subdirectory(tinyusb-0.18.0)
