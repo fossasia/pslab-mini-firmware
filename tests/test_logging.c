@@ -5,9 +5,6 @@
 #include "util.h"
 #include <string.h>
 
-// Test fixtures
-static LOG_LL_Entry g_test_entry;
-
 void setUp(void)
 {
     // Initialize platform logging
@@ -35,23 +32,23 @@ void test_LOG_LL_write(void)
     char const *test_message = "Test log message";
 
     // Act
-    LOG_LL_write(LOG_LL_DEBUG, test_message);
+    int bytes_written = LOG_LL_write(LOG_LL_DEBUG, test_message);
 
     // Assert
+    LOG_LL_Entry entry;
+    circular_buffer_read(
+        &g_LOG_LL_buffer, (uint8_t *)&entry, sizeof(entry)
+    );
+
+    TEST_ASSERT_EQUAL(LOG_LL_DEBUG, entry.level);
+    TEST_ASSERT_EQUAL_STRING(entry.message, test_message);
+    TEST_ASSERT_EQUAL(strlen(test_message), entry.length);
     TEST_ASSERT_EQUAL(
-        sizeof(g_test_entry.level)
-        + sizeof(g_test_entry.length)
-        + strlen(test_message) + 1, // +1 for null terminator
-        g_LOG_LL_buffer.head
+        bytes_written,
+        sizeof(entry.level) + sizeof(entry.length) + entry.length + 1
     );
-    TEST_ASSERT_EQUAL_MEMORY(
-        test_message,
-        g_LOG_LL_buffer.buffer
-        + g_LOG_LL_buffer.tail
-        + sizeof(g_test_entry.level)
-        + sizeof(g_test_entry.length),
-        strlen(test_message)
-    );
+    // Verify the message is null-terminated
+    TEST_ASSERT_EQUAL('\0', entry.message[entry.length]);
 }
 
 void test_LOG_LL_read_entry(void)
@@ -82,13 +79,14 @@ void test_LOG_LL_available(void)
 {
     // Arrange
     char const *test_message = "Test log message";
-    LOG_LL_write(LOG_LL_DEBUG, test_message);
-
+    
     // Act
+    int bytes_written = LOG_LL_write(LOG_LL_DEBUG, test_message);
     size_t available = LOG_LL_available();
 
     // Assert
-    TEST_ASSERT_GREATER_THAN(0, available);
+    TEST_ASSERT_GREATER_THAN(0, bytes_written);
+    TEST_ASSERT_EQUAL(available, bytes_written);
 }
 
 void test_LOG_service_platform(void)
@@ -96,7 +94,8 @@ void test_LOG_service_platform(void)
     // Arrange
     g_LOG_LL_service_request = true;
     // Fill the log buffer with a test entry
-    LOG_LL_write(LOG_LL_INFO, "Test log entry");
+    int bytes_written = LOG_LL_write(LOG_LL_INFO, "Test log entry");
+    TEST_ASSERT_GREATER_THAN(0, bytes_written);
 
     // Act
     LOG_service_platform();
@@ -108,12 +107,16 @@ void test_LOG_service_platform(void)
 void test_LOG_LL_write_multiple_entries(void)
 {
     // Arrange & Act
-    LOG_LL_write(LOG_LL_ERROR, "Error message");
-    LOG_LL_write(LOG_LL_WARN, "Warning message");
-    LOG_LL_write(LOG_LL_INFO, "Info message");
-    LOG_LL_write(LOG_LL_DEBUG, "Debug message");
+    int bytes1 = LOG_LL_write(LOG_LL_ERROR, "Error message");
+    int bytes2 = LOG_LL_write(LOG_LL_WARN, "Warning message");
+    int bytes3 = LOG_LL_write(LOG_LL_INFO, "Info message");
+    int bytes4 = LOG_LL_write(LOG_LL_DEBUG, "Debug message");
 
-    // Assert
+    // Assert - All writes should succeed
+    TEST_ASSERT_GREATER_THAN(0, bytes1);
+    TEST_ASSERT_GREATER_THAN(0, bytes2);
+    TEST_ASSERT_GREATER_THAN(0, bytes3);
+    TEST_ASSERT_GREATER_THAN(0, bytes4);
     TEST_ASSERT_GREATER_THAN(0, LOG_LL_available());
 
     // Verify we can read multiple entries
@@ -142,9 +145,10 @@ void test_LOG_LL_write_with_format_string(void)
     char const *string = "test";
 
     // Act
-    LOG_LL_write(LOG_LL_INFO, "Value: %d, String: %s", value, string);
+    int bytes_written = LOG_LL_write(LOG_LL_INFO, "Value: %d, String: %s", value, string);
 
     // Assert
+    TEST_ASSERT_GREATER_THAN(0, bytes_written);
     LOG_LL_Entry entry;
     TEST_ASSERT_TRUE(LOG_LL_read_entry(&entry));
     TEST_ASSERT_EQUAL(LOG_LL_INFO, entry.level);
@@ -159,9 +163,10 @@ void test_LOG_LL_write_long_message(void)
     long_message[sizeof(long_message) - 1] = '\0';
 
     // Act
-    LOG_LL_write(LOG_LL_INFO, "%s", long_message);
+    int bytes_written = LOG_LL_write(LOG_LL_INFO, "%s", long_message);
 
-    // Assert - Message should be truncated to fit buffer
+    // Assert - Write should succeed but message should be truncated
+    TEST_ASSERT_GREATER_THAN(0, bytes_written);
     LOG_LL_Entry entry;
     TEST_ASSERT_TRUE(LOG_LL_read_entry(&entry));
     TEST_ASSERT_EQUAL(LOG_LL_INFO, entry.level);
@@ -184,29 +189,35 @@ void test_LOG_LL_read_entry_empty_buffer(void)
 void test_LOG_LL_read_entry_null_pointer(void)
 {
     // Arrange
-    LOG_LL_write(LOG_LL_INFO, "Test message");
+    int bytes_written = LOG_LL_write(LOG_LL_INFO, "Test message");
+    TEST_ASSERT_GREATER_THAN(0, bytes_written);
 
     // Act & Assert
     bool result = LOG_LL_read_entry(NULL);
     TEST_ASSERT_FALSE(result);
 }
 
-void test_LOG_LL_buffer_wraparound(void)
+void test_LOG_LL_buffer_overflow(void)
 {
-    // Arrange - Fill buffer almost to capacity
+    // Arrange - Write messages until buffer is filled
     size_t entries_written = 0;
-    while (circular_buffer_free_space(&g_LOG_LL_buffer) > 50) {
-        LOG_LL_write(LOG_LL_INFO, "Entry %zu", entries_written);
-        entries_written++;
-    }
+    while (LOG_LL_write(LOG_LL_INFO, "Entry %zu", entries_written++) > 0);
 
-    // Act - Write one more entry to potentially cause wraparound
-    LOG_LL_write(LOG_LL_DEBUG, "Final entry");
-
-    // Assert - Should still be able to read entries
+    // Assert - First entry should be available
     LOG_LL_Entry entry;
     TEST_ASSERT_TRUE(LOG_LL_read_entry(&entry));
     TEST_ASSERT_EQUAL_STRING("Entry 0", entry.message);
+    // Final entry written should be dropped
+    // Final entry in buffer should be the second to last written
+    while (LOG_LL_read_entry(&entry));
+    char final_entry_message_in_buffer[LOG_LL_MAX_MESSAGE_SIZE];
+    snprintf(
+        final_entry_message_in_buffer,
+        sizeof(final_entry_message_in_buffer),
+        "Entry %zu",
+        entries_written - 2
+    );
+    TEST_ASSERT_EQUAL_STRING(final_entry_message_in_buffer, entry.message);
 }
 
 void test_LOG_LL_service_request_flag_behavior(void)
@@ -215,9 +226,10 @@ void test_LOG_LL_service_request_flag_behavior(void)
     TEST_ASSERT_FALSE(g_LOG_LL_service_request);
 
     // Act - Write a log entry
-    LOG_LL_write(LOG_LL_INFO, "Test entry");
+    int bytes_written = LOG_LL_write(LOG_LL_INFO, "Test entry");
 
-    // Assert - Service request should be set
+    // Assert - Write should succeed and service request should be set
+    TEST_ASSERT_GREATER_THAN(0, bytes_written);
     TEST_ASSERT_TRUE(g_LOG_LL_service_request);
 
     // Act - Service the platform
@@ -242,10 +254,16 @@ void test_LOG_service_platform_no_request(void)
 void test_LOG_service_platform_multiple_entries(void)
 {
     // Arrange - Write multiple entries
-    LOG_LL_write(LOG_LL_ERROR, "Error entry");
-    LOG_LL_write(LOG_LL_WARN, "Warning entry");
-    LOG_LL_write(LOG_LL_INFO, "Info entry");
-    LOG_LL_write(LOG_LL_DEBUG, "Debug entry");
+    int bytes1 = LOG_LL_write(LOG_LL_ERROR, "Error entry");
+    int bytes2 = LOG_LL_write(LOG_LL_WARN, "Warning entry");
+    int bytes3 = LOG_LL_write(LOG_LL_INFO, "Info entry");
+    int bytes4 = LOG_LL_write(LOG_LL_DEBUG, "Debug entry");
+
+    // Assert all writes succeeded
+    TEST_ASSERT_GREATER_THAN(0, bytes1);
+    TEST_ASSERT_GREATER_THAN(0, bytes2);
+    TEST_ASSERT_GREATER_THAN(0, bytes3);
+    TEST_ASSERT_GREATER_THAN(0, bytes4);
 
     // Act
     LOG_service_platform();
@@ -258,7 +276,8 @@ void test_LOG_service_platform_multiple_entries(void)
 void test_LOG_LL_buffer_reset_behavior(void)
 {
     // Arrange - Write some data first
-    LOG_LL_write(LOG_LL_INFO, "Before reset");
+    int bytes_written1 = LOG_LL_write(LOG_LL_INFO, "Before reset");
+    TEST_ASSERT_GREATER_THAN(0, bytes_written1);
     TEST_ASSERT_GREATER_THAN(0, LOG_LL_available());
 
     // Act - Reset the buffer
@@ -268,7 +287,8 @@ void test_LOG_LL_buffer_reset_behavior(void)
     TEST_ASSERT_EQUAL(0, LOG_LL_available());
 
     // Verify we can still write after reset (since LOG_LL_init was called in setUp)
-    LOG_LL_write(LOG_LL_INFO, "After reset message");
+    int bytes_written2 = LOG_LL_write(LOG_LL_INFO, "After reset message");
+    TEST_ASSERT_GREATER_THAN(0, bytes_written2);
     TEST_ASSERT_GREATER_THAN(0, LOG_LL_available());
 
     // Verify we can read the new message
@@ -280,10 +300,16 @@ void test_LOG_LL_buffer_reset_behavior(void)
 void test_LOG_LL_all_log_levels(void)
 {
     // Test all log levels to ensure they're handled correctly
-    LOG_LL_write(LOG_LL_ERROR, "Error level test");
-    LOG_LL_write(LOG_LL_WARN, "Warning level test");
-    LOG_LL_write(LOG_LL_INFO, "Info level test");
-    LOG_LL_write(LOG_LL_DEBUG, "Debug level test");
+    int bytes1 = LOG_LL_write(LOG_LL_ERROR, "Error level test");
+    int bytes2 = LOG_LL_write(LOG_LL_WARN, "Warning level test");
+    int bytes3 = LOG_LL_write(LOG_LL_INFO, "Info level test");
+    int bytes4 = LOG_LL_write(LOG_LL_DEBUG, "Debug level test");
+
+    // Assert all writes succeeded
+    TEST_ASSERT_GREATER_THAN(0, bytes1);
+    TEST_ASSERT_GREATER_THAN(0, bytes2);
+    TEST_ASSERT_GREATER_THAN(0, bytes3);
+    TEST_ASSERT_GREATER_THAN(0, bytes4);
 
     // Verify each level is correctly stored and retrieved
     LOG_LL_Entry entry;
@@ -329,11 +355,14 @@ void test_LOG_LL_convenience_macros(void)
     TEST_ASSERT_EQUAL_STRING("Debug macro test", entry.message);
 }
 
+// Test edge case of empty message
 void test_LOG_LL_zero_length_message(void)
 {
-    // Test edge case of empty message
-    LOG_LL_write(LOG_LL_INFO, "");
+    // Act
+    int bytes_written = LOG_LL_write(LOG_LL_INFO, "");
 
+    // Assert - Write should succeed even for empty message
+    TEST_ASSERT_GREATER_THAN(0, bytes_written);
     LOG_LL_Entry entry;
     TEST_ASSERT_TRUE(LOG_LL_read_entry(&entry));
     TEST_ASSERT_EQUAL(LOG_LL_INFO, entry.level);
@@ -341,21 +370,122 @@ void test_LOG_LL_zero_length_message(void)
     TEST_ASSERT_EQUAL_STRING("", entry.message);
 }
 
-void test_LOG_LL_buffer_boundary_conditions(void)
+// Test that buffer can be partially read to make space for new entries
+void test_LOG_LL_buffer_partial_read(void)
 {
-    // Test when buffer has exactly enough space for one more entry
-    size_t initial_free = circular_buffer_free_space(&g_LOG_LL_buffer);
-
-    // Fill buffer until we have just enough space for a small entry
-    while (circular_buffer_free_space(&g_LOG_LL_buffer) > 20) {
-        LOG_LL_write(LOG_LL_INFO, "Fill");
+    // Arrange - Write messages until buffer is filled
+    size_t entries_written = 0;
+    while (LOG_LL_write(LOG_LL_INFO, "Entry %zu", entries_written) > 0) {
+        entries_written++;
     }
 
-    // Try to write an entry that should fit
-    size_t free_before = circular_buffer_free_space(&g_LOG_LL_buffer);
-    LOG_LL_write(LOG_LL_INFO, "Last");
+    // Act - Read back half the entries to make space
+    size_t entries_to_read = entries_written / 2;
+    for (size_t i = 0; i < entries_to_read; i++) {
+        LOG_LL_Entry entry;
+        TEST_ASSERT_TRUE(LOG_LL_read_entry(&entry));
+    }
 
-    // Should either succeed or fail gracefully
-    size_t free_after = circular_buffer_free_space(&g_LOG_LL_buffer);
-    TEST_ASSERT_TRUE(free_after <= free_before);
+    // Assert - Buffer should still have remaining entries
+    TEST_ASSERT_GREATER_THAN(0, LOG_LL_available());
+
+    // Verify we can write new entries after partial read
+    TEST_ASSERT_GREATER_THAN(0, LOG_LL_write(LOG_LL_INFO, "New entry after partial read"));
+}
+
+// Test buffer wraparound detection
+void test_LOG_LL_buffer_wraparound_detection(void)
+{
+    // Arrange - Fill buffer completely
+    size_t entries_written = 0;
+    while (LOG_LL_write(LOG_LL_INFO, "Fill entry %zu", entries_written) > 0) {
+        entries_written++;
+    }
+
+    // Read half the entries to make space
+    size_t entries_to_read = entries_written / 2;
+    for (size_t i = 0; i < entries_to_read; i++) {
+        LOG_LL_Entry entry;
+        LOG_LL_read_entry(&entry);
+    }
+
+    // Act - Write one more message to cause wraparound
+    LOG_LL_write(LOG_LL_INFO, "Wraparound entry");
+
+    // Assert - Buffer should show wraparound condition (head < tail)
+    TEST_ASSERT_LESS_THAN(g_LOG_LL_buffer.tail, g_LOG_LL_buffer.head);
+}
+
+// Test data integrity before wraparound
+void test_LOG_LL_buffer_data_integrity_before_wraparound(void)
+{
+    // Arrange - Fill buffer with numbered entries
+    size_t entries_written = 0;
+    while (LOG_LL_write(LOG_LL_INFO, "Entry %zu", entries_written) > 0) {
+        entries_written++;
+    }
+
+    // Read half the entries
+    size_t entries_to_read = entries_written / 2;
+    for (size_t i = 0; i < entries_to_read; i++) {
+        LOG_LL_Entry entry;
+        LOG_LL_read_entry(&entry);
+    }
+
+    // Act & Assert - Remaining entries should be readable with correct content
+    LOG_LL_Entry entry;
+    for (size_t i = entries_to_read; i < entries_written; i++) {
+        char expected_message[LOG_LL_MAX_MESSAGE_SIZE];
+        snprintf(expected_message, sizeof(expected_message), "Entry %zu", i);
+
+        TEST_ASSERT_TRUE(LOG_LL_read_entry(&entry));
+        TEST_ASSERT_EQUAL(LOG_LL_INFO, entry.level);
+        TEST_ASSERT_EQUAL_STRING(expected_message, entry.message);
+    }
+}
+
+// Test data integrity after wraparound
+void test_LOG_LL_buffer_data_integrity_after_wraparound(void)
+{
+    // Arrange - Fill buffer, then clear some space
+    size_t entries_written = 0;
+    while (LOG_LL_write(LOG_LL_INFO, "Initial entry %zu", entries_written) > 0) {
+        entries_written++;
+    }
+
+    // Read half the entries to make space
+    size_t entries_to_read = entries_written / 2;
+    for (size_t i = 0; i < entries_to_read; i++) {
+        LOG_LL_Entry entry;
+        LOG_LL_read_entry(&entry);
+    }
+
+    // Act - Write new numbered entries after wraparound
+    size_t new_entries_written = 0;
+    while (LOG_LL_write(LOG_LL_INFO, "New Entry %zu", new_entries_written) > 0) {
+        new_entries_written++;
+    }
+
+    // Skip remaining pre-wraparound entries
+    LOG_LL_Entry entry;
+    while (LOG_LL_read_entry(&entry)) {
+        if (strstr(entry.message, "New Entry") != NULL) {
+            // Found first new entry - it's now in the entry variable
+            break;
+        }
+    }
+
+    // Assert - New entries should be readable with correct content
+    for (size_t i = 0; i < new_entries_written; i++) {
+        char expected_message[LOG_LL_MAX_MESSAGE_SIZE];
+        snprintf(expected_message, sizeof(expected_message), "New Entry %zu", i);
+
+        if (i == 0) {
+            // First entry was already read above
+            TEST_ASSERT_EQUAL_STRING(expected_message, entry.message);
+        } else {
+            TEST_ASSERT_TRUE(LOG_LL_read_entry(&entry));
+            TEST_ASSERT_EQUAL_STRING(expected_message, entry.message);
+        }
+    }
 }
