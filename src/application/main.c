@@ -8,9 +8,12 @@
 #include <string.h>
 
 #include "adc.h"
+#include "error.h"
 #include "led.h"
 #include "logging.h"
+#include "syscalls_config.h"
 #include "system.h"
+#include "uart.h"
 #include "usb.h"
 #include "util.h"
 
@@ -46,7 +49,31 @@ void usb_cb(USB_Handle *husb, uint32_t bytes_available)
 
 int main(void) // NOLINT
 {
+    Error e;
     SYSTEM_init();
+    // Try to initialize SYSCALLS_UART_BUS directly, demonstrating CException
+    // handling
+    TRY
+    {
+        uint32_t uart_buf_sz = 8;
+        uint8_t uart_rx_buffer_data[uart_buf_sz];
+        uint8_t uart_tx_buffer_data[uart_buf_sz];
+        CircularBuffer uart_rx_buf;
+        CircularBuffer uart_tx_buf;
+        circular_buffer_init(&uart_rx_buf, uart_rx_buffer_data, uart_buf_sz);
+        circular_buffer_init(&uart_tx_buf, uart_tx_buffer_data, uart_buf_sz);
+        UART_Handle *huart =
+            UART_init(SYSCALLS_UART_BUS, &uart_rx_buf, &uart_tx_buf);
+        if (huart == nullptr) {
+            LOG_ERROR("Failed to initialize SYSCALLS_UART_BUS");
+            THROW(ERROR_RESOURCE_UNAVAILABLE);
+        }
+    }
+    CATCH(e)
+    {
+        LOG_DEBUG("Caught exception during UART initialization:");
+        LOG_DEBUG("%d %s", e, error_to_string(e));
+    }
 
     // Initialize USB
     CircularBuffer usb_rx_buf;

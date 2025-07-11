@@ -25,7 +25,7 @@ typedef enum {
 
 // Default log level (can be overridden via preprocessor)
 #ifndef LOG_LEVEL
-#define LOG_LEVEL LOG_LEVEL_INFO
+#define LOG_LEVEL LOG_LEVEL_DEBUG
 #endif
 
 // Timestamp support (optional - define LOG_WITH_TIMESTAMP to enable)
