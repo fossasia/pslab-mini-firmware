@@ -8,6 +8,7 @@
  */
 
 #include "led.h"
+#include "logging.h"
 #include "platform.h"
 
 #include "system.h"
@@ -15,5 +16,7 @@
 void SYSTEM_init(void)
 {
     PLATFORM_init();
+    // Read any logs that were generated during platform initialization
+    LOG_service_platform();
     LED_init();
 }

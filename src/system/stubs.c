@@ -33,3 +33,40 @@ _off_t _lseek_r(struct _reent *r, int fd, _off_t offset, int whence)
     errno = ENOSYS;
     return (_off_t)-1;
 }
+
+/**
+ * @brief Reentrant version of getpid system call stub
+ *
+ * This stub is required by newlib's reentrant infrastructure when using
+ * setjmp/longjmp (as used by CException). In bare-metal embedded systems,
+ * there are no processes, so we return a fixed process ID.
+ *
+ * @param r Pointer to reentrant structure (unused)
+ * @return Always returns 1 (fixed process ID for embedded systems)
+ */
+int _getpid_r(struct _reent *r)
+{
+    (void)r;
+    return 1;
+}
+
+/**
+ * @brief Reentrant version of kill system call stub
+ *
+ * This stub is required by newlib's reentrant infrastructure when using
+ * setjmp/longjmp (as used by CException). In bare-metal embedded systems,
+ * there are no processes or signals, so this always fails.
+ *
+ * @param r Pointer to reentrant structure (unused)
+ * @param pid Process ID (unused)
+ * @param sig Signal number (unused)
+ * @return Always returns -1 with errno set to EINVAL
+ */ // NOLINTNEXTLINE: bugprone-easily-swappable-parameters
+int _kill_r(struct _reent *r, int pid, int sig)
+{
+    (void)r;
+    (void)pid;
+    (void)sig;
+    errno = EINVAL;
+    return -1;
+}

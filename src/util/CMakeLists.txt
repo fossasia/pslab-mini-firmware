@@ -7,3 +7,7 @@ target_sources(pslab-util PRIVATE
 target_include_directories(pslab-util PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+target_link_libraries(pslab-util PUBLIC
+    cexception
+)
