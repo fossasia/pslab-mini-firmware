@@ -6,6 +6,7 @@
  * implementation used throughout the PSLab firmware.
  */
 
+#include "error.h"
 #include "unity.h"
 #include "util.h"
 #include <stdlib.h>
@@ -54,15 +55,20 @@ void test_circular_buffer_is_empty_when_initialized(void)
 // Test that non-power-of-two size results in unusable buffer
 void test_circular_buffer_init_non_power_of_two_size(void)
 {
+    Error exc;
     CircularBuffer cb;
     uint8_t buffer[30]; // Not a power of two
 
-    circular_buffer_init(&cb, buffer, sizeof(buffer));
-
-    TEST_ASSERT_NULL(cb.buffer); // Should not initialize properly
-    TEST_ASSERT_EQUAL_UINT32(0, cb.head);
-    TEST_ASSERT_EQUAL_UINT32(0, cb.tail);
-    TEST_ASSERT_EQUAL_UINT32(0, cb.size);
+    TRY
+    {
+        circular_buffer_init(&cb, buffer, sizeof(buffer));
+    }
+    CATCH(exc)
+    {
+        // Expected error for non-power-of-two size
+        TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exc);
+        return;
+    }
 }
 
 // Test single byte operations

@@ -16,6 +16,7 @@
 #include "tusb.h"
 #include "tusb_config.h"
 
+#include "error.h"
 #include "usb_ll.h"
 
 // USB clock, 48 MHz
@@ -66,7 +67,13 @@ static void crs_enable(void)
 
 void USB_LL_init(USB_Bus bus)
 {
-    if (bus >= USB_BUS_COUNT || g_usb_instances[bus].initialized) {
+    if (bus >= USB_BUS_COUNT) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return;
+    }
+
+    if (g_usb_instances[bus].initialized) {
+        THROW(ERROR_RESOURCE_BUSY);
         return;
     }
 
@@ -77,9 +84,8 @@ void USB_LL_init(USB_Bus bus)
     periph_init.PeriphClockSelection = RCC_PERIPHCLK_USB;
     periph_init.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
     if (HAL_RCCEx_PeriphCLKConfig(&periph_init) != HAL_OK) {
-        // Clock configuration incorrect or hardware failure. Hang the system
-        // to prevent damage.
-        while (1);
+        THROW(ERROR_HARDWARE_FAULT);
+        return;
     }
 
     // Enable USB-related clocks.
@@ -104,7 +110,10 @@ void USB_LL_init(USB_Bus bus)
     // Because AI reviewers keep commenting on it:
     // TinyUSB enables the USB_DRD_FS_IRQn. It is not necessary (and would be
     // incorrect) to call HAL_NVIC_EnableIRQ(USB_DRD_FS_IRQn) here.
-    tusb_init();
+    if (!tusb_init()) {
+        THROW(ERROR_HARDWARE_FAULT);
+        return;
+    }
 
     if (__HAL_RCC_GET_USB_SOURCE() == RCC_USBCLKSOURCE_HSI48) {
         crs_enable();

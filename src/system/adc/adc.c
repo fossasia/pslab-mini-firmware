@@ -15,6 +15,7 @@
 
 #include "adc.h"
 #include "adc_ll.h"
+#include "error.h"
 
 /**
  * @brief Initializes the ADC peripheral.
@@ -75,7 +76,11 @@ void ADC_stop(void)
  */
 uint32_t ADC_read(uint32_t *data)
 {
-    *data = ADC_LL_read(data);
+    if (!data) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return 0;
+    }
 
+    *data = ADC_LL_read(data);
     return *data;
 }

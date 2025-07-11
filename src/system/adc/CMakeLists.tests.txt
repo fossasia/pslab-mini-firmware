@@ -5,6 +5,11 @@ add_library(pslab-adc STATIC
     adc.c
 )
 
+target_link_libraries(pslab-adc
+    PRIVATE
+        pslab-util
+)
+
 target_include_directories(pslab-adc
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}

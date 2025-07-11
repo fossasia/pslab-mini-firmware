@@ -17,6 +17,7 @@
 #include "stm32h5xx_hal.h"
 
 #include "adc_ll.h"
+#include "error.h"
 
 static ADC_HandleTypeDef g_hadc = { nullptr };
 
@@ -73,13 +74,17 @@ void ADC_LL_init(void)
     g_hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
     g_hadc.Init.ExternalTrigConv = ADC_SOFTWARE_START;
 
-    HAL_ADC_Init(&g_hadc);
+    if (HAL_ADC_Init(&g_hadc) != HAL_OK) {
+        THROW(ERROR_HARDWARE_FAULT);
+    }
 
     // Configure ADC channel
     g_config.Channel = ADC_CHANNEL_0; // ADC1_IN0
     g_config.Rank = ADC_REGULAR_RANK_1;
     g_config.SamplingTime = ADC_SAMPLETIME_640CYCLES_5;
-    HAL_ADC_ConfigChannel(&g_hadc, &g_config);
+    if (HAL_ADC_ConfigChannel(&g_hadc, &g_config) != HAL_OK) {
+        THROW(ERROR_HARDWARE_FAULT);
+    }
 }
 
 /**
@@ -89,7 +94,9 @@ void ADC_LL_init(void)
 void ADC_LL_deinit(void)
 {
     // Deinitialize the ADC peripheral
-    HAL_ADC_DeInit(&g_hadc);
+    if (HAL_ADC_DeInit(&g_hadc) != HAL_OK) {
+        THROW(ERROR_HARDWARE_FAULT);
+    }
 }
 
 /**
@@ -102,7 +109,9 @@ void ADC_LL_deinit(void)
 void ADC_LL_start(void)
 {
     // Start the ADC conversion
-    HAL_ADC_Start(&g_hadc);
+    if (HAL_ADC_Start(&g_hadc) != HAL_OK) {
+        THROW(ERROR_HARDWARE_FAULT);
+    }
 }
 
 /**
@@ -115,20 +124,28 @@ void ADC_LL_start(void)
 void ADC_LL_stop(void)
 {
     // Stop the ADC conversion
-    HAL_ADC_Stop(&g_hadc);
+    if (HAL_ADC_Stop(&g_hadc) != HAL_OK) {
+        THROW(ERROR_HARDWARE_FAULT);
+    }
 }
 
 uint32_t ADC_LL_read(uint32_t *buffer)
 {
     // Start the ADC conversion
-    HAL_ADC_Start(&g_hadc);
+    if (HAL_ADC_Start(&g_hadc) != HAL_OK) {
+        THROW(ERROR_HARDWARE_FAULT);
+    }
 
-    HAL_ADC_PollForConversion(&g_hadc, HAL_MAX_DELAY);
+    if (HAL_ADC_PollForConversion(&g_hadc, HAL_MAX_DELAY) != HAL_OK) {
+        THROW(ERROR_TIMEOUT);
+    }
 
     // Read the converted value
     *buffer = HAL_ADC_GetValue(&g_hadc);
 
-    HAL_ADC_Stop(&g_hadc); // Stop the ADC conversion
+    if (HAL_ADC_Stop(&g_hadc) != HAL_OK) {
+        THROW(ERROR_HARDWARE_FAULT);
+    }
 
     return *buffer; // Return the converted value
 }
