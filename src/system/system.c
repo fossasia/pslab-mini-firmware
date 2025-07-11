@@ -7,6 +7,7 @@
  * other hardware access.
  */
 
+#include "error.h"
 #include "led.h"
 #include "logging.h"
 #include "platform.h"

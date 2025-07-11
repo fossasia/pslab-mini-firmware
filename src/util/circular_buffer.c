@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "error.h"
 #include "util.h"
 
 /**
@@ -20,13 +21,14 @@
  */
 void circular_buffer_init(CircularBuffer *cb, uint8_t *buffer, uint32_t size)
 {
+    if (!cb || !buffer) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return;
+    }
+
     // Require power of two size
     if ((size == 0) || (size & (size - 1)) != 0) {
-        cb->buffer = nullptr; // Invalid size
-        cb->head = 0;
-        cb->tail = 0;
-        cb->size = 0;
-        cb->mask = 0;
+        THROW(ERROR_INVALID_ARGUMENT);
         return;
     }
     cb->buffer = buffer;
@@ -44,6 +46,10 @@ void circular_buffer_init(CircularBuffer *cb, uint8_t *buffer, uint32_t size)
  */
 bool circular_buffer_is_empty(CircularBuffer *cb)
 {
+    if (!cb) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return true;
+    }
     return cb->head == cb->tail;
 }
 
@@ -55,6 +61,10 @@ bool circular_buffer_is_empty(CircularBuffer *cb)
  */
 bool circular_buffer_is_full(CircularBuffer *cb)
 {
+    if (!cb) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return true;
+    }
     return ((cb->head + 1) & cb->mask) == cb->tail;
 }
 
@@ -66,6 +76,10 @@ bool circular_buffer_is_full(CircularBuffer *cb)
  */
 uint32_t circular_buffer_available(CircularBuffer *cb)
 {
+    if (!cb) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return 0;
+    }
     return (cb->head - cb->tail) & cb->mask;
 }
 
@@ -78,6 +92,11 @@ uint32_t circular_buffer_available(CircularBuffer *cb)
  */
 bool circular_buffer_put(CircularBuffer *cb, uint8_t data)
 {
+    if (!cb) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return false;
+    }
+
     if (circular_buffer_is_full(cb)) {
         return false;
     }
@@ -96,6 +115,11 @@ bool circular_buffer_put(CircularBuffer *cb, uint8_t data)
  */
 bool circular_buffer_get(CircularBuffer *cb, uint8_t *data)
 {
+    if (!cb || !data) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return false;
+    }
+
     if (circular_buffer_is_empty(cb)) {
         return false;
     }
@@ -110,7 +134,14 @@ bool circular_buffer_get(CircularBuffer *cb, uint8_t *data)
  *
  * @param cb Pointer to circular buffer structure
  */
-void circular_buffer_reset(CircularBuffer *cb) { cb->head = cb->tail = 0; }
+void circular_buffer_reset(CircularBuffer *cb)
+{
+    if (!cb) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return;
+    }
+    cb->head = cb->tail = 0;
+}
 
 /**
  * @brief Write multiple bytes to circular buffer
@@ -126,6 +157,11 @@ uint32_t circular_buffer_write(
     uint32_t len
 )
 {
+    if (!cb || !data) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return 0;
+    }
+
     uint32_t bytes_written = 0;
 
     while (bytes_written < len && !circular_buffer_is_full(cb)) {
@@ -149,6 +185,11 @@ uint32_t circular_buffer_write(
  */
 uint32_t circular_buffer_read(CircularBuffer *cb, uint8_t *data, uint32_t len)
 {
+    if (!cb || !data) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return 0;
+    }
+
     uint32_t bytes_read = 0;
 
     while (bytes_read < len && !circular_buffer_is_empty(cb)) {
@@ -170,5 +211,9 @@ uint32_t circular_buffer_read(CircularBuffer *cb, uint8_t *data, uint32_t len)
  */
 uint32_t circular_buffer_free_space(CircularBuffer *cb)
 {
+    if (!cb) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return 0;
+    }
     return (cb->size - 1) - ((cb->head - cb->tail) & cb->mask);
 }

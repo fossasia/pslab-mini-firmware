@@ -22,6 +22,7 @@
 
 #include "stm32h5xx_hal.h"
 
+#include "error.h"
 #include "logging_ll.h"
 #include "platform.h"
 
@@ -90,10 +91,9 @@ static void system_clock_config(void)
     osc_init.PLL.PLLVCOSEL = RCC_PLL1_VCORANGE_WIDE;
     osc_init.PLL.PLLFRACN = 0;
     if (HAL_RCC_OscConfig(&osc_init) != HAL_OK) {
-        /* Clock configuration incorrect or hardware failure. Hang the system to
-         * prevent damage.
-         */
-        while (1);
+        /* Clock configuration incorrect or hardware failure */
+        THROW(ERROR_HARDWARE_FAULT);
+        return;
     }
 
     // Wait for HSI48.
@@ -110,10 +110,9 @@ static void system_clock_config(void)
     clk_init.APB2CLKDivider = RCC_HCLK_DIV1;
     clk_init.APB3CLKDivider = RCC_HCLK_DIV1;
     if (HAL_RCC_ClockConfig(&clk_init, FLASH_LATENCY_5) != HAL_OK) {
-        /* Clock configuration incorrect or hardware failure. Hang the system to
-         * prevent damage.
-         */
-        while (1);
+        /* Clock configuration incorrect or hardware failure */
+        THROW(ERROR_HARDWARE_FAULT);
+        return;
     }
 }
 
@@ -146,7 +145,10 @@ static void system_clock_config(void)
  */
 void PLATFORM_init(void)
 {
-    HAL_Init();
+    if (HAL_Init() != HAL_OK) {
+        THROW(ERROR_HARDWARE_FAULT);
+        return;
+    }
     system_clock_config();
     LOG_LL_init();
     LOG_LL_INFO("Platform hardware initialized");

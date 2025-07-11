@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "error.h"
 #include "usb.h"
 #include "usb_ll.h"
 #include "util.h"
@@ -167,6 +168,7 @@ static void line_state_callback(USB_Bus itf, bool dtr, bool rts)
 USB_Handle *USB_init(size_t interface, CircularBuffer *rx_buffer)
 {
     if (!rx_buffer || interface >= USB_INTERFACE_COUNT) {
+        THROW(ERROR_INVALID_ARGUMENT);
         return nullptr;
     }
 
@@ -174,12 +176,14 @@ USB_Handle *USB_init(size_t interface, CircularBuffer *rx_buffer)
 
     /* Check if interface is already initialized */
     if (g_active_handles[interface_id] != nullptr) {
+        THROW(ERROR_RESOURCE_BUSY);
         return nullptr;
     }
 
     /* Allocate handle */
     USB_Handle *handle = malloc(sizeof(USB_Handle));
     if (!handle) {
+        THROW(ERROR_OUT_OF_MEMORY);
         return nullptr;
     }
 

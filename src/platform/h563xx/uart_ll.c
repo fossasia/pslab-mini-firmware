@@ -24,6 +24,7 @@
 
 #include "stm32h5xx_hal.h"
 
+#include "error.h"
 #include "uart_ll.h"
 
 enum { UART_DEFAULT_BAUDRATE = 115200 }; // Default UART baud rate
@@ -299,20 +300,29 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
  */
 void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz)
 {
-    if (bus >= UART_BUS_COUNT || g_uart_instances[bus].initialized) {
+    if (bus >= UART_BUS_COUNT) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return;
+    }
+
+    if (!rx_buf || sz == 0) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return;
+    }
+
+    if (g_uart_instances[bus].initialized) {
+        THROW(ERROR_RESOURCE_BUSY);
         return;
     }
 
     UARTInstance *instance = &g_uart_instances[bus];
+    USART_TypeDef *uart_instance[UART_BUS_COUNT] = {
+        [UART_BUS_0] = USART1,
+        [UART_BUS_1] = USART2,
+        [UART_BUS_2] = USART3,
+    };
 
-    /* Configure UART instance based on bus */
-    if (bus == UART_BUS_0) {
-        instance->huart->Instance = USART1;
-    } else if (bus == UART_BUS_1) {
-        instance->huart->Instance = USART2;
-    } else if (bus == UART_BUS_2) {
-        instance->huart->Instance = USART3;
-    }
+    instance->huart->Instance = uart_instance[bus];
 
     instance->huart->Init.BaudRate = UART_DEFAULT_BAUDRATE;
     instance->huart->Init.WordLength = UART_WORDLENGTH_8B;
@@ -323,7 +333,11 @@ void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz)
     instance->huart->Init.OverSampling = UART_OVERSAMPLING_16;
     instance->huart->Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
     instance->huart->Init.ClockPrescaler = UART_PRESCALER_DIV1;
-    HAL_UART_Init(instance->huart);
+
+    if (HAL_UART_Init(instance->huart) != HAL_OK) {
+        THROW(ERROR_HARDWARE_FAULT);
+        return;
+    }
 
     instance->rx_buffer_data = rx_buf;
     instance->rx_buffer_size = sz;
@@ -332,9 +346,12 @@ void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz)
     instance->initialized = true;
 
     /* Start DMA reception */
-    HAL_UART_Receive_DMA(
-        instance->huart, instance->rx_buffer_data, instance->rx_buffer_size
-    );
+    if (HAL_UART_Receive_DMA(
+            instance->huart, instance->rx_buffer_data, instance->rx_buffer_size
+        ) != HAL_OK) {
+        THROW(ERROR_HARDWARE_FAULT);
+        return;
+    }
 
     /* Enable UART idle line interrupt for packet detection */
     __HAL_UART_ENABLE_IT(instance->huart, UART_IT_IDLE);
@@ -351,7 +368,12 @@ void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz)
  */
 void UART_LL_deinit(UART_Bus bus)
 {
-    if (bus >= UART_BUS_COUNT || !g_uart_instances[bus].initialized) {
+    if (bus >= UART_BUS_COUNT) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return;
+    }
+
+    if (!g_uart_instances[bus].initialized) {
         return;
     }
 
@@ -367,7 +389,9 @@ void UART_LL_deinit(UART_Bus bus)
     }
 
     /* Deinitialize UART */
-    HAL_UART_DeInit(instance->huart);
+    if (HAL_UART_DeInit(instance->huart) != HAL_OK) {
+        THROW(ERROR_HARDWARE_FAULT);
+    }
 
     /* Clear instance data */
     instance->rx_buffer_data = nullptr;
@@ -389,14 +413,30 @@ void UART_LL_deinit(UART_Bus bus)
  */
 void UART_LL_start_dma_tx(UART_Bus bus, uint8_t *buffer, uint32_t size)
 {
-    if (bus >= UART_BUS_COUNT || !g_uart_instances[bus].initialized) {
+    if (bus >= UART_BUS_COUNT) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return;
+    }
+
+    if (!buffer || size == 0) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return;
+    }
+
+    if (!g_uart_instances[bus].initialized) {
+        THROW(ERROR_DEVICE_NOT_READY);
         return;
     }
 
     UARTInstance *instance = &g_uart_instances[bus];
     instance->tx_in_progress = true;
     instance->tx_dma_size = size;
-    HAL_UART_Transmit_DMA(instance->huart, buffer, size);
+
+    if (HAL_UART_Transmit_DMA(instance->huart, buffer, size) != HAL_OK) {
+        instance->tx_in_progress = false;
+        instance->tx_dma_size = 0;
+        THROW(ERROR_HARDWARE_FAULT);
+    }
 }
 
 /**

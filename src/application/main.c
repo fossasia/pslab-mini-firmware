@@ -62,17 +62,13 @@ int main(void) // NOLINT
         CircularBuffer uart_tx_buf;
         circular_buffer_init(&uart_rx_buf, uart_rx_buffer_data, uart_buf_sz);
         circular_buffer_init(&uart_tx_buf, uart_tx_buffer_data, uart_buf_sz);
-        UART_Handle *huart =
-            UART_init(SYSCALLS_UART_BUS, &uart_rx_buf, &uart_tx_buf);
-        if (huart == nullptr) {
-            LOG_ERROR("Failed to initialize SYSCALLS_UART_BUS");
-            THROW(ERROR_RESOURCE_UNAVAILABLE);
-        }
+        // This will fail
+        (void)UART_init(SYSCALLS_UART_BUS, &uart_rx_buf, &uart_tx_buf);
     }
     CATCH(e)
     {
-        LOG_DEBUG("Caught exception during UART initialization:");
-        LOG_DEBUG("%d %s", e, error_to_string(e));
+        LOG_ERROR("Failed to initialize SYSCALLS_UART_BUS");
+        LOG_ERROR("%d %s", e, error_to_string(e));
     }
 
     // Initialize USB
