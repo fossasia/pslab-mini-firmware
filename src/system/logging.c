@@ -24,10 +24,12 @@ void LOG_service_platform(void)
         return;
     }
 
+    enum { SERVICE_MAX_ENTRIES = 8 };
     LOG_LL_Entry entry;
+    int processed = 0;
 
-    /* Process all available platform log entries */
-    while (LOG_LL_read_entry(&entry)) {
+    /* Process up to SERVICE_MAX_ENTRIES platform log entries */
+    while (processed < SERVICE_MAX_ENTRIES && LOG_LL_read_entry(&entry)) {
         /* Forward to appropriate system log level */
         switch (entry.level) {
         case LOG_LL_ERROR:
@@ -48,8 +50,11 @@ void LOG_service_platform(void)
             LOG_DEBUG("[LL] %s", entry.message);
             break;
         }
+        processed++;
     }
 
-    /* Clear service request flag after processing all messages */
-    g_LOG_LL_service_request = false;
+    /* Only clear service request flag if no entries remain */
+    if (!LOG_LL_available()) {
+        g_LOG_LL_service_request = false;
+    }
 }

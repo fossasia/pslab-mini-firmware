@@ -79,7 +79,7 @@ void test_LOG_LL_available(void)
 {
     // Arrange
     char const *test_message = "Test log message";
-    
+
     // Act
     int bytes_written = LOG_LL_write(LOG_LL_DEBUG, test_message);
     size_t available = LOG_LL_available();
@@ -102,6 +102,31 @@ void test_LOG_service_platform(void)
 
     // Assert - Should process the log entry and reset the request flag
     TEST_ASSERT_FALSE(g_LOG_LL_service_request);
+}
+
+// Test LOG_service_platform processes at most 8 entries per call
+void test_LOG_service_platform_partial_processing(void)
+{
+    // Arrange: Write more than 8 entries
+    const int total_entries = 12;
+    for (int i = 0; i < total_entries; i++) {
+        int bytes_written = LOG_LL_write(LOG_LL_INFO, "Test entry %d", i);
+        TEST_ASSERT_GREATER_THAN(0, bytes_written);
+    }
+
+    // Act: Call service once
+    LOG_service_platform();
+
+    // Assert: Only 8 processed, 4 remain, flag should still be set
+    TEST_ASSERT_TRUE(g_LOG_LL_service_request);
+    TEST_ASSERT_GREATER_THAN(0, LOG_LL_available());
+
+    // Act: Call service again
+    LOG_service_platform();
+
+    // Assert: Remaining 4 processed, buffer empty, flag cleared
+    TEST_ASSERT_FALSE(g_LOG_LL_service_request);
+    TEST_ASSERT_EQUAL(0, LOG_LL_available());
 }
 
 void test_LOG_LL_write_multiple_entries(void)
