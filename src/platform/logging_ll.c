@@ -44,10 +44,10 @@ void LOG_LL_init(void)
 /**
  * @brief Write a log message to the platform buffer
  */
-void LOG_LL_write(LOG_LL_Level level, char const *format, ...)
+int LOG_LL_write(LOG_LL_Level level, char const *format, ...)
 {
     if (!g_initialized) {
-        return;
+        return -1; /* Not initialized */
     }
 
     /* Prepare log entry */
@@ -63,7 +63,7 @@ void LOG_LL_write(LOG_LL_Level level, char const *format, ...)
     va_end(args);
 
     if (formatted_length < 0) {
-        return; /* Formatting error */
+        return -1; /* Formatting error */
     }
 
     entry.length = (uint16_t)(formatted_length < sizeof(entry.message)
@@ -90,8 +90,10 @@ void LOG_LL_write(LOG_LL_Level level, char const *format, ...)
 
         /* Signal system layer that service is needed */
         g_LOG_LL_service_request = true;
+        return entry_size; /* Write OK */
     }
     /* If write fails, message is dropped (acceptable for logging) */
+    return -1; /* Not enough space in buffer */
 }
 
 /**

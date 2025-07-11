@@ -78,8 +78,10 @@ void LOG_LL_init(void);
  * @param level Log level
  * @param format Printf-style format string
  * @param ... Variable arguments
+ *
+ * @return Number of bytes written to the buffer, or -1 on error
  */
-void LOG_LL_write(LOG_LL_Level level, char const *format, ...);
+int LOG_LL_write(LOG_LL_Level level, char const *format, ...);
 
 /**
  * @brief Get the number of bytes available in the log buffer
@@ -92,6 +94,7 @@ size_t LOG_LL_available(void);
  * @brief Read a log entry from the buffer
  *
  * @param entry Pointer to entry structure to fill
+ *
  * @return true if entry was read successfully, false if buffer is empty
  */
 bool LOG_LL_read_entry(LOG_LL_Entry *entry);
