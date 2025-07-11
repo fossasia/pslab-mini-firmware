@@ -12,6 +12,7 @@
  */
 
 #include "logging_ll.h"
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -34,6 +35,9 @@ static bool g_initialized = false;
  */
 void LOG_LL_init(void)
 {
+    static_assert(
+        LOG_LL_BUFFER_SIZE < INT32_MAX, "Buffer size too large for int32_t"
+    );
     circular_buffer_init(
         &g_LOG_LL_buffer, g_LOG_LL_buffer_data, LOG_LL_BUFFER_SIZE
     );
@@ -72,7 +76,7 @@ int LOG_LL_write(LOG_LL_Level level, char const *format, ...)
     entry.message[entry.length] = '\0'; /* Ensure null termination */
 
     /* Calculate total entry size */
-    uint32_t entry_size =
+    size_t entry_size =
         sizeof(entry.level) + sizeof(entry.length) + entry.length + 1;
 
     /* Check if we have enough space */
@@ -90,7 +94,7 @@ int LOG_LL_write(LOG_LL_Level level, char const *format, ...)
 
         /* Signal system layer that service is needed */
         g_LOG_LL_service_request = true;
-        return entry_size; /* Write OK */
+        return (int32_t)entry_size; /* Write OK */
     }
     /* If write fails, message is dropped (acceptable for logging) */
     return -1; /* Not enough space in buffer */
