@@ -9,6 +9,7 @@
 
 #include "adc.h"
 #include "led.h"
+#include "logging.h"
 #include "system.h"
 #include "usb.h"
 #include "util.h"
@@ -67,10 +68,13 @@ int main(void) // NOLINT
     while (1) {
         USB_task(husb);
 
+        // Read low-level logs
+        LOG_service_platform();
+
         // Log system status periodically (optional)
         static uint32_t log_counter = 0;
         if (++log_counter % 1000000 == 0) {
-            printf("System running, USB active\r\n");
+            LOG_INFO("System running, USB active");
         }
 
         if (usb_service_requested) {

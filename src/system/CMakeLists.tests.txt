@@ -1,5 +1,19 @@
 # System layer - test build configuration
 
+add_library(pslab-logging STATIC
+    logging.c
+    ../platform/logging_ll.c
+)
+target_link_libraries(pslab-logging
+    PRIVATE
+        pslab-util
+)
+target_include_directories(pslab-logging
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../platform
+)
+
 # Add subdirectories that contain testable code
 add_subdirectory(bus)
 add_subdirectory(adc)
