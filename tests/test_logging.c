@@ -56,7 +56,7 @@ void test_LOG_LL_read_entry(void)
     // Arrange
     LOG_LL_Entry entry;
     entry.level = LOG_LL_INFO;
-    entry.length = 20;
+    entry.length = strlen("Test log message");
     strcpy(entry.message, "Test log message");
 
     // Write to the platform log buffer
