@@ -14,7 +14,18 @@
 #include <errno.h>
 #include <stdint.h>
 
+/*
+ * CException macro wrappers with clang-tidy suppressions
+ *
+ * The NOLINT directives are needed because:
+ * - readability-isolate-declaration: The Try macro declares multiple variables
+ *   in a single statement (jmp_buf *PrevFrame, NewFrame;)
+ * - clang-analyzer-optin.core.EnumCastOutOfRange: CException uses magic values
+ *   like 1515870810 (CEXCEPTION_NONE) that don't fit in our Error enum range
+ */
+// NOLINTNEXTLINE(readability-isolate-declaration,clang-analyzer-optin.core.EnumCastOutOfRange)
 #define TRY Try
+// NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
 #define CATCH Catch
 #define THROW Throw
 
