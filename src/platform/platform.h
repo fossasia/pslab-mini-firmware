@@ -19,6 +19,8 @@
 #ifndef PSLAB_LL_PLATFORM_H
 #define PSLAB_LL_PLATFORM_H
 
+#include <stdint.h>
+
 /**
  * @brief Initialize the platform hardware
  *
@@ -37,5 +39,32 @@
  * @return None
  */
 void PLATFORM_init(void);
+
+typedef enum {
+    PLATFORM_CLOCK_TIMER1,
+    PLATFORM_CLOCK_TIMER2,
+    PLATFORM_CLOCK_TIMER3,
+    PLATFORM_CLOCK_TIMER4,
+    PLATFORM_CLOCK_TIMER5,
+    PLATFORM_CLOCK_TIMER6,
+    PLATFORM_CLOCK_TIMER7,
+    PLATFORM_CLOCK_TIMER8,
+    PLATFORM_CLOCK_TIMER16,
+    PLATFORM_CLOCK_TIMER17
+} PLATFORM_PeripheralClock;
+
+/**
+ * @brief Get the clock speed for a specific peripheral clock
+ *
+ * This function retrieves the clock speed for the specified peripheral clock
+ * type. It can be used to determine the frequency of various system clocks (for
+ * now timers)
+ *
+ * @param clock The type of peripheral clock to query (TIM1, TIM2, etc.)
+ *
+ * @return The clock speed in Hz for the specified peripheral clock type,
+ *         or 0 if an invalid type is provided.
+ */
+uint32_t PLATFORM_get_peripheral_clock_speed(PLATFORM_PeripheralClock clock);
 
 #endif // PSLAB_LL_PLATFORM_H
