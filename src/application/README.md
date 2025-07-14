@@ -28,8 +28,8 @@ The implementation provides the following mandatory IEEE 488.2 commands:
 
 ### Instrument-Specific Commands
 
-- `MEASure:VOLTage:DC?` - Measure DC voltage using the ADC
-- `CONFigure:VOLTage:DC` - Configure DC voltage measurement parameters
+- `MEASure:VOLTage:DC?` - Measure DC voltage using the ADC (returns result in millivolts)
+- `CONFigure:VOLTage:DC` - Configure DC voltage measurement parameters (range in millivolts, resolution in microvolts)
 
 ## Usage
 
@@ -80,12 +80,21 @@ The protocol uses USB CDC (Communication Device Class) as the transport layer:
 - Error queue size: 16 entries
 - Supports standard SCPI syntax and error handling
 
+### Fixed-Point Arithmetic
+
+The voltage measurement implementation uses fixed-point arithmetic instead of floating-point for better performance and determinism:
+- Uses Q16.16 format (16 integer bits, 16 fractional bits) for internal calculations
+- Provides approximately 50µV resolution for voltage measurements
+- Eliminates floating-point unit (FPU) dependency
+- Results in smaller code size and predictable execution times
+- Voltage outputs are converted to millivolts for user-friendly integer results
+
 ### ADC Integration
 
 The `MEASure:VOLTage:DC?` command demonstrates integration with the ADC system:
 - Reads raw ADC value using `ADC_read()`
-- Converts to voltage assuming 12-bit ADC with 3.3V reference
-- Returns voltage as floating-point value
+- Converts to voltage using fixed-point arithmetic (Q16.16 format) assuming 12-bit ADC with 3.3V reference
+- Returns voltage in millivolts as an unsigned 32-bit integer (no floating-point operations)
 
 ## Example SCPI Commands
 
@@ -99,12 +108,14 @@ FOSSASIA,PSLab Mini,1.0,v1.0.0
 0
 
 MEAS:VOLT:DC?
-1.65
+1650
 
 *RST
 
-CONF:VOLT:DC 5.0 0.001
+CONF:VOLT:DC 5000 1000
 ```
+
+Note: Voltage measurements are now returned in millivolts (e.g., 1650 for 1.65V), and configuration parameters are expected in millivolts for range and microvolts for resolution.
 
 ## Extension Points
 
@@ -117,8 +128,9 @@ CONF:VOLT:DC 5.0 0.001
 ```c
 static scpi_result_t scpi_cmd_my_command(scpi_t *context) {
     // Parse parameters using SCPI_Param*() functions
-    // Perform the operation
-    // Return result using SCPI_Result*() functions
+    // For voltage-related commands, prefer SCPI_ParamInt32() for millivolt/microvolt units
+    // Perform the operation using fixed-point arithmetic when possible
+    // Return result using SCPI_Result*() functions (prefer integer types)
     return SCPI_RES_OK;
 }
 ```
