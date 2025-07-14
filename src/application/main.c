@@ -29,8 +29,8 @@ enum { RX_BUFFER_SIZE = 256 };
  * Static variables
  ******************************************************************************/
 
-static uint8_t usb_rx_buffer_data[RX_BUFFER_SIZE] = { 0 };
-static bool usb_service_requested = false;
+static uint8_t g_usb_rx_buffer_data[RX_BUFFER_SIZE] = { 0 };
+static bool g_usb_service_requested = false;
 
 /*****************************************************************************
  * Static prototypes
@@ -44,12 +44,12 @@ void usb_cb(USB_Handle *husb, uint32_t bytes_available)
 {
     (void)husb;
     (void)bytes_available;
-    usb_service_requested = true;
+    g_usb_service_requested = true;
 }
 
 int main(void) // NOLINT
 {
-    Error e;
+    Error exc = ERROR_NONE;
     SYSTEM_init();
     // Try to initialize SYSCALLS_UART_BUS directly, demonstrating CException
     // handling
@@ -65,15 +65,15 @@ int main(void) // NOLINT
         // This will fail
         (void)UART_init(SYSCALLS_UART_BUS, &uart_rx_buf, &uart_tx_buf);
     }
-    CATCH(e)
+    CATCH(exc)
     {
         LOG_ERROR("Failed to initialize SYSCALLS_UART_BUS");
-        LOG_ERROR("%d %s", e, error_to_string(e));
+        LOG_ERROR("%d %s", exc, error_to_string(exc));
     }
 
     // Initialize USB
     CircularBuffer usb_rx_buf;
-    circular_buffer_init(&usb_rx_buf, usb_rx_buffer_data, RX_BUFFER_SIZE);
+    circular_buffer_init(&usb_rx_buf, g_usb_rx_buffer_data, RX_BUFFER_SIZE);
     USB_Handle *husb = USB_init(0, &usb_rx_buf);
 
     USB_set_rx_callback(husb, usb_cb, CB_THRESHOLD);
@@ -96,12 +96,13 @@ int main(void) // NOLINT
 
         // Log system status periodically (optional)
         static uint32_t log_counter = 0;
-        if (++log_counter % 1000000 == 0) {
+        enum { PING_INTERVAL = 1000000 }; // Log every 1 million iterations
+        if (log_counter++ % PING_INTERVAL == 0) {
             LOG_INFO("System running, USB active");
         }
 
-        if (usb_service_requested) {
-            usb_service_requested = false;
+        if (g_usb_service_requested) {
+            g_usb_service_requested = false;
             LED_toggle();
             uint8_t buf[CB_THRESHOLD + 1] = { 0 };
             uint32_t bytes_read = USB_read(husb, buf, CB_THRESHOLD);
