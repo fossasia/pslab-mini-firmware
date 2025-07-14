@@ -312,19 +312,30 @@ static scpi_result_t scpi_cmd_wai(scpi_t *context)
  */
 static scpi_result_t scpi_cmd_measure_voltage_dc(scpi_t *context)
 {
-    static float const k_adc_reference_voltage = 3.3F;
-    static float const k_adc_max_value = 4095.0F;
+    // Fixed-point constants for 12-bit ADC with 3.3V reference
+    // Using Q16.16 format (16 integer bits, 16 fractional bits)
+    static uint32_t const k_adc_reference_voltage_q16 =
+        0x00034CCD; // 3.3V in Q16.16
+    static uint32_t const k_adc_max_value = 4095U;
 
     uint32_t adc_value = 0;
-    float voltage = 0.0F;
+    uint32_t voltage_q16 = 0;
+    uint32_t voltage_millivolts = 0;
 
     // Read ADC value
     if (ADC_read(&adc_value) == 0) {
-        // Convert ADC value to voltage
-        // Assuming 12-bit ADC with 3.3V reference
-        voltage = (float)adc_value * k_adc_reference_voltage / k_adc_max_value;
+        // Convert ADC value to voltage using fixed-point arithmetic
+        // voltage_q16 = (adc_value * k_adc_reference_voltage_q16) /
+        // k_adc_max_value
+        voltage_q16 =
+            (adc_value * k_adc_reference_voltage_q16) / k_adc_max_value;
 
-        SCPI_ResultFloat(context, voltage);
+        // Convert Q16.16 to millivolts for SCPI output
+        // Multiply by 1000 and shift right by 16 to get millivolts
+        enum { milli = 1000 };
+        voltage_millivolts = (voltage_q16 * milli) >> 16;
+
+        SCPI_ResultUInt32(context, voltage_millivolts);
         return SCPI_RES_OK;
     }
     SCPI_ErrorPush(context, SCPI_ERROR_SYSTEM_ERROR);
@@ -336,17 +347,19 @@ static scpi_result_t scpi_cmd_measure_voltage_dc(scpi_t *context)
  */
 static scpi_result_t scpi_cmd_configure_voltage_dc(scpi_t *context)
 {
-    float range = 0.0F;
-    float resolution = 0.0F;
+    int32_t range_millivolts = 0;
+    int32_t resolution_microvolts = 0;
 
-    // Parse optional range parameter
-    if (SCPI_ParamFloat(context, &range, TRUE)) {
+    // Parse optional range parameter (in millivolts)
+    if (SCPI_ParamInt32(context, &range_millivolts, TRUE)) {
         // TODO(@bessman): Configure ADC range based on parameter
+        // Range is now in millivolts instead of volts
     }
 
-    // Parse optional resolution parameter
-    if (SCPI_ParamFloat(context, &resolution, TRUE)) {
+    // Parse optional resolution parameter (in microvolts)
+    if (SCPI_ParamInt32(context, &resolution_microvolts, TRUE)) {
         // TODO(@bessman): Configure ADC resolution based on parameter
+        // Resolution is now in microvolts instead of volts
     }
 
     // Configure ADC for DC voltage measurement
