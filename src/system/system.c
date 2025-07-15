@@ -18,6 +18,7 @@ void SYSTEM_init(void)
 {
     PLATFORM_init();
     // Read any logs that were generated during platform initialization
-    LOG_service_platform();
+    unsigned const max_log_entries = 32;
+    LOG_task(max_log_entries);
     LED_init();
 }

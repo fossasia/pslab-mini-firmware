@@ -14,7 +14,7 @@
 #include "stm32h5xx_hal.h"
 
 #include "error.h"
-#include "logging_ll.h"
+#include "logging.h"
 #include "platform.h"
 #include "tim_ll.h"
 #include <stdbool.h>

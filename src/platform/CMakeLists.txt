@@ -3,12 +3,6 @@
 # Create platform library
 add_library(pslab-platform STATIC)
 
-# Add platform logging source
-target_sources(pslab-platform
-    PRIVATE
-        logging_ll.c
-)
-
 target_link_libraries(pslab-platform
     PRIVATE
         pslab-util

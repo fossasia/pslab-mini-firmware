@@ -22,7 +22,7 @@
 #include "stm32h5xx_hal.h"
 
 #include "error.h"
-#include "logging_ll.h"
+#include "logging.h"
 #include "platform.h"
 
 enum { SYSTEM_CLOCK_FREQ = 250000000U }; // 250 MHz
@@ -160,7 +160,7 @@ void PLATFORM_init(void)
         return;
     }
     system_clock_config();
-    LOG_LL_init();
+    LOG_init();
     LOG_LL_INFO("Platform hardware initialized");
 }
 

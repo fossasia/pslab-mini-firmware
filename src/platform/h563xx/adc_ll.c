@@ -18,7 +18,7 @@
 
 #include "adc_ll.h"
 #include "error.h"
-#include "logging_ll.h"
+#include "logging.h"
 
 enum { ADC_IRQ_PRIORITY = 1 }; // ADC interrupt priority
 

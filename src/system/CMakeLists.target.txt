@@ -7,7 +7,6 @@ add_subdirectory(timer)
 target_sources(pslab-mini-firmware
     PRIVATE
         led.c
-        logging.c
         system.c
         stubs.c
         syscalls.c

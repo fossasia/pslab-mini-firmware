@@ -10,8 +10,8 @@
  */
 
 #include "tim.h"
-#include "../logging.h"
 #include "error.h"
+#include "logging.h"
 #include "tim_ll.h"
 #include <stddef.h>
 #include <stdlib.h>
