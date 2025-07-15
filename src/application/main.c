@@ -45,9 +45,11 @@ bool volatile g_adc_data_ready = false;
 
 void usb_cb(USB_Handle *husb, uint32_t bytes_available)
 {
+    LOG_FUNCTION_ENTRY();
     (void)husb;
     (void)bytes_available;
     g_usb_service_requested = true;
+    LOG_FUNCTION_EXIT();
 }
 
 static void g_adc_callback(uint32_t value)
@@ -60,6 +62,7 @@ int main(void) // NOLINT
 {
     Error exc = ERROR_NONE;
     SYSTEM_init();
+    LOG_INIT("Main application");
     // Try to initialize SYSCALLS_UART_BUS directly, demonstrating CException
     // handling
     TRY

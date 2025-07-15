@@ -53,12 +53,28 @@ typedef enum {
 #endif
 
 /**
+ * @brief Log handle structure (opaque)
+ */
+typedef struct LOG_Handle LOG_Handle;
+
+/**
+ * @brief Log message entry structure
+ */
+typedef struct {
+    LOG_Level level;
+    uint16_t length;
+    char message[LOG_MAX_MESSAGE_SIZE];
+} LOG_Entry;
+
+/**
  * @brief Initialize the logging system
  *
  * This must be called before any logging functions are used.
  * It initializes the internal circular buffer and sets up the logging state.
+ *
+ * @return Pointer to the log handle, or nullptr on error
  */
-void LOG_init(void);
+LOG_Handle *LOG_init(void);
 
 /**
  * @brief Write a log message
@@ -77,6 +93,14 @@ int LOG_write(LOG_Level level, char const *format, ...);
  * @return Number of bytes available in the log buffer
  */
 size_t LOG_available(void);
+
+/**
+ * @brief Read a log entry from the buffer
+ *
+ * @param entry Pointer to entry structure to fill
+ * @return true if entry was read successfully, false if buffer is empty
+ */
+bool LOG_read_entry(LOG_Entry *entry);
 
 /**
  * @brief Service log messages by outputting them to stdout
