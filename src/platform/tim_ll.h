@@ -29,7 +29,7 @@ void TIM_LL_init(TIM_Num tim, uint32_t freq);
  * @param tim TIM instance instance
  * @param freq Frequency for the timer
  */
-void TIM_LL_start(TIM_Num tim, uint32_t freq);
+void TIM_LL_start(TIM_Num tim);
 
 /**
  * @brief Stop the Timer Module

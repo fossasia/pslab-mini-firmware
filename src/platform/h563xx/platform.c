@@ -211,31 +211,36 @@ static uint32_t get_clock_speed(CLKType clk_type)
 {
     if (clk_type == SYS_CLK) {
         return HAL_RCC_GetSysClockFreq();
-    } else if (clk_type == AHB_CLK) {
-        return HAL_RCC_GetHCLKFreq();
-    } else if (clk_type == APB1_CLK) {
-        return HAL_RCC_GetPCLK1Freq();
-    } else if (clk_type == APB2_CLK) {
-        return HAL_RCC_GetPCLK2Freq();
-    } else if (clk_type == APB3_CLK) {
-        return HAL_RCC_GetPCLK3Freq();
-    } else {
-        return 0; // Invalid clock type
     }
+    if (clk_type == AHB_CLK) {
+        return HAL_RCC_GetHCLKFreq();
+    }
+    if (clk_type == APB1_CLK) {
+        return HAL_RCC_GetPCLK1Freq();
+    }
+    if (clk_type == APB2_CLK) {
+        return HAL_RCC_GetPCLK2Freq();
+    }
+    if (clk_type == APB3_CLK) {
+        return HAL_RCC_GetPCLK3Freq();
+    }
+    return 0; // Invalid clock type
 }
 
 uint32_t PLATFORM_get_peripheral_clock_speed(PLATFORM_PeripheralClock clock)
 {
+    if (clock == PLATFORM_CLOCK_INVALID) {
+        return 0;
+    }
     if (clock == PLATFORM_CLOCK_TIMER2 || clock == PLATFORM_CLOCK_TIMER3 ||
         clock == PLATFORM_CLOCK_TIMER4 || clock == PLATFORM_CLOCK_TIMER5 ||
         clock == PLATFORM_CLOCK_TIMER6 || clock == PLATFORM_CLOCK_TIMER7) {
         return get_clock_speed(APB1_CLK); // These timers use APB1 frequency
-    } else if (clock == PLATFORM_CLOCK_TIMER1 ||
-               clock == PLATFORM_CLOCK_TIMER8 ||
-               clock == PLATFORM_CLOCK_TIMER16 ||
-               clock == PLATFORM_CLOCK_TIMER17) {
-        return get_clock_speed(APB2_CLK); // These timers use APB2 frequency
-    } else {
-        return 0; // Invalid timer clock
     }
+    if (clock == PLATFORM_CLOCK_TIMER1 || clock == PLATFORM_CLOCK_TIMER8 ||
+        clock == PLATFORM_CLOCK_TIMER16 || clock == PLATFORM_CLOCK_TIMER17) {
+        return get_clock_speed(APB2_CLK); // These timers use APB2 frequency
+    }
+
+    return 0; // Invalid timer clock
 }

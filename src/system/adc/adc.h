@@ -24,6 +24,14 @@ extern "C" {
 #endif
 
 /**
+ * @brief Callback function type for ADC completion.
+ *
+ * This callback is called when an ADC conversion is complete.
+ * It receives the converted ADC value as an argument.
+ */
+typedef void (*ADC_CompleteCallback)(uint32_t value);
+
+/**
  * @brief ADC Initialization function.
  *
  * This function initializes the ADC peripheral with the specified settings.
@@ -57,14 +65,16 @@ void ADC_start(void);
 void ADC_stop(void);
 
 /**
- * @brief Reads the ADC value.
+ * @brief Sets the callback function to be called when an ADC conversion is
+ * complete.
  *
- * This function reads the converted ADC value from the specified channel.
- * It should be called after starting the ADC conversion.
+ * This function allows the user to set a callback that will be invoked
+ * when an ADC conversion is complete. The callback will receive the converted
+ * ADC value as an argument.
  *
- * @param data Pointer to store the read ADC value.
+ * @param callback Pointer to the callback function to be set.
  */
-uint32_t ADC_read(uint32_t *data);
+void ADC_set_complete_callback(ADC_CompleteCallback callback);
 
 #ifdef __cplusplus
 }

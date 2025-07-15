@@ -12,12 +12,19 @@
 
 #include <stdint.h>
 
+typedef enum {
+    ADC_TRIGGER_TIMER6 = 6,
+    ADC_TRIGGER_TIMER7 = 7
+} ADC_LL_TriggerSource;
+
+typedef void (*ADC_LL_CompleteCallback)(uint32_t value);
+
 /**
  * @brief Initializes the ADC1 peripheral.
  *
  * This function configures the ADC1 peripheral with the specified settings.
  */
-void ADC_LL_init(void);
+void ADC_LL_init(ADC_LL_TriggerSource adc_trigger_timer);
 
 /**
  * @brief Deinitializes the ADC peripheral.
@@ -44,14 +51,14 @@ void ADC_LL_start(void);
 void ADC_LL_stop(void);
 
 /**
- * @brief Reads the ADC value into the provided buffer.
+ * @brief Sets the callback function to be called when an ADC conversion is
+ * complete.
  *
- * This function starts the ADC conversion, waits for it to complete,
- * and reads the converted value into the provided buffer.
+ * This function allows the user to set a callback that will be invoked
+ * when an ADC conversion is complete.
  *
- * @param buffer Pointer to a buffer where the ADC value will be stored.
- * @return The converted ADC value.
+ * @param callback Pointer to the callback function to be set.
  */
-uint32_t ADC_LL_read(uint32_t *buffer);
+void ADC_LL_set_complete_callback(ADC_LL_CompleteCallback callback);
 
 #endif // ADC_LL_H

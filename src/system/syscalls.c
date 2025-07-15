@@ -51,7 +51,7 @@
 #include "bus/uart.h"
 
 #ifndef SYSCALLS_UART_TX_BUFFER_SIZE
-#define SYSCALLS_UART_TX_BUFFER_SIZE 256
+#define SYSCALLS_UART_TX_BUFFER_SIZE 1024
 #endif
 
 // Minimal RX buffer (required by UART driver)

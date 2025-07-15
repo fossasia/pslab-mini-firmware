@@ -56,36 +56,44 @@ static TimerInstance g_timer_instances[TIM_NUM_COUNT] = {
  * @param tim The timer count of the timer
  * @return The clock frequency in Hz, or 0 if the timer instance is invalid.
  */
-static uint32_t Get_Timer_Clock_frequency(TIM_Num tim)
+static uint32_t get_timer_clock_frequency(TIM_Num tim)
 {
 
     TimerInstance *instance = &g_timer_instances[tim];
 
-    PLATFORM_PeripheralClock clock_type;
+    PLATFORM_PeripheralClock clock_type = PLATFORM_CLOCK_INVALID;
 
     if (instance->htim->Instance == TIM1) {
         clock_type = PLATFORM_CLOCK_TIMER1;
-    } else if (instance->htim->Instance == TIM2) {
-        clock_type = PLATFORM_CLOCK_TIMER2;
-    } else if (instance->htim->Instance == TIM3) {
-        clock_type = PLATFORM_CLOCK_TIMER3;
-    } else if (instance->htim->Instance == TIM4) {
-        clock_type = PLATFORM_CLOCK_TIMER4;
-    } else if (instance->htim->Instance == TIM5) {
-        clock_type = PLATFORM_CLOCK_TIMER5;
-    } else if (instance->htim->Instance == TIM6) {
-        clock_type = PLATFORM_CLOCK_TIMER6;
-    } else if (instance->htim->Instance == TIM7) {
-        clock_type = PLATFORM_CLOCK_TIMER7;
-    } else if (instance->htim->Instance == TIM8) {
-        clock_type = PLATFORM_CLOCK_TIMER8;
-    } else if (instance->htim->Instance == TIM16) {
-        clock_type = PLATFORM_CLOCK_TIMER16;
-    } else if (instance->htim->Instance == TIM17) {
-        clock_type = PLATFORM_CLOCK_TIMER17;
-    } else {
-        return 0; // Invalid timer
     }
+    if (instance->htim->Instance == TIM2) {
+        clock_type = PLATFORM_CLOCK_TIMER2;
+    }
+    if (instance->htim->Instance == TIM3) {
+        clock_type = PLATFORM_CLOCK_TIMER3;
+    }
+    if (instance->htim->Instance == TIM4) {
+        clock_type = PLATFORM_CLOCK_TIMER4;
+    }
+    if (instance->htim->Instance == TIM5) {
+        clock_type = PLATFORM_CLOCK_TIMER5;
+    }
+    if (instance->htim->Instance == TIM6) {
+        clock_type = PLATFORM_CLOCK_TIMER6;
+    }
+    if (instance->htim->Instance == TIM7) {
+        clock_type = PLATFORM_CLOCK_TIMER7;
+    }
+    if (instance->htim->Instance == TIM8) {
+        clock_type = PLATFORM_CLOCK_TIMER8;
+    }
+    if (instance->htim->Instance == TIM16) {
+        clock_type = PLATFORM_CLOCK_TIMER16;
+    }
+    if (instance->htim->Instance == TIM17) {
+        clock_type = PLATFORM_CLOCK_TIMER17;
+    }
+
     return PLATFORM_get_peripheral_clock_speed(clock_type
     ); // Return the system clock frequency
 }
@@ -99,7 +107,7 @@ static uint32_t Get_Timer_Clock_frequency(TIM_Num tim)
  *
  * @param tim The timer count of the timer
  */
-static void Calculate_Timer_Values(TIM_Num tim)
+static void calculate_timer_values(TIM_Num tim)
 {
     TimerInstance *instance = &g_timer_instances[tim];
     if (instance->frequency == 0) {
@@ -108,7 +116,7 @@ static void Calculate_Timer_Values(TIM_Num tim)
         return;
     }
 
-    uint32_t tim_clock = Get_Timer_Clock_frequency(tim);
+    uint32_t tim_clock = get_timer_clock_frequency(tim);
 
     if (tim_clock == 0) {
         // Invalid timer clock frequency
@@ -172,7 +180,7 @@ void TIM_LL_init(TIM_Num tim, uint32_t freq)
         instance->htim->Channel = TIM_CHANNEL_1;
     }
 
-    Calculate_Timer_Values(tim);
+    calculate_timer_values(tim);
 
     instance->htim->Init.Prescaler = TIMER_DEFAULT_PRESCALER;
     instance->htim->Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -185,13 +193,14 @@ void TIM_LL_init(TIM_Num tim, uint32_t freq)
         return;
     }
 
-    TIM_MasterConfigTypeDef sMasterConfig = { 0 };
+    TIM_MasterConfigTypeDef s_master_config = { 0 };
 
-    sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
-    sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+    s_master_config.MasterOutputTrigger = TIM_TRGO_UPDATE;
+    s_master_config.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
 
-    if (HAL_TIMEx_MasterConfigSynchronization(instance->htim, &sMasterConfig) !=
-        HAL_OK) {
+    if (HAL_TIMEx_MasterConfigSynchronization(
+            instance->htim, &s_master_config
+        ) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
         return;
     }
@@ -230,7 +239,7 @@ void TIM_LL_deinit(TIM_Num tim)
  * @param tim TIM instance instance
  * @param freq Frequency for the timer
  */
-void TIM_LL_start(TIM_Num tim, uint32_t freq)
+void TIM_LL_start(TIM_Num tim)
 {
     TimerInstance *instance = &g_timer_instances[tim];
     if (HAL_TIM_Base_Start(instance->htim) != HAL_OK) {

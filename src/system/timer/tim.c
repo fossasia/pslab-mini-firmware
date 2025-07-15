@@ -75,7 +75,7 @@ TIM_Handle *TIM_init(size_t tim, uint32_t freq)
  * @param tim TIM instance to start
  * @param freq Frequency to set for the timer
  */
-void TIM_start(size_t tim, uint32_t freq)
+void TIM_start(size_t tim)
 {
     if (tim >= TIM_NUM_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
@@ -87,7 +87,7 @@ void TIM_start(size_t tim, uint32_t freq)
         return;
     }
 
-    TIM_LL_start((TIM_Num)tim, freq);
+    TIM_LL_start((TIM_Num)tim);
     LOG_INFO("Starting TIM instance");
 }
 

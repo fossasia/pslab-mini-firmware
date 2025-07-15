@@ -48,7 +48,7 @@ TIM_Handle *TIM_init(size_t tim, uint32_t freq);
  * @param tim TIM instance to start
  * @param freq Frequency for the timer
  */
-void TIM_start(size_t tim, uint32_t freq);
+void TIM_start(size_t tim);
 
 /**
  * @brief Stop the Timer Module
