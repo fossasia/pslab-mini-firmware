@@ -13,11 +13,11 @@
 
 #include <stdint.h>
 
-#include "../logging.h"
 #include "../timer/tim.h"
 #include "adc.h"
 #include "adc_ll.h"
 #include "error.h"
+#include "logging.h"
 
 /**********************************************************************
  * Macros
