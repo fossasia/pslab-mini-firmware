@@ -15,5 +15,6 @@ target_include_directories(pslab-logging
 )
 
 # Add subdirectories that contain testable code
+add_subdirectory(timer)
 add_subdirectory(bus)
 add_subdirectory(adc)

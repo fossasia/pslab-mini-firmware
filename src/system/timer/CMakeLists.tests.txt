@@ -1,0 +1,17 @@
+# TIM subsystem - test build configuration
+
+# Create a library for testable TIM components
+add_library(pslab-tim STATIC
+    tim.c
+)
+
+target_link_libraries(pslab-tim
+    PRIVATE
+        pslab-util
+)
+
+target_include_directories(pslab-tim
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/src/platform  # For platform interface headers
+)
