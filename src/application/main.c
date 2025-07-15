@@ -99,7 +99,8 @@ int main(void) // NOLINT
      */
     while (1) {
         USB_task(husb);
-        // Read low-level logs
+
+        // Output logs
         LOG_task();
 
         // Log system status periodically (optional)
