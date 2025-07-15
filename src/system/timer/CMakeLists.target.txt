@@ -1,11 +1,11 @@
 # TIM subsystem - target build configuration
 
-target_sources(pslab-mini-firmware
+target_sources(pslab-system
     PRIVATE
         tim.c
 )
 
-target_include_directories(pslab-mini-firmware
-    PRIVATE
+target_include_directories(pslab-system
+    PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
 )

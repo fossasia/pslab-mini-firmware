@@ -1,18 +1,33 @@
 # System layer - target build configuration
+add_library(pslab-system STATIC)
 
 add_subdirectory(bus)
 add_subdirectory(adc)
 add_subdirectory(timer)
 
-target_sources(pslab-mini-firmware
+target_sources(pslab-system
     PRIVATE
         led.c
         system.c
+    # Needed by newlib when linking application
+    PUBLIC
         stubs.c
         syscalls.c
 )
 
-target_include_directories(pslab-mini-firmware
+target_include_directories(pslab-system
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(pslab-system
     PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+        pslab-util
+        pslab-platform
+)
+
+# Propagate TinyUSB desciptor callbacks to application
+target_link_options(pslab-system
+    INTERFACE
+        $<TARGET_PROPERTY:pslab-platform,INTERFACE_LINK_OPTIONS>
 )
