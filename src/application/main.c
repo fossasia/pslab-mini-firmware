@@ -104,7 +104,7 @@ int main(void) // NOLINT
         USB_task(husb);
 
         // Output logs
-        LOG_task();
+        LOG_task(8);
 
         // Log system status periodically (optional)
         static uint32_t log_counter = 0;

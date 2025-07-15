@@ -22,7 +22,7 @@ void setUp(void)
 void tearDown(void)
 {
     // Reset logging state
-    circular_buffer_reset(&g_log_handle->buffer);
+    LOG_deinit(g_log_handle);
 }
 
 void test_LOG_init(void)
@@ -32,6 +32,41 @@ void test_LOG_init(void)
     TEST_ASSERT_EQUAL(0, g_log_handle->buffer.head);
     TEST_ASSERT_EQUAL(0, g_log_handle->buffer.tail);
     TEST_ASSERT_EQUAL(LOG_BUFFER_SIZE, g_log_handle->buffer.size);
+}
+
+void test_LOG_init_already_initialized(void)
+{
+    // Arrange - Call init again
+    LOG_Handle *handle = LOG_init();
+
+    // Assert - Should return the same handle
+    TEST_ASSERT_EQUAL_PTR(g_log_handle, handle);
+}
+
+void test_LOG_deinit(void)
+{
+    // Arrange
+    LOG_Handle *handle = g_log_handle;
+
+    // Act
+    LOG_deinit(handle);
+
+    // Assert - Check if handle is still valid after deinit
+    TEST_ASSERT_NOT_NULL(handle);
+    TEST_ASSERT_FALSE(handle->initialized);
+    TEST_ASSERT_EQUAL(0, circular_buffer_available(&handle->buffer));
+}
+
+void test_LOG_deinit_invalid_handle(void)
+{
+    // Arrange
+    LOG_Handle invalid_handle = { .initialized = true };
+
+    // Act - Attempt to deinitialize an invalid handle
+    LOG_deinit(&invalid_handle);
+
+    // Assert - Should not crash, handle remains unchanged
+    TEST_ASSERT_TRUE(invalid_handle.initialized);
 }
 
 void test_LOG_write(void)
@@ -57,43 +92,6 @@ void test_LOG_write(void)
     );
     // Verify the message is null-terminated
     TEST_ASSERT_EQUAL('\0', entry.message[entry.length]);
-}
-
-void test_LOG_available(void)
-{
-    // Arrange
-    char const *test_message = "Test log message";
-
-    // Act
-    int bytes_written = LOG_write(LOG_LEVEL_DEBUG, test_message);
-    size_t available = LOG_available();
-
-    // Assert
-    TEST_ASSERT_GREATER_THAN(0, bytes_written);
-    TEST_ASSERT_EQUAL(available, bytes_written);
-}
-
-// Test LOG_task processes at most 8 entries per call
-void test_LOG_task_partial_processing(void)
-{
-    // Arrange: Write more than 8 entries
-    const int total_entries = 12;
-    for (int i = 0; i < total_entries; i++) {
-        int bytes_written = LOG_write(LOG_LEVEL_INFO, "Test entry %d", i);
-        TEST_ASSERT_GREATER_THAN(0, bytes_written);
-    }
-
-    // Act: Call service once
-    LOG_task();
-
-    // Assert: Only 8 processed, 4 remain
-    TEST_ASSERT_GREATER_THAN(0, LOG_available());
-
-    // Act: Call service again
-    LOG_task();
-
-    // Assert: Remaining 4 processed, buffer empty
-    TEST_ASSERT_EQUAL(0, LOG_available());
 }
 
 void test_LOG_write_multiple_entries(void)
@@ -166,6 +164,24 @@ void test_LOG_write_long_message(void)
     TEST_ASSERT_EQUAL('\0', entry.message[entry.length]);
 }
 
+void test_LOG_write_null_message(void)
+{
+    // Act - Attempt to write a null message
+    int bytes_written = LOG_write(LOG_LEVEL_INFO, NULL);
+
+    // Assert - Should return -1 for invalid format string
+    TEST_ASSERT_EQUAL(-1, bytes_written);
+}
+
+void test_LOG_write_invalid_level(void)
+{
+    // Act - Attempt to write with an invalid log level
+    int bytes_written = LOG_write((LOG_Level)999, "Invalid level test");
+
+    // Assert - Should return -1 for invalid log level
+    TEST_ASSERT_EQUAL(-1, bytes_written);
+}
+
 void test_LOG_read_entry_success(void)
 {
     // Arrange - Write a message first
@@ -194,7 +210,7 @@ void test_LOG_read_entry_empty_buffer(void)
     TEST_ASSERT_FALSE(result);
 }
 
-void test_LOG_LOG_read_entry_null_pointer(void)
+void test_LOG_read_entry_null_pointer(void)
 {
     // Arrange
     int bytes_written = LOG_write(LOG_LEVEL_INFO, "Test message");
@@ -228,6 +244,54 @@ void test_LOG_buffer_overflow(void)
     TEST_ASSERT_EQUAL_STRING(final_entry_message_in_buffer, entry.message);
 }
 
+void test_LOG_available(void)
+{
+    // Arrange
+    char const *test_message = "Test log message";
+
+    // Act
+    int bytes_written = LOG_write(LOG_LEVEL_DEBUG, test_message);
+    size_t available = LOG_available();
+
+    // Assert
+    TEST_ASSERT_GREATER_THAN(0, bytes_written);
+    TEST_ASSERT_EQUAL(available, bytes_written);
+}
+
+void test_LOG_available_empty_buffer(void)
+{
+    // Act
+    size_t available = LOG_available();
+
+    // Assert - Should be 0 after setUp
+    TEST_ASSERT_EQUAL(0, available);
+}
+
+// Test LOG_task processes fewer entries than available
+void test_LOG_task_partial_processing(void)
+{
+    // Arrange: Write several entries
+    const int total_entries = 12;
+    for (int i = 0; i < total_entries; i++) {
+        int bytes_written = LOG_write(LOG_LEVEL_INFO, "Test entry %d", i);
+        TEST_ASSERT_GREATER_THAN(0, bytes_written);
+    }
+
+    // Act: Process fewer entries than available
+    int processed = LOG_task(8);
+
+    // Assert: Only 8 processed, 4 remain
+    TEST_ASSERT_EQUAL(8, processed);
+    TEST_ASSERT_GREATER_THAN(0, LOG_available());
+
+    // Act: Call service again
+    processed += LOG_task(8);
+
+    // Assert: Remaining 4 processed, buffer empty
+    TEST_ASSERT_EQUAL(12, processed);
+    TEST_ASSERT_EQUAL(0, LOG_available());
+}
+
 void test_LOG_task_multiple_entries(void)
 {
     // Arrange - Write multiple entries
@@ -243,9 +307,20 @@ void test_LOG_task_multiple_entries(void)
     TEST_ASSERT_GREATER_THAN(0, bytes4);
 
     // Act
-    LOG_task();
+    int processed = LOG_task(4);
 
     // Assert - All entries should be processed and buffer empty
+    TEST_ASSERT_EQUAL(4, processed);
+    TEST_ASSERT_EQUAL(0, LOG_available());
+}
+
+void test_LOG_task_no_entries(void)
+{
+    // Act - Call task with no entries
+    int processed = LOG_task(5);
+
+    // Assert - Should process 0 entries
+    TEST_ASSERT_EQUAL(0, processed);
     TEST_ASSERT_EQUAL(0, LOG_available());
 }
 
@@ -464,4 +539,26 @@ void test_LOG_buffer_data_integrity_after_wraparound(void)
             TEST_ASSERT_EQUAL_STRING(expected_message, entry.message);
         }
     }
+}
+
+void test_LOG_consistent_state_on_multiple_initializations(void)
+{
+    // Arrange - Write a message before reinitialization
+    char const *test_message = "Consistent state test";
+    int bytes_written = LOG_write(LOG_LEVEL_INFO, test_message);
+    TEST_ASSERT_GREATER_THAN(0, bytes_written);
+
+    // Act - Reinitialize logging system
+    LOG_Handle *handle_reinit = LOG_init();
+
+    // Assert - Should return the same handle, state should be consistent
+    TEST_ASSERT_EQUAL_PTR(g_log_handle, handle_reinit);
+    TEST_ASSERT_TRUE(handle_reinit->initialized);
+    TEST_ASSERT_EQUAL(bytes_written, LOG_available());
+
+    // Verify we can still read the previously written message
+    LOG_Entry entry;
+    TEST_ASSERT_TRUE(LOG_read_entry(&entry));
+    TEST_ASSERT_EQUAL(LOG_LEVEL_INFO, entry.level);
+    TEST_ASSERT_EQUAL_STRING(test_message, entry.message);
 }

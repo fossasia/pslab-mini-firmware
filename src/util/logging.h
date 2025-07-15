@@ -8,8 +8,9 @@
  * - Printf-style formatting
  * - Configurable buffer size
  *
- * The logging system uses a circular buffer to store log messages, which
- * are written to stdout by the `LOG_task` function.
+ * The logging system uses a circular buffer to store log messages, which can
+ * be read back by the application using the `LOG_read_entry` function, or
+ * written to stdout by the `LOG_task` function.
  *
  * @author PSLab Team
  * @date 2025-07-14
@@ -77,6 +78,16 @@ typedef struct {
 LOG_Handle *LOG_init(void);
 
 /**
+ * @brief Deinitialize the logging system
+ *
+ * This should be called when the logging system is no longer needed.
+ * It resets the internal state and frees any resources.
+ *
+ * @param handle Pointer to the log handle to deinitialize
+ */
+void LOG_deinit(LOG_Handle *handle);
+
+/**
  * @brief Write a log message
  *
  * @param level Log level for this message
@@ -111,8 +122,12 @@ bool LOG_read_entry(LOG_Entry *entry);
  *
  * The function processes up to a limited number of entries per call to avoid
  * blocking for too long in interrupt contexts.
+ *
+ * @param max_entries Maximum number of entries to process in this call
+ *
+ * @return Number of entries processed
  */
-void LOG_task(void);
+int LOG_task(uint32_t max_entries);
 
 /**
  * @brief Core logging macros with compile-time filtering

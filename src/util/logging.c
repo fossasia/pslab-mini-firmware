@@ -7,7 +7,6 @@
  */
 
 #include "logging.h"
-#include "error.h"
 #include "util.h"
 #include <assert.h>
 #include <stdarg.h>
@@ -47,12 +46,26 @@ LOG_Handle *LOG_init(void)
         "LOG_MAX_MESSAGE_SIZE must be reasonable (1-511)"
     );
 
+    if (g_log_handle.initialized) {
+        return &g_log_handle; // Already initialized
+    }
+
     circular_buffer_init(
         &g_log_handle.buffer, g_log_handle.buffer_data, LOG_BUFFER_SIZE
     );
     g_log_handle.initialized = true;
 
     return &g_log_handle;
+}
+
+void LOG_deinit(LOG_Handle *handle)
+{
+    if (handle != &g_log_handle) {
+        return; // Only deinit the global handle
+    }
+
+    circular_buffer_reset(&g_log_handle.buffer);
+    g_log_handle.initialized = false;
 }
 
 int LOG_write(LOG_Level level, char const *format, ...)
@@ -168,19 +181,18 @@ bool LOG_read_entry(LOG_Entry *entry)
     return true;
 }
 
-void LOG_task(void)
+int LOG_task(uint32_t max_entries)
 {
     if (!g_log_handle.initialized) {
-        return;
+        return 0;
     }
 
     /* Limit the number of entries processed per call to avoid blocking */
-    enum { MAX_ENTRIES_PER_CALL = 8 };
     LOG_Entry entry;
     int processed = 0;
 
     /* Process available log entries */
-    while (processed < MAX_ENTRIES_PER_CALL && LOG_read_entry(&entry)) {
+    while (processed < max_entries && LOG_read_entry(&entry)) {
         /* Format and output the message to stdout */
         printf("[%s] %s\r\n", g_LEVEL_NAMES[entry.level], entry.message);
         processed++;
@@ -190,4 +202,6 @@ void LOG_task(void)
     if (processed > 0) {
         (void)fflush(stdout);
     }
+
+    return processed;
 }
