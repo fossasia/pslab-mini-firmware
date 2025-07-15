@@ -18,6 +18,6 @@ void SYSTEM_init(void)
 {
     PLATFORM_init();
     // Read any logs that were generated during platform initialization
-    LOG_service_platform();
+    LOG_task();
     LED_init();
 }

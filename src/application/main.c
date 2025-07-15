@@ -100,7 +100,7 @@ int main(void) // NOLINT
     while (1) {
         USB_task(husb);
         // Read low-level logs
-        LOG_service_platform();
+        LOG_task();
 
         // Log system status periodically (optional)
         static uint32_t log_counter = 0;

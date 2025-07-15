@@ -38,4 +38,4 @@ target_link_libraries(test_circular_buffer pslab-util)
 
 # Add logging test (no mocks needed - pure unit test)
 unity_add_test(test_logging test_logging.c)
-target_link_libraries(test_logging pslab-logging pslab-util)
+target_link_libraries(test_logging pslab-util)
