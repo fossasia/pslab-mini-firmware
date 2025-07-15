@@ -1,10 +1,10 @@
 /**
  * @file logging.c
- * @brief Unified logging system implementation using circular buffer
+ * @brief PSLab logging system implementation
  *
- * This module implements a unified logging system that uses a circular buffer
- * for message storage. It provides thread-safe logging with configurable
- * levels and supports printf-style formatting.
+ * This module implements a logging system that uses a circular buffer for
+ * message storage. It provides logging with configurable levels and supports
+ * printf-style formatting.
  *
  * @author PSLab Team
  * @date 2025-07-14

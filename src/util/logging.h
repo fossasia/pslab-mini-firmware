@@ -7,11 +7,9 @@
  * - Multiple log levels (ERROR, WARN, INFO, DEBUG)
  * - Printf-style formatting
  * - Configurable buffer size
- * - Thread-safe operation
- * - Optional timestamp support
  *
  * The logging system uses a circular buffer to store log messages, which
- * can be read out by the application or transmitted over UART/USB.
+ * are written to stdout by the `LOG_task` function.
  *
  * @author PSLab Team
  * @date 2025-07-14
