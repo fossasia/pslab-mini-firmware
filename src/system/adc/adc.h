@@ -17,8 +17,6 @@
 
 #include <stdint.h>
 
-#include "adc_ll.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
