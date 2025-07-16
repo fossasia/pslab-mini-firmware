@@ -12,8 +12,10 @@
  */
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "../timer/tim.h"
+#include "../util/util.h"
 #include "adc.h"
 #include "adc_ll.h"
 #include "error.h"
@@ -27,20 +29,77 @@ enum { ADC1_TIM_NUM = 0 }; // Timer used for ADC1 conversions
 enum { ADC1_TIM_Frequency = 25000 }; // ADC1 timer frequency in Hz
 enum { ADC1_TRIGGER_TIMER = 6 };
 
-static ADC_CompleteCallback volatile g_adc_callback; // Callback for ADC
-                                                     // completion
+struct ADC_Handle {
+    CircularBuffer *adc_buffer; // Circular buffer for ADC data
+    uint32_t volatile adc_dma_head; // DMA head position for ADC
+    ADC_Callback g_adc_callback; // Callback for ADC completion
+    uint32_t adc_threshold; // Threshold for ADC callback
+    bool initialized; // Flag to indicate if ADC is initialized
+};
 
-void ADC_set_complete_callback(ADC_CompleteCallback callback)
+static ADC_Handle *g_active_adc_handle = nullptr; // Global ADC handle
+
+static uint32_t adc_buffer_available(ADC_Handle *handle)
 {
-    g_adc_callback = callback; // Set the ADC complete callback
+    if (!handle || !handle->initialized) {
+        return 0;
+    }
+
+    uint32_t dma_pos = ADC_LL_get_dma_position();
+    uint32_t dma_head = dma_pos;
+
+    // Update the DMA head position in the handle
+    handle->adc_dma_head = dma_head;
+    // Circular buffer head position is updated
+    handle->adc_buffer->head = dma_head;
+
+    return circular_buffer_available(handle->adc_buffer);
 }
 
-static void g_adc_complete_callback(uint32_t value)
+static bool check_adc_callback(ADC_Handle *handle)
 {
-    if (g_adc_callback) {
-        g_adc_callback(value
-        ); // Call the user-defined callback with the ADC value
+    if (!handle || !handle->initialized) {
+        return false;
     }
+
+    if (!handle->g_adc_callback) {
+        return false;
+    }
+
+    if (adc_buffer_available(handle) < handle->adc_threshold) {
+        return false;
+    }
+
+    handle->g_adc_callback(handle, adc_buffer_available(handle));
+    return true;
+}
+
+static void adc_complete_callback(uint32_t dma_pos)
+{
+    if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
+        return;
+    }
+    (void)dma_pos;
+    // Update the DMA position and circular buffer head
+    g_active_adc_handle->adc_dma_head = 0;
+    g_active_adc_handle->adc_buffer->head = 0;
+
+    // Check if we should run the ADC callback now
+    check_adc_callback(g_active_adc_handle);
+}
+
+static void adc_half_complete_callback(uint32_t dma_pos)
+{
+    if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
+        return;
+    }
+
+    // review
+    g_active_adc_handle->adc_dma_head = dma_pos;
+    g_active_adc_handle->adc_buffer->head = dma_pos;
+
+    // Check if we should run the ADC callback now
+    check_adc_callback(g_active_adc_handle);
 }
 
 /**
@@ -50,8 +109,13 @@ static void g_adc_complete_callback(uint32_t value)
  * It must be called before any ADC operations can be performed.
  *
  */
-void ADC_init(void)
+void *ADC_init(CircularBuffer *adc_buffer)
 {
+    if (!adc_buffer) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return nullptr;
+    }
+
     // Initialize the timer used for ADC conversions
     TIM_init(
         ADC1_TIM_NUM, ADC1_TIM_Frequency
@@ -75,10 +139,34 @@ void ADC_init(void)
     this rate. The ADC will be configured to use this timer for triggering
     conversions.
     */
+
+    if (g_active_adc_handle) {
+        THROW(ERROR_RESOURCE_BUSY);
+        return nullptr;
+    }
+    ADC_Handle *handle = malloc(sizeof(ADC_Handle));
+
+    if (!handle) {
+        THROW(ERROR_OUT_OF_MEMORY);
+        return nullptr;
+    }
+    // Initialize the ADC handle
+    handle->adc_buffer = adc_buffer;
+    handle->adc_dma_head = 0;
+    handle->g_adc_callback = nullptr;
+    handle->adc_threshold = 0;
+    handle->initialized = false;
     // Initialize the ADC peripheral
-    ADC_LL_init(ADC1_TRIGGER_TIMER);
+    ADC_LL_init(adc_buffer->buffer, adc_buffer->size, ADC1_TRIGGER_TIMER);
     // Set the ADC complete callback
-    ADC_LL_set_complete_callback(g_adc_complete_callback);
+    ADC_LL_set_complete_callback(adc_complete_callback);
+    // Set the ADC half-complete callback
+    ADC_LL_set_half_complete_callback(adc_half_complete_callback);
+
+    handle->initialized = true;
+    g_active_adc_handle = handle;
+
+    return handle; // Return the ADC handle
 }
 
 /**
@@ -92,6 +180,15 @@ void ADC_deinit(void)
     TIM_stop(ADC1_TIM_NUM); // Stop the timer used for ADC conversions
     // Deinitialize the ADC peripheral
     ADC_LL_deinit();
+    ADC_LL_set_complete_callback(nullptr);
+    ADC_LL_set_half_complete_callback(nullptr);
+
+    g_active_adc_handle->initialized = false;
+
+    free(g_active_adc_handle); // Free the ADC handle memory
+
+    // Clear the global ADC handle
+    g_active_adc_handle = nullptr;
 }
 
 /**
@@ -123,4 +220,52 @@ void ADC_stop(void)
     TIM_stop(ADC1_TIM_NUM); // Stop the timer used for ADC conversions
     // Stop the ADC conversion
     ADC_LL_stop();
+}
+
+uint32_t ADC_read(uint8_t *const adc_buf, uint32_t sz)
+{
+    if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
+        THROW(ERROR_DEVICE_NOT_READY);
+        return 0;
+    }
+
+    if (!adc_buf || sz == 0) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return 0;
+    }
+
+    uint32_t available = adc_buffer_available(g_active_adc_handle);
+    uint32_t to_read = sz > available ? available : sz;
+
+    return circular_buffer_read(
+        g_active_adc_handle->adc_buffer, adc_buf, to_read
+    );
+}
+
+void ADC_set_callback(ADC_Callback callback, uint32_t threshold)
+{
+    if (!g_active_adc_handle || threshold == 0) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return;
+    }
+
+    // If the ADC is not initialized, set the global active handle
+    if (g_active_adc_handle == nullptr) {
+        THROW(ERROR_DEVICE_NOT_READY);
+        return;
+    }
+
+    // Set the ADC callback and threshold
+    g_active_adc_handle->g_adc_callback = callback;
+    g_active_adc_handle->adc_threshold = threshold;
+
+    if (g_active_adc_handle->g_adc_callback &&
+        adc_buffer_available(g_active_adc_handle) >=
+            g_active_adc_handle->adc_threshold) {
+        // If the callback is set and the buffer has enough data, call the
+        // callback
+        g_active_adc_handle->g_adc_callback(
+            g_active_adc_handle, adc_buffer_available(g_active_adc_handle)
+        );
+    }
 }

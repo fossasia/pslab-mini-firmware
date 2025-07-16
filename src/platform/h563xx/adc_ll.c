@@ -22,11 +22,29 @@
 
 enum { ADC_IRQ_PRIORITY = 1 }; // ADC interrupt priority
 
+typedef struct {
+    ADC_HandleTypeDef *adc_handle; // Pointer to the ADC handle
+    ADC_ChannelConfTypeDef adc_config; // ADC channel configuration
+    DMA_HandleTypeDef *dma_handle; // Pointer to the DMA handle
+    uint8_t *adc_buffer_data; // Pointer to the ADC data buffer
+    uint32_t adc_buffer_size; // Size of the ADC data buffer
+    ADC_LL_CompleteCallback
+        adc_complete_callback; // Callback for ADC completion
+    ADC_LL_HalfCompleteCallback
+        adc_half_complete_callback; // Callback for ADC completion
+    bool initialized; // Flag to indicate if the ADC is initialized
+} ADCInstance;
+
 static ADC_HandleTypeDef g_hadc = { nullptr };
 
 static ADC_ChannelConfTypeDef g_config = { 0 };
 
-static ADC_LL_CompleteCallback volatile g_adc_complete_callback;
+static DMA_HandleTypeDef g_hdma_adc = { nullptr };
+
+static ADCInstance g_adc_instance = {
+    .adc_handle = &g_hadc,
+    .dma_handle = &g_hdma_adc,
+};
 
 /**
  * @brief Initializes the ADC MSP (MCU Support Package).
@@ -45,6 +63,8 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
     __HAL_RCC_ADC_CLK_ENABLE();
     // Enable GPIOA clock
     __HAL_RCC_GPIOA_CLK_ENABLE();
+    // Enable DMA1 clock
+    __HAL_RCC_GPDMA1_CLK_ENABLE();
 
     // Configure GPIO pin for ADC1_IN0 (PA0)
     gpio_init.Pin = GPIO_PIN_0; // PA0
@@ -52,9 +72,33 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
     gpio_init.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &gpio_init);
 
+    /*DMA for the ADC*/
+    g_hdma_adc.Instance = GPDMA1_Channel6; // DMA channel for ADC1
+    g_hdma_adc.Init.Request = GPDMA1_REQUEST_ADC1;
+    g_hdma_adc.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+    g_hdma_adc.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    g_hdma_adc.Init.SrcInc = DMA_SINC_FIXED;
+    g_hdma_adc.Init.DestInc = DMA_DINC_INCREMENTED;
+    g_hdma_adc.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
+    g_hdma_adc.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+    g_hdma_adc.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
+    g_hdma_adc.Init.SrcBurstLength = 1;
+    g_hdma_adc.Init.DestBurstLength = 1;
+    g_hdma_adc.Init.TransferAllocatedPort =
+        (DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT0);
+    g_hdma_adc.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+    g_hdma_adc.Init.Mode = DMA_NORMAL;
+    if (HAL_DMA_Init(&g_hdma_adc) != HAL_OK) {
+        THROW(ERROR_HARDWARE_FAULT);
+    }
+    __HAL_LINKDMA(&g_hadc, DMA_Handle, g_hdma_adc);
+
     // Enable ADC1 interrupt
     HAL_NVIC_SetPriority(ADC1_IRQn, ADC_IRQ_PRIORITY, 0);
     HAL_NVIC_EnableIRQ(ADC1_IRQn);
+
+    HAL_NVIC_SetPriority(GPDMA1_Channel6_IRQn, ADC_IRQ_PRIORITY, 1);
+    HAL_NVIC_EnableIRQ(GPDMA1_Channel6_IRQn);
 }
 
 /**
@@ -65,37 +109,53 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
  * parameters.
  *
  */
-void ADC_LL_init(ADC_LL_TriggerSource adc_trigger_timer)
+void ADC_LL_init(
+    uint8_t *adc_buf,
+    uint32_t sz,
+    ADC_LL_TriggerSource adc_trigger_timer
+)
 {
+    if (adc_buf == nullptr || sz == 0) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return;
+    }
 
+    if (g_adc_instance.initialized) {
+        THROW(ERROR_RESOURCE_BUSY);
+        return;
+    }
+
+    ADCInstance *instance = &g_adc_instance;
     // Initialize the ADC peripheral
-    g_hadc.Instance = ADC1;
-    g_hadc.Init.ClockPrescaler =
+    instance->adc_handle->Instance = ADC1;
+    instance->adc_handle->Init.ClockPrescaler =
         ADC_CLOCK_SYNC_PCLK_DIV1; // ADC clock and prescaler
-    g_hadc.Init.Resolution = ADC_RESOLUTION_12B;
-    g_hadc.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-    g_hadc.Init.ScanConvMode = DISABLE;
-    g_hadc.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
-    g_hadc.Init.LowPowerAutoWait = DISABLE;
-    g_hadc.Init.ContinuousConvMode = DISABLE;
-    g_hadc.Init.NbrOfConversion = 1;
-    g_hadc.Init.DiscontinuousConvMode = DISABLE;
+    instance->adc_handle->Init.Resolution = ADC_RESOLUTION_12B;
+    instance->adc_handle->Init.DataAlign = ADC_DATAALIGN_RIGHT;
+    instance->adc_handle->Init.ScanConvMode = DISABLE;
+    instance->adc_handle->Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+    instance->adc_handle->Init.LowPowerAutoWait = DISABLE;
+    instance->adc_handle->Init.ContinuousConvMode = DISABLE;
+    instance->adc_handle->Init.NbrOfConversion = 1;
+    instance->adc_handle->Init.DiscontinuousConvMode = DISABLE;
     if (adc_trigger_timer == ADC_TRIGGER_TIMER6) {
-        g_hadc.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T6_TRGO;
+        instance->adc_handle->Init.ExternalTrigConv = ADC_EXTERNALTRIG_T6_TRGO;
     } else {
         THROW(ERROR_INVALID_ARGUMENT);
         return;
     }
-    g_hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
-    g_hadc.Init.SamplingMode = ADC_SAMPLING_MODE_NORMAL;
-    g_hadc.Init.DMAContinuousRequests = DISABLE;
-    g_hadc.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
-    g_hadc.Init.OversamplingMode = DISABLE;
+    instance->adc_handle->Init.ExternalTrigConvEdge =
+        ADC_EXTERNALTRIGCONVEDGE_RISING;
+    instance->adc_handle->Init.SamplingMode = ADC_SAMPLING_MODE_NORMAL;
+    instance->adc_handle->Init.DMAContinuousRequests = DISABLE;
+    instance->adc_handle->Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+    instance->adc_handle->Init.OversamplingMode = DISABLE;
 
     if (HAL_ADC_Init(&g_hadc) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     }
 
+    instance->adc_config = g_config;
     // Configure ADC channel
     g_config.Channel = ADC_CHANNEL_0; // ADC1_IN0
     g_config.Rank = ADC_REGULAR_RANK_1;
@@ -103,7 +163,7 @@ void ADC_LL_init(ADC_LL_TriggerSource adc_trigger_timer)
     g_config.SingleDiff = ADC_SINGLE_ENDED; // Single-ended input
     g_config.OffsetNumber = ADC_OFFSET_NONE;
     g_config.Offset = 0;
-    if (HAL_ADC_ConfigChannel(&g_hadc, &g_config) != HAL_OK) {
+    if (HAL_ADC_ConfigChannel(instance->adc_handle, &g_config) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     }
 
@@ -111,6 +171,11 @@ void ADC_LL_init(ADC_LL_TriggerSource adc_trigger_timer)
     if (HAL_ADCEx_Calibration_Start(&g_hadc, ADC_SINGLE_ENDED) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     } // Calibration
+
+    // Set the ADC buffer and size
+    instance->adc_buffer_data = adc_buf;
+    instance->adc_buffer_size = sz;
+    instance->initialized = true;
 }
 
 /**
@@ -119,10 +184,25 @@ void ADC_LL_init(ADC_LL_TriggerSource adc_trigger_timer)
  */
 void ADC_LL_deinit(void)
 {
+    if (!g_adc_instance.initialized) {
+        THROW(ERROR_RESOURCE_UNAVAILABLE);
+        return;
+    }
+
+    ADCInstance *instance = &g_adc_instance;
+    // Stop the ADC conversion;
+    HAL_NVIC_DisableIRQ(ADC1_IRQn); // Disable ADC1 interrupt
+
     // Deinitialize the ADC peripheral
-    if (HAL_ADC_DeInit(&g_hadc) != HAL_OK) {
+    if (HAL_ADC_DeInit(instance->adc_handle) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     }
+
+    instance->adc_buffer_data = nullptr;
+    instance->adc_buffer_size = 0;
+    instance->adc_complete_callback = nullptr; // Clear the callback
+    instance->adc_half_complete_callback = nullptr; // Clear the callback
+    instance->initialized = false;
 }
 
 /**
@@ -134,10 +214,15 @@ void ADC_LL_deinit(void)
  */
 void ADC_LL_start(void)
 {
-    // Start the ADC conversion
-    if (HAL_ADC_Start_IT(&g_hadc) != HAL_OK) {
+    if (HAL_ADC_Start_DMA(
+            &g_hadc,
+            (uint32_t *)g_adc_instance.adc_buffer_data,
+            g_adc_instance.adc_buffer_size
+        ) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
-    }
+    } // Start ADC in DMA mode
+
+    __HAL_ADC_CLEAR_FLAG(&g_hadc, ADC_FLAG_OVR); // Clear any previous flags
 }
 
 /**
@@ -150,24 +235,67 @@ void ADC_LL_start(void)
 void ADC_LL_stop(void)
 {
     // Stop the ADC conversion
-    if (HAL_ADC_Stop_IT(&g_hadc) != HAL_OK) {
+    if (HAL_ADC_Stop_DMA(&g_hadc) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     }
 }
-
 void ADC_LL_set_complete_callback(ADC_LL_CompleteCallback callback)
 {
-    g_adc_complete_callback = callback; // Set the user-defined callback
+    g_adc_instance.adc_complete_callback =
+        callback; // Set the user-defined callback
+}
+
+void ADC_LL_set_half_complete_callback(ADC_LL_HalfCompleteCallback callback)
+{
+    g_adc_instance.adc_half_complete_callback =
+        callback; // Set the user-defined callback
+}
+
+uint32_t ADC_LL_get_dma_position(void)
+{
+    if (!g_adc_instance.initialized) {
+        THROW(ERROR_RESOURCE_UNAVAILABLE);
+        return 0;
+    }
+
+    // Get the current DMA position
+    return g_adc_instance.adc_buffer_size - __HAL_DMA_GET_COUNTER(&g_hdma_adc);
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
     (void)hadc; // Suppress unused parameter warning
-    uint32_t value = HAL_ADC_GetValue(&g_hadc);
-    if (g_adc_complete_callback != nullptr) {
-        g_adc_complete_callback(value
+
+    HAL_ADC_Start_DMA(
+        &g_hadc,
+        (uint32_t *)g_adc_instance.adc_buffer_data,
+        g_adc_instance.adc_buffer_size
+    );
+
+    uint32_t dma_pos = ADC_LL_get_dma_position();
+
+    if (g_adc_instance.adc_complete_callback != nullptr) {
+        g_adc_instance.adc_complete_callback(dma_pos
+        ); // Call the user-defined callback with the ADC value
+    }
+}
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)
+{
+    (void)hadc; // Suppress unused parameter warning
+
+    ADCInstance *instance = &g_adc_instance;
+
+    uint32_t dma_pos = ADC_LL_get_dma_position();
+
+    if (instance->adc_half_complete_callback != nullptr) {
+        instance->adc_half_complete_callback(dma_pos
         ); // Call the user-defined callback with the ADC value
     }
 }
 
 void ADC1_IRQHandler(void) { HAL_ADC_IRQHandler(&g_hadc); }
+
+void GPDMA1_Channel6_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(&g_hdma_adc); // Handle DMA interrupts
+}

@@ -15,6 +15,7 @@
 #ifndef ADC_H
 #define ADC_H
 
+#include "util.h"
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -22,20 +23,27 @@ extern "C" {
 #endif
 
 /**
+ * @brief ADC Structure with parameters and callback.
+ */
+typedef struct ADC_Handle ADC_Handle;
+
+/**
  * @brief Callback function type for ADC completion.
  *
  * This callback is called when an ADC conversion is complete.
  * It receives the converted ADC value as an argument.
  */
-typedef void (*ADC_CompleteCallback)(uint32_t value);
+typedef void (*ADC_Callback)(ADC_Handle *handle, uint32_t bytes_available);
 
 /**
  * @brief ADC Initialization function.
  *
  * This function initializes the ADC peripheral with the specified settings.
  * It must be called before any ADC operations can be performed.
+ *
+ * @param adc_buffer Pointer to the circular buffer for ADC data.
  */
-void ADC_init(void);
+void *ADC_init(CircularBuffer *adc_buffer);
 
 /**
  * @brief Deinitializes the ADC peripheral.
@@ -63,6 +71,19 @@ void ADC_start(void);
 void ADC_stop(void);
 
 /**
+ * @brief Reads data from the ADC buffer.
+ *
+ * This function reads data from the ADC circular buffer into the provided
+ * buffer. It checks if the ADC is initialized and if the input buffer is valid.
+ *
+ * @param adc_buf Pointer to the buffer where ADC data will be stored.
+ * @param sz Size of the buffer in bytes.
+ *
+ * @return Number of bytes read from the ADC buffer.
+ */
+uint32_t ADC_read(uint8_t *adc_buf, uint32_t sz);
+
+/**
  * @brief Sets the callback function to be called when an ADC conversion is
  * complete.
  *
@@ -72,7 +93,7 @@ void ADC_stop(void);
  *
  * @param callback Pointer to the callback function to be set.
  */
-void ADC_set_complete_callback(ADC_CompleteCallback callback);
+void ADC_set_callback(ADC_Callback callback, uint32_t threshold);
 
 #ifdef __cplusplus
 }

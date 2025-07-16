@@ -17,14 +17,40 @@ typedef enum {
     ADC_TRIGGER_TIMER7 = 7
 } ADC_LL_TriggerSource;
 
-typedef void (*ADC_LL_CompleteCallback)(uint32_t value);
+/**
+ * @brief Callback function type for ADC complete events.
+ *
+ * This callback is called when the ADC conversion is complete.
+ * It receives the DMA position as an argument.
+ * @param dma_pos Current DMA position.
+ */
+typedef void (*ADC_LL_CompleteCallback)(uint32_t dma_pos);
+
+/**
+ * @brief Callback function type for ADC half-complete events.
+ *
+ * This callback is called when the ADC conversion is half complete.
+ * It receives the DMA position as an argument.
+ *
+ * @param dma_pos Current DMA position.
+ */
+typedef void (*ADC_LL_HalfCompleteCallback)(uint32_t dma_pos);
 
 /**
  * @brief Initializes the ADC1 peripheral.
  *
  * This function configures the ADC1 peripheral with the specified settings.
+ * It must be called before any ADC operations can be performed.
+ *
+ * @param adc_buf Pointer to the ADC data buffer.
+ * @param sz Size of the ADC data buffer.
+ * @param adc_trigger_timer Trigger source for the ADC (e.g., timer).
  */
-void ADC_LL_init(ADC_LL_TriggerSource adc_trigger_timer);
+void ADC_LL_init(
+    uint8_t *adc_buf,
+    uint32_t sz,
+    ADC_LL_TriggerSource adc_trigger_timer
+);
 
 /**
  * @brief Deinitializes the ADC peripheral.
@@ -51,14 +77,33 @@ void ADC_LL_start(void);
 void ADC_LL_stop(void);
 
 /**
- * @brief Sets the callback function to be called when an ADC conversion is
- * complete.
+ * @brief Gets the current DMA position.
  *
- * This function allows the user to set a callback that will be invoked
- * when an ADC conversion is complete.
+ * This function retrieves the current position of the DMA buffer.
+ * It returns the number of bytes that have been transferred by the DMA.
+ *
+ * @return Current DMA position.
+ */
+uint32_t ADC_LL_get_dma_position(void);
+
+/**
+ * @brief Sets the callback for ADC completion events.
+ *
+ * This function sets a user-defined callback that will be called when
+ * the ADC conversion is complete.
  *
  * @param callback Pointer to the callback function to be set.
  */
-void ADC_LL_set_complete_callback(ADC_LL_CompleteCallback callback);
+void ADC_LL_set_complete_callback(ADC_LL_HalfCompleteCallback callback);
+
+/**
+ * @brief Sets the callback for ADC half-complete events.
+ *
+ * This function sets a user-defined callback that will be called when
+ * the ADC conversion is half complete.
+ *
+ * @param callback Pointer to the callback function to be set.
+ */
+void ADC_LL_set_half_complete_callback(ADC_LL_HalfCompleteCallback callback);
 
 #endif // ADC_LL_H
