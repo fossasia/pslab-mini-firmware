@@ -26,12 +26,10 @@ typedef struct {
     ADC_HandleTypeDef *adc_handle; // Pointer to the ADC handle
     ADC_ChannelConfTypeDef adc_config; // ADC channel configuration
     DMA_HandleTypeDef *dma_handle; // Pointer to the DMA handle
-    uint8_t *adc_buffer_data; // Pointer to the ADC data buffer
+    uint32_t *adc_buffer_data; // Pointer to the ADC data buffer
     uint32_t adc_buffer_size; // Size of the ADC data buffer
     ADC_LL_CompleteCallback
         adc_complete_callback; // Callback for ADC completion
-    ADC_LL_HalfCompleteCallback
-        adc_half_complete_callback; // Callback for ADC completion
     bool initialized; // Flag to indicate if the ADC is initialized
 } ADCInstance;
 
@@ -79,8 +77,8 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
     g_hdma_adc.Init.Direction = DMA_PERIPH_TO_MEMORY;
     g_hdma_adc.Init.SrcInc = DMA_SINC_FIXED;
     g_hdma_adc.Init.DestInc = DMA_DINC_INCREMENTED;
-    g_hdma_adc.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
-    g_hdma_adc.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+    g_hdma_adc.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_WORD;
+    g_hdma_adc.Init.DestDataWidth = DMA_SRC_DATAWIDTH_WORD;
     g_hdma_adc.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
     g_hdma_adc.Init.SrcBurstLength = 1;
     g_hdma_adc.Init.DestBurstLength = 1;
@@ -110,7 +108,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
  *
  */
 void ADC_LL_init(
-    uint8_t *adc_buf,
+    uint32_t *adc_buf,
     uint32_t sz,
     ADC_LL_TriggerSource adc_trigger_timer
 )
@@ -125,7 +123,9 @@ void ADC_LL_init(
         return;
     }
 
+    // Initialize the ADC handle
     ADCInstance *instance = &g_adc_instance;
+
     // Initialize the ADC peripheral
     instance->adc_handle->Instance = ADC1;
     instance->adc_handle->Init.ClockPrescaler =
@@ -155,8 +155,8 @@ void ADC_LL_init(
         THROW(ERROR_HARDWARE_FAULT);
     }
 
+    // Configure the ADC channel
     instance->adc_config = g_config;
-    // Configure ADC channel
     g_config.Channel = ADC_CHANNEL_0; // ADC1_IN0
     g_config.Rank = ADC_REGULAR_RANK_1;
     g_config.SamplingTime = ADC_SAMPLETIME_12CYCLES_5;
@@ -201,7 +201,6 @@ void ADC_LL_deinit(void)
     instance->adc_buffer_data = nullptr;
     instance->adc_buffer_size = 0;
     instance->adc_complete_callback = nullptr; // Clear the callback
-    instance->adc_half_complete_callback = nullptr; // Clear the callback
     instance->initialized = false;
 }
 
@@ -216,7 +215,7 @@ void ADC_LL_start(void)
 {
     if (HAL_ADC_Start_DMA(
             &g_hadc,
-            (uint32_t *)g_adc_instance.adc_buffer_data,
+            g_adc_instance.adc_buffer_data,
             g_adc_instance.adc_buffer_size
         ) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
@@ -239,56 +238,27 @@ void ADC_LL_stop(void)
         THROW(ERROR_HARDWARE_FAULT);
     }
 }
+
+/**
+ * @brief Sets the ADC complete callback.
+ *
+ * This function sets the user-defined callback that will be called when the
+ * ADC conversion is complete.
+ *
+ * @param callback Pointer to the callback function.
+ */
 void ADC_LL_set_complete_callback(ADC_LL_CompleteCallback callback)
 {
     g_adc_instance.adc_complete_callback =
         callback; // Set the user-defined callback
 }
 
-void ADC_LL_set_half_complete_callback(ADC_LL_HalfCompleteCallback callback)
-{
-    g_adc_instance.adc_half_complete_callback =
-        callback; // Set the user-defined callback
-}
-
-uint32_t ADC_LL_get_dma_position(void)
-{
-    if (!g_adc_instance.initialized) {
-        THROW(ERROR_RESOURCE_UNAVAILABLE);
-        return 0;
-    }
-
-    // Get the current DMA position
-    return g_adc_instance.adc_buffer_size - __HAL_DMA_GET_COUNTER(&g_hdma_adc);
-}
-
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
     (void)hadc; // Suppress unused parameter warning
 
-    HAL_ADC_Start_DMA(
-        &g_hadc,
-        (uint32_t *)g_adc_instance.adc_buffer_data,
-        g_adc_instance.adc_buffer_size
-    );
-
-    uint32_t dma_pos = ADC_LL_get_dma_position();
-
     if (g_adc_instance.adc_complete_callback != nullptr) {
-        g_adc_instance.adc_complete_callback(dma_pos
-        ); // Call the user-defined callback with the ADC value
-    }
-}
-void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)
-{
-    (void)hadc; // Suppress unused parameter warning
-
-    ADCInstance *instance = &g_adc_instance;
-
-    uint32_t dma_pos = ADC_LL_get_dma_position();
-
-    if (instance->adc_half_complete_callback != nullptr) {
-        instance->adc_half_complete_callback(dma_pos
+        g_adc_instance.adc_complete_callback(
         ); // Call the user-defined callback with the ADC value
     }
 }

@@ -15,7 +15,6 @@
 #include <stdlib.h>
 
 #include "../timer/tim.h"
-#include "../util/util.h"
 #include "adc.h"
 #include "adc_ll.h"
 #include "error.h"
@@ -30,7 +29,7 @@ enum { ADC1_TIM_Frequency = 25000 }; // ADC1 timer frequency in Hz
 enum { ADC1_TRIGGER_TIMER = 6 };
 
 struct ADC_Handle {
-    CircularBuffer *adc_buffer; // Circular buffer for ADC data
+    LinearBuffer *adc_buffer; // Buffer for ADC data
     uint32_t volatile adc_dma_head; // DMA head position for ADC
     ADC_Callback g_adc_callback; // Callback for ADC completion
     uint32_t adc_threshold; // Threshold for ADC callback
@@ -39,67 +38,18 @@ struct ADC_Handle {
 
 static ADC_Handle *g_active_adc_handle = nullptr; // Global ADC handle
 
-static uint32_t adc_buffer_available(ADC_Handle *handle)
-{
-    if (!handle || !handle->initialized) {
-        return 0;
-    }
-
-    uint32_t dma_pos = ADC_LL_get_dma_position();
-    uint32_t dma_head = dma_pos;
-
-    // Update the DMA head position in the handle
-    handle->adc_dma_head = dma_head;
-    // Circular buffer head position is updated
-    handle->adc_buffer->head = dma_head;
-
-    return circular_buffer_available(handle->adc_buffer);
-}
-
-static bool check_adc_callback(ADC_Handle *handle)
-{
-    if (!handle || !handle->initialized) {
-        return false;
-    }
-
-    if (!handle->g_adc_callback) {
-        return false;
-    }
-
-    if (adc_buffer_available(handle) < handle->adc_threshold) {
-        return false;
-    }
-
-    handle->g_adc_callback(handle, adc_buffer_available(handle));
-    return true;
-}
-
-static void adc_complete_callback(uint32_t dma_pos)
-{
-    if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
-        return;
-    }
-    (void)dma_pos;
-    // Update the DMA position and circular buffer head
-    g_active_adc_handle->adc_dma_head = 0;
-    g_active_adc_handle->adc_buffer->head = 0;
-
-    // Check if we should run the ADC callback now
-    check_adc_callback(g_active_adc_handle);
-}
-
-static void adc_half_complete_callback(uint32_t dma_pos)
+/**
+ * @brief Callback invoked by hardware layer when ADC conversion is complete
+ */
+static void adc_complete_callback(void)
 {
     if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
         return;
     }
 
-    // review
-    g_active_adc_handle->adc_dma_head = dma_pos;
-    g_active_adc_handle->adc_buffer->head = dma_pos;
-
     // Check if we should run the ADC callback now
-    check_adc_callback(g_active_adc_handle);
+    g_active_adc_handle->g_adc_callback(g_active_adc_handle
+    ); // Call the user-defined callback with the ADC value
 }
 
 /**
@@ -109,7 +59,7 @@ static void adc_half_complete_callback(uint32_t dma_pos)
  * It must be called before any ADC operations can be performed.
  *
  */
-void *ADC_init(CircularBuffer *adc_buffer)
+void *ADC_init(LinearBuffer *adc_buffer)
 {
     if (!adc_buffer) {
         THROW(ERROR_INVALID_ARGUMENT);
@@ -152,17 +102,12 @@ void *ADC_init(CircularBuffer *adc_buffer)
     }
     // Initialize the ADC handle
     handle->adc_buffer = adc_buffer;
-    handle->adc_dma_head = 0;
     handle->g_adc_callback = nullptr;
-    handle->adc_threshold = 0;
     handle->initialized = false;
     // Initialize the ADC peripheral
     ADC_LL_init(adc_buffer->buffer, adc_buffer->size, ADC1_TRIGGER_TIMER);
     // Set the ADC complete callback
     ADC_LL_set_complete_callback(adc_complete_callback);
-    // Set the ADC half-complete callback
-    ADC_LL_set_half_complete_callback(adc_half_complete_callback);
-
     handle->initialized = true;
     g_active_adc_handle = handle;
 
@@ -181,7 +126,6 @@ void ADC_deinit(void)
     // Deinitialize the ADC peripheral
     ADC_LL_deinit();
     ADC_LL_set_complete_callback(nullptr);
-    ADC_LL_set_half_complete_callback(nullptr);
 
     g_active_adc_handle->initialized = false;
 
@@ -200,12 +144,26 @@ void ADC_deinit(void)
  */
 void ADC_start(void)
 {
+    if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
+        THROW(ERROR_DEVICE_NOT_READY);
+        return;
+    }
 
     TIM_start(ADC1_TIM_NUM); // Start the timer for ADC conversions
 
     // Start the ADC conversion
     ADC_LL_start();
     LOG_INFO("ADC_started_successfully");
+}
+
+void ADC_restart(void)
+{
+    if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
+        THROW(ERROR_DEVICE_NOT_READY);
+        return;
+    }
+    // Restart the ADC conversion
+    ADC_LL_start();
 }
 
 /**
@@ -222,7 +180,7 @@ void ADC_stop(void)
     ADC_LL_stop();
 }
 
-uint32_t ADC_read(uint8_t *const adc_buf, uint32_t sz)
+uint32_t ADC_read(uint32_t *const adc_buf, uint32_t sz)
 {
     if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
         THROW(ERROR_DEVICE_NOT_READY);
@@ -234,17 +192,14 @@ uint32_t ADC_read(uint8_t *const adc_buf, uint32_t sz)
         return 0;
     }
 
-    uint32_t available = adc_buffer_available(g_active_adc_handle);
-    uint32_t to_read = sz > available ? available : sz;
-
-    return circular_buffer_read(
-        g_active_adc_handle->adc_buffer, adc_buf, to_read
-    );
+    return linear_buffer_read(
+        g_active_adc_handle->adc_buffer, adc_buf, sz
+    ); // Read data from the ADC buffer
 }
 
-void ADC_set_callback(ADC_Callback callback, uint32_t threshold)
+void ADC_set_callback(ADC_Callback callback)
 {
-    if (!g_active_adc_handle || threshold == 0) {
+    if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
         THROW(ERROR_INVALID_ARGUMENT);
         return;
     }
@@ -255,17 +210,6 @@ void ADC_set_callback(ADC_Callback callback, uint32_t threshold)
         return;
     }
 
-    // Set the ADC callback and threshold
+    // Set the ADC callback
     g_active_adc_handle->g_adc_callback = callback;
-    g_active_adc_handle->adc_threshold = threshold;
-
-    if (g_active_adc_handle->g_adc_callback &&
-        adc_buffer_available(g_active_adc_handle) >=
-            g_active_adc_handle->adc_threshold) {
-        // If the callback is set and the buffer has enough data, call the
-        // callback
-        g_active_adc_handle->g_adc_callback(
-            g_active_adc_handle, adc_buffer_available(g_active_adc_handle)
-        );
-    }
 }

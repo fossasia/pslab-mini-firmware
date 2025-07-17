@@ -15,7 +15,7 @@
 #ifndef ADC_H
 #define ADC_H
 
-#include "util.h"
+#include "linear_buffer.h"
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -33,7 +33,7 @@ typedef struct ADC_Handle ADC_Handle;
  * This callback is called when an ADC conversion is complete.
  * It receives the converted ADC value as an argument.
  */
-typedef void (*ADC_Callback)(ADC_Handle *handle, uint32_t bytes_available);
+typedef void (*ADC_Callback)(ADC_Handle *handle);
 
 /**
  * @brief ADC Initialization function.
@@ -43,7 +43,7 @@ typedef void (*ADC_Callback)(ADC_Handle *handle, uint32_t bytes_available);
  *
  * @param adc_buffer Pointer to the circular buffer for ADC data.
  */
-void *ADC_init(CircularBuffer *adc_buffer);
+void *ADC_init(LinearBuffer *adc_buffer);
 
 /**
  * @brief Deinitializes the ADC peripheral.
@@ -60,6 +60,15 @@ void ADC_deinit(void);
  * the ADC has been initialized and configured.
  */
 void ADC_start(void);
+
+/**
+ * @brief Restarts the ADC conversion.
+ *
+ * This function restarts the ADC conversion process. It can be called to
+ * restart conversions after dma buffer is completely filled and we need
+ * to call the dma to restart the transfer.
+ */
+void ADC_restart(void);
 
 /**
  * @brief Stops the ADC conversion.
@@ -81,7 +90,7 @@ void ADC_stop(void);
  *
  * @return Number of bytes read from the ADC buffer.
  */
-uint32_t ADC_read(uint8_t *adc_buf, uint32_t sz);
+uint32_t ADC_read(uint32_t *adc_buf, uint32_t sz);
 
 /**
  * @brief Sets the callback function to be called when an ADC conversion is
@@ -93,7 +102,7 @@ uint32_t ADC_read(uint8_t *adc_buf, uint32_t sz);
  *
  * @param callback Pointer to the callback function to be set.
  */
-void ADC_set_callback(ADC_Callback callback, uint32_t threshold);
+void ADC_set_callback(ADC_Callback callback);
 
 #ifdef __cplusplus
 }
