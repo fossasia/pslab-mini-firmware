@@ -125,16 +125,24 @@ void *ADC_init(uint16_t *adc_buffer, uint32_t adc_buffer_size)
 void ADC_deinit(void)
 {
     TIM_stop(ADC1_TIM_NUM); // Stop the timer used for ADC conversions
-    // Deinitialize the ADC peripheral
-    ADC_LL_deinit();
-    ADC_LL_set_complete_callback(nullptr);
+    if (g_active_adc_handle && g_active_adc_handle->initialized) {
+        // Deinitialize the ADC peripheral
+        ADC_LL_deinit();
 
-    g_active_adc_handle->initialized = false;
+        ADC_LL_set_complete_callback(nullptr);
 
-    free(g_active_adc_handle); // Free the ADC handle memory
+        g_active_adc_handle->initialized = false;
 
-    // Clear the global ADC handle
-    g_active_adc_handle = nullptr;
+        free(g_active_adc_handle); // Free the ADC handle memory
+
+        // Clear the global ADC handle
+        g_active_adc_handle = nullptr;
+    }
+
+    else {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return;
+    }
 }
 
 /**
@@ -195,7 +203,7 @@ uint32_t ADC_read(uint16_t *const adc_buf, uint32_t sz)
     }
 
     uint32_t samples_read = 0;
-    while (samples_read < sz) {
+    while (samples_read <= sz) {
         adc_buf[samples_read] = g_active_adc_handle->adc_buffer[samples_read];
         samples_read++;
     }
@@ -209,13 +217,6 @@ void ADC_set_callback(ADC_Callback callback)
         THROW(ERROR_INVALID_ARGUMENT);
         return;
     }
-
-    // If the ADC is not initialized, set the global active handle
-    if (g_active_adc_handle == nullptr) {
-        THROW(ERROR_DEVICE_NOT_READY);
-        return;
-    }
-
     // Set the ADC callback
     g_active_adc_handle->g_adc_callback = callback;
 }

@@ -77,8 +77,8 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
     g_hdma_adc.Init.Direction = DMA_PERIPH_TO_MEMORY;
     g_hdma_adc.Init.SrcInc = DMA_SINC_FIXED;
     g_hdma_adc.Init.DestInc = DMA_DINC_INCREMENTED;
-    g_hdma_adc.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_WORD;
-    g_hdma_adc.Init.DestDataWidth = DMA_SRC_DATAWIDTH_WORD;
+    g_hdma_adc.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_HALFWORD;
+    g_hdma_adc.Init.DestDataWidth = DMA_SRC_DATAWIDTH_HALFWORD;
     g_hdma_adc.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
     g_hdma_adc.Init.SrcBurstLength = 1;
     g_hdma_adc.Init.DestBurstLength = 1;
@@ -213,6 +213,8 @@ void ADC_LL_deinit(void)
  */
 void ADC_LL_start(void)
 {
+    __HAL_ADC_CLEAR_FLAG(&g_hadc, ADC_FLAG_OVR); // Clear any previous flags
+
     if (HAL_ADC_Start_DMA(
             &g_hadc,
             (uint32_t *)g_adc_instance.adc_buffer_data,
@@ -220,8 +222,6 @@ void ADC_LL_start(void)
         ) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     } // Start ADC in DMA mode
-
-    __HAL_ADC_CLEAR_FLAG(&g_hadc, ADC_FLAG_OVR); // Clear any previous flags
 }
 
 /**

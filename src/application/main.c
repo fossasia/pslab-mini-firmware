@@ -137,7 +137,7 @@ int main(void) // NOLINT
             } else {
                 LOG_ERROR("ADC read failed or no data available");
             }
-            // ADC_restart(); // Restart ADC for next conversion
+            ADC_restart(); // Restart ADC for next conversion
         }
 
         if (g_usb_service_requested) {
