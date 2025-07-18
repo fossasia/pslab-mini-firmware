@@ -2,7 +2,6 @@ add_library(pslab-util STATIC)
 
 target_sources(pslab-util PRIVATE
     circular_buffer.c
-    linear_buffer.c
     logging.c
 )
 

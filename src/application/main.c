@@ -10,7 +10,6 @@
 #include "adc.h"
 #include "error.h"
 #include "led.h"
-#include "linear_buffer.h"
 #include "logging.h"
 #include "syscalls_config.h"
 #include "system.h"
@@ -95,9 +94,7 @@ int main(void) // NOLINT
     circular_buffer_init(&usb_rx_buf, g_usb_rx_buffer_data, RX_BUFFER_SIZE);
     USB_Handle *husb = USB_init(0, &usb_rx_buf);
 
-    LinearBuffer adc_buf;
-    linear_buffer_init(&adc_buf, g_adc_buffer_data, ADC_BUFFER_SIZE);
-    ADC_init(&adc_buf);
+    ADC_init(g_adc_buffer_data, ADC_BUFFER_SIZE);
 
     USB_set_rx_callback(husb, usb_cb, CB_THRESHOLD);
     ADC_set_callback(adc_cb);
@@ -129,18 +126,18 @@ int main(void) // NOLINT
             g_adc_ready = false;
             LED_toggle();
             uint16_t buf[ADC_BUFFER_SIZE] = { 0 };
-            uint32_t bytes_read = ADC_read(buf, ADC_BUFFER_SIZE);
+            uint32_t samples_read = ADC_read(buf, ADC_BUFFER_SIZE);
 
-            if (bytes_read > 0) {
+            if (samples_read > 0) {
 
-                uint16_t num_samples = ADC_BUFFER_SIZE;
+                uint16_t num_samples = samples_read;
                 for (uint32_t i = 0; i < num_samples; i++) {
                     LOG_INFO("Sample %u: %u", i + 1, buf[i]);
                 }
             } else {
                 LOG_ERROR("ADC read failed or no data available");
             }
-            ADC_restart(); // Restart ADC for next conversion
+            // ADC_restart(); // Restart ADC for next conversion
         }
 
         if (g_usb_service_requested) {

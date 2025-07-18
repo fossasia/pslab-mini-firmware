@@ -29,7 +29,8 @@ enum { ADC1_TIM_Frequency = 25000 }; // ADC1 timer frequency in Hz
 enum { ADC1_TRIGGER_TIMER = 6 };
 
 struct ADC_Handle {
-    LinearBuffer *adc_buffer; // Buffer for ADC data
+    uint16_t *adc_buffer; // Buffer for ADC data
+    uint32_t adc_buffer_size; // Size of the ADC buffer
     ADC_Callback g_adc_callback; // Callback for ADC completion
     bool initialized; // Flag to indicate if ADC is initialized
 };
@@ -57,9 +58,9 @@ static void adc_complete_callback(void)
  * It must be called before any ADC operations can be performed.
  *
  */
-void *ADC_init(LinearBuffer *adc_buffer)
+void *ADC_init(uint16_t *adc_buffer, uint32_t adc_buffer_size)
 {
-    if (!adc_buffer) {
+    if (!adc_buffer || adc_buffer_size == 0) {
         THROW(ERROR_INVALID_ARGUMENT);
         return nullptr;
     }
@@ -100,10 +101,13 @@ void *ADC_init(LinearBuffer *adc_buffer)
     }
     // Initialize the ADC handle
     handle->adc_buffer = adc_buffer;
+    handle->adc_buffer_size = adc_buffer_size;
     handle->g_adc_callback = nullptr;
     handle->initialized = false;
     // Initialize the ADC peripheral
-    ADC_LL_init(adc_buffer->buffer, adc_buffer->size, ADC1_TRIGGER_TIMER);
+    ADC_LL_init(
+        handle->adc_buffer, handle->adc_buffer_size, ADC1_TRIGGER_TIMER
+    );
     // Set the ADC complete callback
     ADC_LL_set_complete_callback(adc_complete_callback);
     handle->initialized = true;
@@ -190,9 +194,13 @@ uint32_t ADC_read(uint16_t *const adc_buf, uint32_t sz)
         return 0;
     }
 
-    return linear_buffer_read(
-        g_active_adc_handle->adc_buffer, adc_buf, sz
-    ); // Read data from the ADC buffer
+    uint32_t samples_read = 0;
+    while (samples_read < sz) {
+        adc_buf[samples_read] = g_active_adc_handle->adc_buffer[samples_read];
+        samples_read++;
+    }
+
+    return samples_read; // Return the number of samples read
 }
 
 void ADC_set_callback(ADC_Callback callback)

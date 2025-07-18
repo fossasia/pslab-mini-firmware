@@ -15,7 +15,6 @@
 #ifndef ADC_H
 #define ADC_H
 
-#include "linear_buffer.h"
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -43,7 +42,7 @@ typedef void (*ADC_Callback)(ADC_Handle *handle);
  *
  * @param adc_buffer Pointer to the circular buffer for ADC data.
  */
-void *ADC_init(LinearBuffer *adc_buffer);
+void *ADC_init(uint16_t *adc_buffer, uint32_t buffer_size);
 
 /**
  * @brief Deinitializes the ADC peripheral.
