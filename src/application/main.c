@@ -34,7 +34,7 @@ enum { ADC_BUFFER_SIZE = 256 }; // Size of ADC buffer for DMA
 
 static uint8_t g_usb_rx_buffer_data[RX_BUFFER_SIZE] = { 0 };
 // Buffer for USB RX data
-static uint32_t g_adc_buffer_data[ADC_BUFFER_SIZE] = { 0 };
+static uint16_t g_adc_buffer_data[ADC_BUFFER_SIZE] = { 0 };
 // Buffer for ADC data
 
 static bool g_usb_service_requested = false;
@@ -128,12 +128,12 @@ int main(void) // NOLINT
         if (g_adc_ready) {
             g_adc_ready = false;
             LED_toggle();
-            uint32_t buf[ADC_BUFFER_SIZE] = { 0 };
+            uint16_t buf[ADC_BUFFER_SIZE] = { 0 };
             uint32_t bytes_read = ADC_read(buf, ADC_BUFFER_SIZE);
 
             if (bytes_read > 0) {
 
-                uint32_t num_samples = ADC_BUFFER_SIZE;
+                uint16_t num_samples = ADC_BUFFER_SIZE;
                 for (uint32_t i = 0; i < num_samples; i++) {
                     LOG_INFO("Sample %u: %u", i + 1, buf[i]);
                 }

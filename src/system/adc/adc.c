@@ -30,9 +30,7 @@ enum { ADC1_TRIGGER_TIMER = 6 };
 
 struct ADC_Handle {
     LinearBuffer *adc_buffer; // Buffer for ADC data
-    uint32_t volatile adc_dma_head; // DMA head position for ADC
     ADC_Callback g_adc_callback; // Callback for ADC completion
-    uint32_t adc_threshold; // Threshold for ADC callback
     bool initialized; // Flag to indicate if ADC is initialized
 };
 
@@ -180,7 +178,7 @@ void ADC_stop(void)
     ADC_LL_stop();
 }
 
-uint32_t ADC_read(uint32_t *const adc_buf, uint32_t sz)
+uint32_t ADC_read(uint16_t *const adc_buf, uint32_t sz)
 {
     if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
         THROW(ERROR_DEVICE_NOT_READY);

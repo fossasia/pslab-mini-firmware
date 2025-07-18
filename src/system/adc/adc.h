@@ -90,7 +90,7 @@ void ADC_stop(void);
  *
  * @return Number of bytes read from the ADC buffer.
  */
-uint32_t ADC_read(uint32_t *adc_buf, uint32_t sz);
+uint32_t ADC_read(uint16_t *adc_buf, uint32_t sz);
 
 /**
  * @brief Sets the callback function to be called when an ADC conversion is

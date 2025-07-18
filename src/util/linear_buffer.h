@@ -16,7 +16,7 @@
 #include <stdint.h>
 
 typedef struct {
-    uint32_t *buffer; // Pointer to the buffer data
+    uint16_t *buffer; // Pointer to the buffer data
     uint32_t size; // Size of the buffer
 } LinearBuffer;
 
@@ -29,7 +29,7 @@ typedef struct {
  */
 void linear_buffer_init(
     LinearBuffer *linear_buffer,
-    uint32_t *buffer,
+    uint16_t *buffer,
     uint32_t size
 );
 
@@ -43,7 +43,7 @@ void linear_buffer_init(
  */
 uint32_t linear_buffer_read(
     LinearBuffer *linear_buffer,
-    uint32_t *data,
+    uint16_t *data,
     uint32_t size
 );
 

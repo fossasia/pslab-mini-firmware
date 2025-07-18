@@ -37,7 +37,7 @@ typedef void (*ADC_LL_CompleteCallback)(void);
  * @param adc_trigger_timer Trigger source for the ADC (e.g., timer).
  */
 void ADC_LL_init(
-    uint32_t *adc_buf,
+    uint16_t *adc_buf,
     uint32_t sz,
     ADC_LL_TriggerSource adc_trigger_timer
 );

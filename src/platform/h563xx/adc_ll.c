@@ -26,7 +26,7 @@ typedef struct {
     ADC_HandleTypeDef *adc_handle; // Pointer to the ADC handle
     ADC_ChannelConfTypeDef adc_config; // ADC channel configuration
     DMA_HandleTypeDef *dma_handle; // Pointer to the DMA handle
-    uint32_t *adc_buffer_data; // Pointer to the ADC data buffer
+    uint16_t *adc_buffer_data; // Pointer to the ADC data buffer
     uint32_t adc_buffer_size; // Size of the ADC data buffer
     ADC_LL_CompleteCallback
         adc_complete_callback; // Callback for ADC completion
@@ -108,7 +108,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
  *
  */
 void ADC_LL_init(
-    uint32_t *adc_buf,
+    uint16_t *adc_buf,
     uint32_t sz,
     ADC_LL_TriggerSource adc_trigger_timer
 )
@@ -215,7 +215,7 @@ void ADC_LL_start(void)
 {
     if (HAL_ADC_Start_DMA(
             &g_hadc,
-            g_adc_instance.adc_buffer_data,
+            (uint32_t *)g_adc_instance.adc_buffer_data,
             g_adc_instance.adc_buffer_size
         ) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
