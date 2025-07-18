@@ -22,20 +22,27 @@ extern "C" {
 #endif
 
 /**
+ * @brief ADC Structure with parameters and callback.
+ */
+typedef struct ADC_Handle ADC_Handle;
+
+/**
  * @brief Callback function type for ADC completion.
  *
  * This callback is called when an ADC conversion is complete.
  * It receives the converted ADC value as an argument.
  */
-typedef void (*ADC_CompleteCallback)(uint32_t value);
+typedef void (*ADC_Callback)(ADC_Handle *handle);
 
 /**
  * @brief ADC Initialization function.
  *
  * This function initializes the ADC peripheral with the specified settings.
  * It must be called before any ADC operations can be performed.
+ *
+ * @param adc_buffer Pointer to the circular buffer for ADC data.
  */
-void ADC_init(void);
+void *ADC_init(uint16_t *adc_buffer, uint32_t buffer_size);
 
 /**
  * @brief Deinitializes the ADC peripheral.
@@ -54,6 +61,15 @@ void ADC_deinit(void);
 void ADC_start(void);
 
 /**
+ * @brief Restarts the ADC conversion.
+ *
+ * This function restarts the ADC conversion process. It can be called to
+ * restart conversions after dma buffer is completely filled and we need
+ * to call the dma to restart the transfer.
+ */
+void ADC_restart(void);
+
+/**
  * @brief Stops the ADC conversion.
  *
  * This function stops the ongoing ADC conversion process. It can be called
@@ -61,6 +77,19 @@ void ADC_start(void);
 
  */
 void ADC_stop(void);
+
+/**
+ * @brief Reads data from the ADC buffer.
+ *
+ * This function reads data from the ADC circular buffer into the provided
+ * buffer. It checks if the ADC is initialized and if the input buffer is valid.
+ *
+ * @param adc_buf Pointer to the buffer where ADC data will be stored.
+ * @param sz Size of the buffer in bytes.
+ *
+ * @return Number of bytes read from the ADC buffer.
+ */
+uint32_t ADC_read(uint16_t *adc_buf, uint32_t sz);
 
 /**
  * @brief Sets the callback function to be called when an ADC conversion is
@@ -72,7 +101,7 @@ void ADC_stop(void);
  *
  * @param callback Pointer to the callback function to be set.
  */
-void ADC_set_complete_callback(ADC_CompleteCallback callback);
+void ADC_set_callback(ADC_Callback callback);
 
 #ifdef __cplusplus
 }

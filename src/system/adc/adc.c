@@ -12,6 +12,7 @@
  */
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "../timer/tim.h"
 #include "adc.h"
@@ -27,20 +28,27 @@ enum { ADC1_TIM_NUM = 0 }; // Timer used for ADC1 conversions
 enum { ADC1_TIM_Frequency = 25000 }; // ADC1 timer frequency in Hz
 enum { ADC1_TRIGGER_TIMER = 6 };
 
-static ADC_CompleteCallback volatile g_adc_callback; // Callback for ADC
-                                                     // completion
+struct ADC_Handle {
+    uint16_t *adc_buffer; // Buffer for ADC data
+    uint32_t adc_buffer_size; // Size of the ADC buffer
+    ADC_Callback g_adc_callback; // Callback for ADC completion
+    bool initialized; // Flag to indicate if ADC is initialized
+};
 
-void ADC_set_complete_callback(ADC_CompleteCallback callback)
-{
-    g_adc_callback = callback; // Set the ADC complete callback
-}
+static ADC_Handle *g_active_adc_handle = nullptr; // Global ADC handle
 
-static void g_adc_complete_callback(uint32_t value)
+/**
+ * @brief Callback invoked by hardware layer when ADC conversion is complete
+ */
+static void adc_complete_callback(void)
 {
-    if (g_adc_callback) {
-        g_adc_callback(value
-        ); // Call the user-defined callback with the ADC value
+    if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
+        return;
     }
+
+    // Check if we should run the ADC callback now
+    g_active_adc_handle->g_adc_callback(g_active_adc_handle
+    ); // Call the user-defined callback with the ADC value
 }
 
 /**
@@ -50,8 +58,13 @@ static void g_adc_complete_callback(uint32_t value)
  * It must be called before any ADC operations can be performed.
  *
  */
-void ADC_init(void)
+void *ADC_init(uint16_t *adc_buffer, uint32_t adc_buffer_size)
 {
+    if (!adc_buffer || adc_buffer_size == 0) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return nullptr;
+    }
+
     // Initialize the timer used for ADC conversions
     TIM_init(
         ADC1_TIM_NUM, ADC1_TIM_Frequency
@@ -75,10 +88,32 @@ void ADC_init(void)
     this rate. The ADC will be configured to use this timer for triggering
     conversions.
     */
+
+    if (g_active_adc_handle) {
+        THROW(ERROR_RESOURCE_BUSY);
+        return nullptr;
+    }
+    ADC_Handle *handle = malloc(sizeof(ADC_Handle));
+
+    if (!handle) {
+        THROW(ERROR_OUT_OF_MEMORY);
+        return nullptr;
+    }
+    // Initialize the ADC handle
+    handle->adc_buffer = adc_buffer;
+    handle->adc_buffer_size = adc_buffer_size;
+    handle->g_adc_callback = nullptr;
+    handle->initialized = false;
     // Initialize the ADC peripheral
-    ADC_LL_init(ADC1_TRIGGER_TIMER);
+    ADC_LL_init(
+        handle->adc_buffer, handle->adc_buffer_size, ADC1_TRIGGER_TIMER
+    );
     // Set the ADC complete callback
-    ADC_LL_set_complete_callback(g_adc_complete_callback);
+    ADC_LL_set_complete_callback(adc_complete_callback);
+    handle->initialized = true;
+    g_active_adc_handle = handle;
+
+    return handle; // Return the ADC handle
 }
 
 /**
@@ -90,8 +125,24 @@ void ADC_init(void)
 void ADC_deinit(void)
 {
     TIM_stop(ADC1_TIM_NUM); // Stop the timer used for ADC conversions
-    // Deinitialize the ADC peripheral
-    ADC_LL_deinit();
+    if (g_active_adc_handle && g_active_adc_handle->initialized) {
+        // Deinitialize the ADC peripheral
+        ADC_LL_deinit();
+
+        ADC_LL_set_complete_callback(nullptr);
+
+        g_active_adc_handle->initialized = false;
+
+        free(g_active_adc_handle); // Free the ADC handle memory
+
+        // Clear the global ADC handle
+        g_active_adc_handle = nullptr;
+    }
+
+    else {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return;
+    }
 }
 
 /**
@@ -103,12 +154,26 @@ void ADC_deinit(void)
  */
 void ADC_start(void)
 {
+    if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
+        THROW(ERROR_DEVICE_NOT_READY);
+        return;
+    }
 
     TIM_start(ADC1_TIM_NUM); // Start the timer for ADC conversions
 
     // Start the ADC conversion
     ADC_LL_start();
     LOG_INFO("ADC_started_successfully");
+}
+
+void ADC_restart(void)
+{
+    if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
+        THROW(ERROR_DEVICE_NOT_READY);
+        return;
+    }
+    // Restart the ADC conversion
+    ADC_LL_start();
 }
 
 /**
@@ -123,4 +188,35 @@ void ADC_stop(void)
     TIM_stop(ADC1_TIM_NUM); // Stop the timer used for ADC conversions
     // Stop the ADC conversion
     ADC_LL_stop();
+}
+
+uint32_t ADC_read(uint16_t *const adc_buf, uint32_t sz)
+{
+    if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
+        THROW(ERROR_DEVICE_NOT_READY);
+        return 0;
+    }
+
+    if (!adc_buf || sz == 0) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return 0;
+    }
+
+    uint32_t samples_read = 0;
+    while (samples_read <= sz) {
+        adc_buf[samples_read] = g_active_adc_handle->adc_buffer[samples_read];
+        samples_read++;
+    }
+
+    return samples_read; // Return the number of samples read
+}
+
+void ADC_set_callback(ADC_Callback callback)
+{
+    if (!g_active_adc_handle || !g_active_adc_handle->initialized) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return;
+    }
+    // Set the ADC callback
+    g_active_adc_handle->g_adc_callback = callback;
 }

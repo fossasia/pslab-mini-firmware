@@ -23,17 +23,21 @@
 
 // Callback when at least 5 bytes are available
 #define CB_THRESHOLD (sizeof("Hello") - 1)
+
 enum { RX_BUFFER_SIZE = 256 };
+enum { ADC_BUFFER_SIZE = 256 }; // Size of ADC buffer for DMA
 
 /*****************************************************************************
  * Static variables
  ******************************************************************************/
 
 static uint8_t g_usb_rx_buffer_data[RX_BUFFER_SIZE] = { 0 };
-static bool g_usb_service_requested = false;
+// Buffer for USB RX data
+static uint16_t g_adc_buffer_data[ADC_BUFFER_SIZE] = { 0 };
+// Buffer for ADC data
 
-uint32_t volatile g_latest_adc_value = 0;
-bool volatile g_adc_data_ready = false;
+static bool g_usb_service_requested = false;
+bool volatile g_adc_ready = false;
 
 /*****************************************************************************
  * Static prototypes
@@ -52,10 +56,12 @@ void usb_cb(USB_Handle *husb, uint32_t bytes_available)
     LOG_FUNCTION_EXIT();
 }
 
-static void g_adc_callback(uint32_t value)
+static void adc_cb(ADC_Handle *hadc)
 {
-    g_latest_adc_value = value; // Store the latest ADC value
-    g_adc_data_ready = true; // Set a flag to indicate new data is ready
+    LOG_FUNCTION_ENTRY();
+    (void)hadc;
+    g_adc_ready = true; // Set flag to indicate ADC data is ready
+    LOG_FUNCTION_EXIT();
 }
 
 int main(void) // NOLINT
@@ -88,11 +94,14 @@ int main(void) // NOLINT
     circular_buffer_init(&usb_rx_buf, g_usb_rx_buffer_data, RX_BUFFER_SIZE);
     USB_Handle *husb = USB_init(0, &usb_rx_buf);
 
+    ADC_init(g_adc_buffer_data, ADC_BUFFER_SIZE);
+
     USB_set_rx_callback(husb, usb_cb, CB_THRESHOLD);
-    // Initialize ADC
-    ADC_init();
-    ADC_set_complete_callback(g_adc_callback);
-    ADC_start(); // Start ADC conversions
+    ADC_set_callback(adc_cb);
+
+    // Start ADC conversions
+    ADC_start();
+
     /* Basic USB/LED example:
      * - Process incoming bytes when USB callback is triggered
      * - If a byte is received, toggle the LED
@@ -113,12 +122,22 @@ int main(void) // NOLINT
             LOG_INFO("System running, USB active");
         }
 
-        if (g_adc_data_ready) {
-            g_adc_data_ready = false; // Reset flag
-            LED_toggle(); // Toggle LED to indicate ADC data ready
-            LOG_INFO(
-                "ADC Value: %u", (unsigned int)g_latest_adc_value
-            ); // Log the ADC value
+        if (g_adc_ready) {
+            g_adc_ready = false;
+            LED_toggle();
+            uint16_t buf[ADC_BUFFER_SIZE] = { 0 };
+            uint32_t samples_read = ADC_read(buf, ADC_BUFFER_SIZE);
+
+            if (samples_read > 0) {
+
+                uint16_t num_samples = samples_read;
+                for (uint32_t i = 0; i < num_samples; i++) {
+                    LOG_INFO("Sample %u: %u", i + 1, buf[i]);
+                }
+            } else {
+                LOG_ERROR("ADC read failed or no data available");
+            }
+            ADC_restart(); // Restart ADC for next conversion
         }
 
         if (g_usb_service_requested) {
