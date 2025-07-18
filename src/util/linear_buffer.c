@@ -44,7 +44,7 @@ uint32_t linear_buffer_read(
 
     uint32_t bytes_read = 0;
     while (bytes_read < size) {
-        *data = linear_buffer->buffer[bytes_read];
+        data[bytes_read] = linear_buffer->buffer[bytes_read];
         bytes_read++;
     }
 
