@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "adc.h"
+#include "dmm.h"
 #include "error.h"
 #include "led.h"
 #include "logging.h"
@@ -25,20 +25,16 @@
 #define CB_THRESHOLD (sizeof("Hello") - 1)
 
 enum { RX_BUFFER_SIZE = 256 };
-enum { ADC_BUFFER_SIZE = 256 }; // Size of ADC buffer for DMA
 
 enum { CONVERSION_ADC = 2 }; // ADC instance number
 /*****************************************************************************
  * Static variables
  ******************************************************************************/
 
-static uint8_t g_usb_rx_buffer_data[RX_BUFFER_SIZE] = { 0 };
 // Buffer for USB RX data
-static uint32_t g_adc_buffer_data[ADC_BUFFER_SIZE] = { 0 };
-// Buffer for ADC data
+static uint8_t g_usb_rx_buffer_data[RX_BUFFER_SIZE] = { 0 };
 
 static bool g_usb_service_requested = false;
-bool volatile g_adc_ready = false;
 
 /*****************************************************************************
  * Static prototypes
@@ -57,52 +53,19 @@ void usb_cb(USB_Handle *husb, uint32_t bytes_available)
     LOG_FUNCTION_EXIT();
 }
 
-static void adc_cb(ADC_Handle *hadc)
-{
-    LOG_FUNCTION_ENTRY();
-    (void)hadc;
-    g_adc_ready = true; // Set flag to indicate ADC data is ready
-    LOG_FUNCTION_EXIT();
-}
-
 int main(void) // NOLINT
 {
-    Error exc = ERROR_NONE;
     SYSTEM_init();
     LOG_INIT("Main application");
-    // Try to initialize SYSCALLS_UART_BUS directly, demonstrating CException
-    // handling
-    TRY
-    {
-        uint32_t uart_buf_sz = 8;
-        uint8_t uart_rx_buffer_data[uart_buf_sz];
-        uint8_t uart_tx_buffer_data[uart_buf_sz];
-        CircularBuffer uart_rx_buf;
-        CircularBuffer uart_tx_buf;
-        circular_buffer_init(&uart_rx_buf, uart_rx_buffer_data, uart_buf_sz);
-        circular_buffer_init(&uart_tx_buf, uart_tx_buffer_data, uart_buf_sz);
-        // This will fail
-        (void)UART_init(SYSCALLS_UART_BUS, &uart_rx_buf, &uart_tx_buf);
-    }
-    CATCH(exc)
-    {
-        LOG_ERROR("Failed to initialize SYSCALLS_UART_BUS");
-        LOG_ERROR("%d %s", exc, error_to_string(exc));
-    }
+
+    DMM_Handle *dmmh = DMM_init(&(DMM_Config)DMM_CONFIG_DEFAULT);
 
     // Initialize USB
     CircularBuffer usb_rx_buf;
     circular_buffer_init(&usb_rx_buf, g_usb_rx_buffer_data, RX_BUFFER_SIZE);
     USB_Handle *husb = USB_init(0, &usb_rx_buf);
 
-    ADC_Handle *hadc =
-        ADC_init(CONVERSION_ADC, g_adc_buffer_data, ADC_BUFFER_SIZE);
-
     USB_set_rx_callback(husb, usb_cb, CB_THRESHOLD);
-    ADC_set_callback(hadc, adc_cb);
-
-    // Start ADC conversions
-    ADC_start(hadc);
 
     /* Basic USB/LED example:
      * - Process incoming bytes when USB callback is triggered
@@ -122,30 +85,14 @@ int main(void) // NOLINT
         enum { PING_INTERVAL = 1000000 }; // Log every 1 million iterations
         if (log_counter++ % PING_INTERVAL == 0) {
             LOG_INFO("System running, USB active");
-        }
-
-        if (g_adc_ready) {
-            g_adc_ready = false;
-            LED_toggle();
-            if (CONVERSION_ADC == 2) {
-                for (uint32_t i = 0; i < ADC_BUFFER_SIZE; i++) {
-                    uint16_t adc2_value = (g_adc_buffer_data[i] >> 16) &
-                                          0xFFF; // Extract ADC2 data
-                    uint16_t adc1_value =
-                        g_adc_buffer_data[i] & 0xFFF; // Extract ADC1 data
-                    LOG_INFO(
-                        "Sample %u: ADC1: %u, ADC2: %u",
-                        i + 1,
-                        adc1_value,
-                        adc2_value
-                    );
-                }
-            } else {
-                for (uint32_t i = 0; i < ADC_BUFFER_SIZE; i++) {
-                    LOG_INFO("Sample %u: %u", i + 1, g_adc_buffer_data[i]);
-                }
-            }
-            ADC_restart(hadc); // Restart ADC for next conversion
+            FIXED_Q1616 voltage = FIXED_ZERO;
+            bool new_reading = DMM_read_voltage(dmmh, &voltage);
+            LOG_INFO(
+                "DMM Channel 0 Voltage: %d.%04d V (new_reading=%s)",
+                FIXED_get_integer_part(voltage),
+                (FIXED_get_fractional_part(voltage) * 10000) >> 16,
+                new_reading ? "true" : "false"
+            );
         }
 
         if (g_usb_service_requested) {

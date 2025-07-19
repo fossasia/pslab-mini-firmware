@@ -1,4 +1,4 @@
-# ADC subsystem build delegation
+# Instrument subsystem build delegation
 
 if(BUILD_TESTS)
     include(${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.tests.txt)
