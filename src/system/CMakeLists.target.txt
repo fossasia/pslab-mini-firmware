@@ -2,7 +2,7 @@
 add_library(pslab-system STATIC)
 
 add_subdirectory(bus)
-add_subdirectory(adc)
+add_subdirectory(instrument)
 add_subdirectory(timer)
 
 target_sources(pslab-system

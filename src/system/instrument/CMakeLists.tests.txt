@@ -1,0 +1,17 @@
+# Instrument subsystem - test build configuration
+
+# Create a library for testable bus components
+add_library(pslab-instrument STATIC
+    dmm.c
+)
+
+target_link_libraries(pslab-instrument PRIVATE
+    pslab-util
+)
+
+target_include_directories(pslab-instrument
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/src/platform  # For platform interface headers
+        ${CMAKE_SOURCE_DIR}/src/system
+)

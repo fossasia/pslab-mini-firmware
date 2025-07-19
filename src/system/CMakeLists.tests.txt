@@ -3,4 +3,4 @@
 # Add subdirectories that contain testable code
 add_subdirectory(timer)
 add_subdirectory(bus)
-add_subdirectory(adc)
+add_subdirectory(instrument)
