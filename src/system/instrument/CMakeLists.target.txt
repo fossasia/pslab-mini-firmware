@@ -1,8 +1,8 @@
-# ADC subsystem - target build configuration
+# Instrument subsystem - target build configuration
 
 target_sources(pslab-system
     PRIVATE
-        adc.c
+        dmm.c
 )
 
 target_include_directories(pslab-system

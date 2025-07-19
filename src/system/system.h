@@ -10,6 +10,10 @@
 #ifndef SYSTEM_H
 #define SYSTEM_H
 
+#include "fixed_point.h"
+
+#define SYSTEM_VDD (FIXED_FROM_FLOAT(3.3F)) // NOLINT(readability-magic-numbers)
+
 /**
  * @brief Initialize all core hardware peripherals.
  *

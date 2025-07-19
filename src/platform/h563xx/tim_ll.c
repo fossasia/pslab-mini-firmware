@@ -238,9 +238,6 @@ void TIM_LL_start(TIM_Num tim)
     if (HAL_TIM_Base_Start(instance->htim) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     }
-    if (HAL_TIM_PWM_Start(instance->htim, TIM_CHANNEL_1) != HAL_OK) {
-        THROW(ERROR_HARDWARE_FAULT);
-    }
 }
 
 /**
