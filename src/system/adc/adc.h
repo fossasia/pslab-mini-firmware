@@ -15,6 +15,7 @@
 #ifndef ADC_H
 #define ADC_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus

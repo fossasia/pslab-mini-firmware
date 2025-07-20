@@ -11,7 +11,6 @@
  * @date 2025-07-02
  */
 
-#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
