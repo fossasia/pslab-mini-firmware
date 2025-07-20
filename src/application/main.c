@@ -27,6 +27,7 @@
 enum { RX_BUFFER_SIZE = 256 };
 enum { ADC_BUFFER_SIZE = 256 }; // Size of ADC buffer for DMA
 
+enum { CONVERSION_ADC = 0 }; // ADC instance number
 /*****************************************************************************
  * Static variables
  ******************************************************************************/
@@ -94,13 +95,14 @@ int main(void) // NOLINT
     circular_buffer_init(&usb_rx_buf, g_usb_rx_buffer_data, RX_BUFFER_SIZE);
     USB_Handle *husb = USB_init(0, &usb_rx_buf);
 
-    ADC_init(g_adc_buffer_data, ADC_BUFFER_SIZE);
+    ADC_Handle *hadc =
+        ADC_init(CONVERSION_ADC, g_adc_buffer_data, ADC_BUFFER_SIZE);
 
     USB_set_rx_callback(husb, usb_cb, CB_THRESHOLD);
-    ADC_set_callback(adc_cb);
+    ADC_set_callback(hadc, adc_cb);
 
     // Start ADC conversions
-    ADC_start();
+    ADC_start(hadc);
 
     /* Basic USB/LED example:
      * - Process incoming bytes when USB callback is triggered
@@ -126,7 +128,7 @@ int main(void) // NOLINT
             g_adc_ready = false;
             LED_toggle();
             uint16_t buf[ADC_BUFFER_SIZE] = { 0 };
-            uint32_t samples_read = ADC_read(buf, ADC_BUFFER_SIZE);
+            uint32_t samples_read = ADC_read(hadc, buf, ADC_BUFFER_SIZE);
 
             if (samples_read > 0) {
 
@@ -137,7 +139,7 @@ int main(void) // NOLINT
             } else {
                 LOG_ERROR("ADC read failed or no data available");
             }
-            ADC_restart(); // Restart ADC for next conversion
+            ADC_restart(hadc); // Restart ADC for next conversion
         }
 
         if (g_usb_service_requested) {

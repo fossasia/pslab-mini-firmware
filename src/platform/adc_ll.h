@@ -17,6 +17,8 @@ typedef enum {
     ADC_TRIGGER_TIMER7 = 7
 } ADC_LL_TriggerSource;
 
+typedef enum { ADC_1 = 0, ADC_2 = 1, ADC_1_2 = 2, ADC_COUNT = 3 } ADC_Num;
+
 /**
  * @brief Callback function type for ADC complete events.
  *
@@ -24,7 +26,7 @@ typedef enum {
  * It receives the DMA position as an argument.
  * @param dma_pos Current DMA position.
  */
-typedef void (*ADC_LL_CompleteCallback)(void);
+typedef void (*ADC_LL_CompleteCallback)(ADC_Num adc_num);
 
 /**
  * @brief Initializes the ADC1 peripheral.
@@ -37,6 +39,7 @@ typedef void (*ADC_LL_CompleteCallback)(void);
  * @param adc_trigger_timer Trigger source for the ADC (e.g., timer).
  */
 void ADC_LL_init(
+    ADC_Num adc_num,
     uint16_t *adc_buf,
     uint32_t sz,
     ADC_LL_TriggerSource adc_trigger_timer
@@ -48,7 +51,7 @@ void ADC_LL_init(
  * This function deinitializes the ADC peripheral and releases any resources
  * used.
  */
-void ADC_LL_deinit(void);
+void ADC_LL_deinit(ADC_Num adc_num);
 
 /**
  * @brief Starts the ADC conversion.
@@ -56,7 +59,7 @@ void ADC_LL_deinit(void);
  * This function starts the ADC conversion process. It must be called after
  * the ADC has been initialized and configured.
  */
-void ADC_LL_start(void);
+void ADC_LL_start(ADC_Num adc_num);
 
 /**
  * @brief Stops the ADC conversion.
@@ -64,7 +67,7 @@ void ADC_LL_start(void);
  * This function stops the ongoing ADC conversion process. It can be called
  * to halt conversions before deinitializing the ADC or when no longer needed.
  */
-void ADC_LL_stop(void);
+void ADC_LL_stop(ADC_Num adc_num);
 
 /**
  * @brief Sets the callback for ADC completion events.
@@ -74,6 +77,9 @@ void ADC_LL_stop(void);
  *
  * @param callback Pointer to the callback function to be set.
  */
-void ADC_LL_set_complete_callback(ADC_LL_CompleteCallback callback);
+void ADC_LL_set_complete_callback(
+    ADC_Num adc_num,
+    ADC_LL_CompleteCallback callback
+);
 
 #endif // ADC_LL_H
