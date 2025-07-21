@@ -25,7 +25,7 @@ enum { ADC_IRQ_PRIORITY = 1 }; // ADC interrupt priority
 bool g_adc1_initialized = false; // Flag to indicate if ADC1 is initialized
 bool g_adc2_initialized = false; // Flag to indicate if ADC2 is initialized
 bool g_adc_multimode =
-    true; // Flag to indicate if ADC1 and ADC2 are in multimode
+    false; // Flag to indicate if ADC1 and ADC2 are in multimode
 
 typedef struct {
     ADC_HandleTypeDef *adc_handle; // Pointer to the ADC handle
@@ -497,13 +497,32 @@ void ADC_LL_start(ADC_Num adc_num)
         instance->adc_handle, ADC_FLAG_OVR
     ); // Clear any previous flags
 
-    if (HAL_ADC_Start_DMA(
-            instance->adc_handle,
-            (uint32_t *)instance->adc_buffer_data,
-            instance->adc_buffer_size
-        ) != HAL_OK) {
-        THROW(ERROR_HARDWARE_FAULT);
-    } // Start ADC in DMA mode
+    if (adc_num >= ADC_COUNT) {
+        THROW(ERROR_INVALID_ARGUMENT);
+        return;
+    }
+
+    if (g_adc_multimode) {
+        if (HAL_ADCEx_MultiModeStart_DMA(
+                instance->adc_handle,
+                (uint32_t *)instance->adc_buffer_data,
+                instance->adc_buffer_size
+            ) != HAL_OK) {
+            THROW(ERROR_HARDWARE_FAULT);
+        } // Start ADC in DMA mode for multimode
+        return;
+    }
+    if (!g_adc_multimode) {
+        // Start ADC in DMA mode
+        if (HAL_ADC_Start_DMA(
+                instance->adc_handle,
+                (uint32_t *)instance->adc_buffer_data,
+                instance->adc_buffer_size
+            ) != HAL_OK) {
+            THROW(ERROR_HARDWARE_FAULT);
+        }
+        return;
+    }
 }
 
 /**
@@ -527,9 +546,19 @@ void ADC_LL_stop(ADC_Num adc_num)
     }
 
     // Stop the ADC conversion
-    if (HAL_ADC_Stop_DMA(instance->adc_handle) != HAL_OK) {
-        THROW(ERROR_HARDWARE_FAULT);
-    } // Stop ADC in DMA mode
+    if (g_adc_multimode) {
+        if (HAL_ADCEx_MultiModeStop_DMA(instance->adc_handle) != HAL_OK) {
+            THROW(ERROR_HARDWARE_FAULT);
+            return;
+        } // Stop ADC in multimode DMA
+    }
+
+    if (!g_adc_multimode) {
+        if (HAL_ADC_Stop_DMA(instance->adc_handle) != HAL_OK) {
+            THROW(ERROR_HARDWARE_FAULT);
+            return;
+        } // Stop ADC in DMA mode
+    }
 
     // Clear any pending flags
     __HAL_ADC_CLEAR_FLAG(instance->adc_handle, ADC_FLAG_EOC);
