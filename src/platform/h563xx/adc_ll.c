@@ -31,7 +31,7 @@ typedef struct {
     ADC_HandleTypeDef *adc_handle; // Pointer to the ADC handle
     ADC_ChannelConfTypeDef adc_config; // ADC channel configuration
     DMA_HandleTypeDef *dma_handle; // Pointer to the DMA handle
-    uint16_t *adc_buffer_data; // Pointer to the ADC data buffer
+    uint32_t *adc_buffer_data; // Pointer to the ADC data buffer
     uint32_t adc_buffer_size; // Size of the ADC data buffer
     ADC_LL_CompleteCallback
         adc_complete_callback; // Callback for ADC completion
@@ -72,14 +72,15 @@ static ADCInstance g_adc_instances[ADC_COUNT] = {
  */
 static ADC_Num get_adc_num_from_handle(ADC_HandleTypeDef *hadc)
 {
-    if (hadc->Instance == ADC1 || !g_adc_multimode) {
+    if (hadc->Instance == ADC1) {
+        if (g_adc_multimode) {
+            // If multimode is enabled, return ADC_1_2
+            return ADC_1_2;
+        }
         return ADC_1;
     }
-    if (hadc->Instance == ADC2 || !g_adc_multimode) {
+    if (hadc->Instance == ADC2) {
         return ADC_2;
-    }
-    if (hadc->Instance == ADC1 || g_adc_multimode) {
-        return ADC_1_2;
     }
     return ADC_COUNT; // Invalid ADC instance
 }
@@ -140,8 +141,8 @@ void dma_config(ADC_HandleTypeDef *hadc)
         g_hdma_adc1.Init.Direction = DMA_PERIPH_TO_MEMORY;
         g_hdma_adc1.Init.SrcInc = DMA_SINC_FIXED;
         g_hdma_adc1.Init.DestInc = DMA_DINC_INCREMENTED;
-        g_hdma_adc1.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_HALFWORD;
-        g_hdma_adc1.Init.DestDataWidth = DMA_DEST_DATAWIDTH_HALFWORD;
+        g_hdma_adc1.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_WORD;
+        g_hdma_adc1.Init.DestDataWidth = DMA_DEST_DATAWIDTH_WORD;
         g_hdma_adc1.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
         g_hdma_adc1.Init.SrcBurstLength = 1;
         g_hdma_adc1.Init.DestBurstLength = 1;
@@ -169,8 +170,8 @@ void dma_config(ADC_HandleTypeDef *hadc)
             g_hdma_adc2.Init.Direction = DMA_PERIPH_TO_MEMORY;
             g_hdma_adc2.Init.SrcInc = DMA_SINC_FIXED;
             g_hdma_adc2.Init.DestInc = DMA_DINC_INCREMENTED;
-            g_hdma_adc2.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_HALFWORD;
-            g_hdma_adc2.Init.DestDataWidth = DMA_DEST_DATAWIDTH_HALFWORD;
+            g_hdma_adc2.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_WORD;
+            g_hdma_adc2.Init.DestDataWidth = DMA_DEST_DATAWIDTH_WORD;
             g_hdma_adc2.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
             g_hdma_adc2.Init.SrcBurstLength = 1;
             g_hdma_adc2.Init.DestBurstLength = 1;
@@ -246,10 +247,6 @@ void adc_handle_initialization(
         }
 
     } else if (adc_num == ADC_2) {
-        if (g_adc2_initialized) {
-            THROW(ERROR_RESOURCE_BUSY);
-            return;
-        }
         instance->adc_handle->Instance = ADC2;
         // Initialize the ADC peripheral
         instance->adc_handle->Init.ClockPrescaler =
@@ -293,7 +290,7 @@ void adc_handle_initialization(
  * @param sz Size of the ADC buffer
  */
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-void adc_channel_configuration(ADC_Num adc_num, uint16_t *adc_buf, uint32_t sz)
+void adc_channel_configuration(ADC_Num adc_num, uint32_t *adc_buf, uint32_t sz)
 {
     ADCInstance *instance = &g_adc_instances[adc_num];
     if (adc_num == ADC_1) {
@@ -388,7 +385,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ADC_LL_init(
     ADC_Num adc_num,
-    uint16_t *adc_buf,
+    uint32_t *adc_buf,
     uint32_t sz,
     ADC_LL_TriggerSource adc_trigger_timer
 )
@@ -505,23 +502,20 @@ void ADC_LL_start(ADC_Num adc_num)
     if (g_adc_multimode) {
         if (HAL_ADCEx_MultiModeStart_DMA(
                 instance->adc_handle,
-                (uint32_t *)instance->adc_buffer_data,
+                instance->adc_buffer_data,
                 instance->adc_buffer_size
             ) != HAL_OK) {
             THROW(ERROR_HARDWARE_FAULT);
         } // Start ADC in DMA mode for multimode
         return;
     }
-    if (!g_adc_multimode) {
-        // Start ADC in DMA mode
-        if (HAL_ADC_Start_DMA(
-                instance->adc_handle,
-                (uint32_t *)instance->adc_buffer_data,
-                instance->adc_buffer_size
-            ) != HAL_OK) {
-            THROW(ERROR_HARDWARE_FAULT);
-        }
-        return;
+    // Start ADC in DMA mode
+    if (HAL_ADC_Start_DMA(
+            instance->adc_handle,
+            instance->adc_buffer_data,
+            instance->adc_buffer_size
+        ) != HAL_OK) {
+        THROW(ERROR_HARDWARE_FAULT);
     }
 }
 
@@ -552,13 +546,10 @@ void ADC_LL_stop(ADC_Num adc_num)
             return;
         } // Stop ADC in multimode DMA
     }
-
-    if (!g_adc_multimode) {
-        if (HAL_ADC_Stop_DMA(instance->adc_handle) != HAL_OK) {
-            THROW(ERROR_HARDWARE_FAULT);
-            return;
-        } // Stop ADC in DMA mode
-    }
+    if (HAL_ADC_Stop_DMA(instance->adc_handle) != HAL_OK) {
+        THROW(ERROR_HARDWARE_FAULT);
+        return;
+    } // Stop ADC in DMA mode
 
     // Clear any pending flags
     __HAL_ADC_CLEAR_FLAG(instance->adc_handle, ADC_FLAG_EOC);

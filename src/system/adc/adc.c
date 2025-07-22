@@ -30,7 +30,7 @@ enum { ADC_TRIGGER_TIMER = 6 };
 
 struct ADC_Handle {
     ADC_Num adc_id; // ADC instance ID
-    uint16_t *adc_buffer; // Buffer for ADC data
+    uint32_t *adc_buffer; // Buffer for ADC data
     uint32_t adc_buffer_size; // Size of the ADC buffer
     ADC_Callback g_adc_callback; // Callback for ADC completion
     bool initialized; // Flag to indicate if ADC is initialized
@@ -62,7 +62,7 @@ static void adc_complete_callback(ADC_Num adc_num)
  * It must be called before any ADC operations can be performed.
  *
  */
-void *ADC_init(size_t adc, uint16_t *adc_buffer, uint32_t adc_buffer_size)
+void *ADC_init(size_t adc, uint32_t *adc_buffer, uint32_t adc_buffer_size)
 {
     if (adc >= ADC_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
@@ -210,7 +210,7 @@ void ADC_stop(ADC_Handle *handle)
     ADC_LL_stop(handle->adc_id);
 }
 
-uint32_t ADC_read(ADC_Handle *handle, uint16_t *const adc_buf, uint32_t sz)
+uint32_t ADC_read(ADC_Handle *handle, uint32_t *const adc_buf, uint32_t sz)
 {
     if (!handle || !handle->initialized) {
         THROW(ERROR_DEVICE_NOT_READY);
@@ -223,7 +223,7 @@ uint32_t ADC_read(ADC_Handle *handle, uint16_t *const adc_buf, uint32_t sz)
     }
 
     uint32_t samples_read = 0;
-    while (samples_read <= sz) {
+    while (samples_read < sz) {
         adc_buf[samples_read] = handle->adc_buffer[samples_read];
         samples_read++;
     }

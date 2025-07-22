@@ -43,7 +43,7 @@ typedef void (*ADC_Callback)(ADC_Handle *handle);
  *
  * @param adc_buffer Pointer to the circular buffer for ADC data.
  */
-void *ADC_init(size_t adc, uint16_t *adc_buffer, uint32_t buffer_size);
+void *ADC_init(size_t adc, uint32_t *adc_buffer, uint32_t buffer_size);
 
 /**
  * @brief Deinitializes the ADC peripheral.
@@ -90,7 +90,7 @@ void ADC_stop(ADC_Handle *handle);
  *
  * @return Number of bytes read from the ADC buffer.
  */
-uint32_t ADC_read(ADC_Handle *handle, uint16_t *adc_buf, uint32_t sz);
+uint32_t ADC_read(ADC_Handle *handle, uint32_t *adc_buf, uint32_t sz);
 
 /**
  * @brief Sets the callback function to be called when an ADC conversion is

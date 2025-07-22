@@ -40,7 +40,7 @@ typedef void (*ADC_LL_CompleteCallback)(ADC_Num adc_num);
  */
 void ADC_LL_init(
     ADC_Num adc_num,
-    uint16_t *adc_buf,
+    uint32_t *adc_buf,
     uint32_t sz,
     ADC_LL_TriggerSource adc_trigger_timer
 );

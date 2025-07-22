@@ -27,14 +27,14 @@
 enum { RX_BUFFER_SIZE = 256 };
 enum { ADC_BUFFER_SIZE = 256 }; // Size of ADC buffer for DMA
 
-enum { CONVERSION_ADC = 0 }; // ADC instance number
+enum { CONVERSION_ADC = 2 }; // ADC instance number
 /*****************************************************************************
  * Static variables
  ******************************************************************************/
 
 static uint8_t g_usb_rx_buffer_data[RX_BUFFER_SIZE] = { 0 };
 // Buffer for USB RX data
-static uint16_t g_adc_buffer_data[ADC_BUFFER_SIZE] = { 0 };
+static uint32_t g_adc_buffer_data[ADC_BUFFER_SIZE] = { 0 };
 // Buffer for ADC data
 
 static bool g_usb_service_requested = false;
@@ -127,14 +127,31 @@ int main(void) // NOLINT
         if (g_adc_ready) {
             g_adc_ready = false;
             LED_toggle();
-            uint16_t buf[ADC_BUFFER_SIZE] = { 0 };
+            uint32_t buf[ADC_BUFFER_SIZE] = { 0 };
             uint32_t samples_read = ADC_read(hadc, buf, ADC_BUFFER_SIZE);
 
             if (samples_read > 0) {
 
-                uint16_t num_samples = samples_read;
-                for (uint32_t i = 0; i < num_samples; i++) {
-                    LOG_INFO("Sample %u: %u", i + 1, buf[i]);
+                if (CONVERSION_ADC == 2) {
+                    uint32_t num_samples = samples_read;
+                    uint16_t adc1_buf[num_samples];
+                    uint16_t adc2_buf[num_samples];
+                    for (uint32_t i = 0; i < num_samples; i++) {
+                        adc2_buf[i] =
+                            (buf[i] >> 16) & 0xFFF; // Extract ADC2 data
+                        adc1_buf[i] = buf[i] & 0xFFF; // Extract ADC1 data
+                        LOG_INFO(
+                            "Sample %u: ADC1: %u, ADC2: %u",
+                            i + 1,
+                            adc1_buf[i],
+                            adc2_buf[i]
+                        );
+                    }
+                } else {
+                    uint32_t num_samples = samples_read;
+                    for (uint32_t i = 0; i < num_samples; i++) {
+                        LOG_INFO("Sample %u: %u", i + 1, buf[i]);
+                    }
                 }
             } else {
                 LOG_ERROR("ADC read failed or no data available");
