@@ -127,9 +127,8 @@ int main(void) // NOLINT
         if (g_adc_ready) {
             g_adc_ready = false;
             LED_toggle();
-            uint32_t buf_size = sizeof(g_adc_buffer_data);
             if (CONVERSION_ADC == 2) {
-                for (uint32_t i = 0; i < buf_size; i++) {
+                for (uint32_t i = 0; i < ADC_BUFFER_SIZE; i++) {
                     uint16_t adc2_value = (g_adc_buffer_data[i] >> 16) &
                                           0xFFF; // Extract ADC2 data
                     uint16_t adc1_value =
@@ -142,7 +141,7 @@ int main(void) // NOLINT
                     );
                 }
             } else {
-                for (uint32_t i = 0; i < buf_size; i++) {
+                for (uint32_t i = 0; i < ADC_BUFFER_SIZE; i++) {
                     LOG_INFO("Sample %u: %u", i + 1, g_adc_buffer_data[i]);
                 }
             }
