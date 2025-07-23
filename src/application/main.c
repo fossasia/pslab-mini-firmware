@@ -127,34 +127,31 @@ int main(void) // NOLINT
         if (g_adc_ready) {
             g_adc_ready = false;
             LED_toggle();
-            uint32_t buf[ADC_BUFFER_SIZE] = { 0 };
-            uint32_t samples_read = ADC_read(hadc, buf, ADC_BUFFER_SIZE);
-
-            if (samples_read > 0) {
-
+            uint32_t num_samples = sizeof(g_adc_buffer_data);
+            if (num_samples >
+                1) // As the g_adc_buffer_data is initialised with a single
+                   // element so it needs to be greater than that
+            {
                 if (CONVERSION_ADC == 2) {
-                    uint32_t num_samples = samples_read;
-                    uint16_t adc1_buf[num_samples];
-                    uint16_t adc2_buf[num_samples];
                     for (uint32_t i = 0; i < num_samples; i++) {
-                        adc2_buf[i] =
-                            (buf[i] >> 16) & 0xFFF; // Extract ADC2 data
-                        adc1_buf[i] = buf[i] & 0xFFF; // Extract ADC1 data
+                        uint16_t adc2_value = (g_adc_buffer_data[i] >> 16) &
+                                              0xFFF; // Extract ADC2 data
+                        uint16_t adc1_value =
+                            g_adc_buffer_data[i] & 0xFFF; // Extract ADC1 data
                         LOG_INFO(
                             "Sample %u: ADC1: %u, ADC2: %u",
                             i + 1,
-                            adc1_buf[i],
-                            adc2_buf[i]
+                            adc1_value,
+                            adc2_value
                         );
                     }
                 } else {
-                    uint32_t num_samples = samples_read;
                     for (uint32_t i = 0; i < num_samples; i++) {
-                        LOG_INFO("Sample %u: %u", i + 1, buf[i]);
+                        LOG_INFO("Sample %u: %u", i + 1, g_adc_buffer_data[i]);
                     }
                 }
             } else {
-                LOG_ERROR("ADC read failed or no data available");
+                LOG_ERROR("No data available");
             }
             ADC_restart(hadc); // Restart ADC for next conversion
         }

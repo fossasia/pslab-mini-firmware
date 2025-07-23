@@ -108,12 +108,10 @@ void gpio_config(ADC_HandleTypeDef *hadc)
         }
     } else if (hadc->Instance == ADC2) {
         if (g_adc_multimode) {
-            // Configure GPIO pin for ADC2_IN7 (PA7)
-            gpio_init.Pin = GPIO_PIN_7; // PA7
-        } else {
-            // Configure GPIO pin for ADC2_IN1 (PA1)
-            gpio_init.Pin = GPIO_PIN_1; // PA1
+            return;
         }
+        // Configure GPIO pin for ADC2_IN1 (PA1)
+        gpio_init.Pin = GPIO_PIN_1; // PA1
     }
     gpio_init.Mode = GPIO_MODE_ANALOG;
     gpio_init.Pull = GPIO_NOPULL;
@@ -208,7 +206,7 @@ void dma_config(ADC_HandleTypeDef *hadc)
  * @param adc_trigger_timer The trigger source for the ADC (e.g., TIMER6)
  */
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-void adc_handle_initialization(
+HAL_StatusTypeDef adc_handle_initialization(
     ADC_Num adc_num,
     ADC_LL_TriggerSource adc_trigger_timer
 )
@@ -233,7 +231,7 @@ void adc_handle_initialization(
                 ADC_EXTERNALTRIG_T6_TRGO;
         } else {
             THROW(ERROR_INVALID_ARGUMENT);
-            return;
+            return HAL_ERROR;
         }
         instance->adc_handle->Init.ExternalTrigConvEdge =
             ADC_EXTERNALTRIGCONVEDGE_RISING;
@@ -242,11 +240,9 @@ void adc_handle_initialization(
         instance->adc_handle->Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
         instance->adc_handle->Init.OversamplingMode = DISABLE;
 
-        if (HAL_ADC_Init(instance->adc_handle) != HAL_OK) {
-            THROW(ERROR_HARDWARE_FAULT);
-        }
-
-    } else if (adc_num == ADC_2) {
+        return HAL_ADC_Init(instance->adc_handle);
+    }
+    if (adc_num == ADC_2) {
         instance->adc_handle->Instance = ADC2;
         // Initialize the ADC peripheral
         instance->adc_handle->Init.ClockPrescaler =
@@ -264,7 +260,7 @@ void adc_handle_initialization(
                 ADC_EXTERNALTRIG_T6_TRGO;
         } else {
             THROW(ERROR_INVALID_ARGUMENT);
-            return;
+            return HAL_ERROR;
         }
         instance->adc_handle->Init.ExternalTrigConvEdge =
             ADC_EXTERNALTRIGCONVEDGE_RISING;
@@ -273,10 +269,10 @@ void adc_handle_initialization(
         instance->adc_handle->Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
         instance->adc_handle->Init.OversamplingMode = DISABLE;
 
-        if (HAL_ADC_Init(instance->adc_handle) != HAL_OK) {
-            THROW(ERROR_HARDWARE_FAULT);
-        }
+        return HAL_ADC_Init(instance->adc_handle);
     }
+    THROW(ERROR_INVALID_ARGUMENT);
+    return HAL_ERROR;
 }
 
 /**
@@ -290,11 +286,19 @@ void adc_handle_initialization(
  * @param sz Size of the ADC buffer
  */
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-void adc_channel_configuration(ADC_Num adc_num, uint32_t *adc_buf, uint32_t sz)
+HAL_StatusTypeDef adc_channel_configuration(
+    ADC_Num adc_num,
+    uint32_t *adc_buf,
+    uint32_t sz
+)
 {
     ADCInstance *instance = &g_adc_instances[adc_num];
     if (adc_num == ADC_1) {
 
+        if (!g_adc_multimode) {
+            instance->adc_buffer_data = adc_buf;
+            instance->adc_buffer_size = sz;
+        }
         // Configure the ADC channel
         instance->adc_config = g_config1;
         if (!g_adc_multimode) {
@@ -314,25 +318,22 @@ void adc_channel_configuration(ADC_Num adc_num, uint32_t *adc_buf, uint32_t sz)
         }
 
         // Calibration with error handling
-        if (HAL_ADCEx_Calibration_Start(
-                instance->adc_handle, ADC_SINGLE_ENDED
-            ) != HAL_OK) {
-            THROW(ERROR_HARDWARE_FAULT);
-        } // Calibration
+        return HAL_ADCEx_Calibration_Start(
+            instance->adc_handle, ADC_SINGLE_ENDED
+        ); // Calibration
+    }
+    if (adc_num == ADC_2) {
         if (!g_adc_multimode) {
             instance->adc_buffer_data = adc_buf;
             instance->adc_buffer_size = sz;
         }
-        g_adc1_initialized = true; // Set the ADC1 initialized flag
-
-    } else if (adc_num == ADC_2) {
         // Configure the ADC channel
         instance->adc_config = g_config2;
         if (!g_adc_multimode) {
             g_config2.Channel = ADC_CHANNEL_1; // ADC2_IN1
         }
         if (g_adc_multimode) {
-            g_config2.Channel = ADC_CHANNEL_7; // ADC2_INP7
+            g_config2.Channel = ADC_CHANNEL_3; // ADC2_INP3
         }
         // Configure the ADC channel
         g_config2.Rank = ADC_REGULAR_RANK_1;
@@ -345,17 +346,12 @@ void adc_channel_configuration(ADC_Num adc_num, uint32_t *adc_buf, uint32_t sz)
         }
 
         // Calibration with error handling
-        if (HAL_ADCEx_Calibration_Start(
-                instance->adc_handle, ADC_SINGLE_ENDED
-            ) != HAL_OK) {
-            THROW(ERROR_HARDWARE_FAULT);
-        } // Calibration
-        if (!g_adc_multimode) {
-            instance->adc_buffer_data = adc_buf;
-            instance->adc_buffer_size = sz;
-        }
-        g_adc2_initialized = true; // Set the ADC2 initialized flag
+        return HAL_ADCEx_Calibration_Start(
+            instance->adc_handle, ADC_SINGLE_ENDED
+        ); // Calibration
     }
+    THROW(ERROR_INVALID_ARGUMENT);
+    return HAL_ERROR;
 }
 /**
  * @brief Initializes the ADC MSP (MCU Support Package).
@@ -382,7 +378,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
  * parameters.
  *
  */
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+// NOLINTNEXTLINE(readability-function-cognitive-complexity,readability-function-size)
 void ADC_LL_init(
     ADC_Num adc_num,
     uint32_t *adc_buf,
@@ -399,15 +395,31 @@ void ADC_LL_init(
             THROW(ERROR_RESOURCE_BUSY);
             return;
         }
-        adc_handle_initialization(ADC_1, adc_trigger_timer);
-        adc_channel_configuration(ADC_1, adc_buf, sz);
+        if (adc_handle_initialization(ADC_1, adc_trigger_timer) != HAL_OK) {
+            THROW(ERROR_HARDWARE_FAULT);
+            return;
+        }
+        if (adc_channel_configuration(ADC_1, adc_buf, sz) != HAL_OK) {
+            THROW(ERROR_HARDWARE_FAULT);
+            return;
+        }
+        g_adc1_initialized = true; // Set the ADC1 initialized flag
+
     } else if (adc_num == ADC_2) {
         if (g_adc2_initialized) {
             THROW(ERROR_RESOURCE_BUSY);
             return;
         }
-        adc_handle_initialization(ADC_2, adc_trigger_timer);
-        adc_channel_configuration(ADC_2, adc_buf, sz);
+        if (adc_handle_initialization(ADC_2, adc_trigger_timer) != HAL_OK) {
+            THROW(ERROR_HARDWARE_FAULT);
+            return;
+        }
+        if (adc_channel_configuration(ADC_2, adc_buf, sz) != HAL_OK) {
+            THROW(ERROR_HARDWARE_FAULT);
+            return;
+        }
+        g_adc2_initialized = true; // Set the ADC2 initialized flag
+
     } else if (adc_num == ADC_1_2) {
         if (g_adc1_initialized || g_adc2_initialized) {
             THROW(ERROR_RESOURCE_BUSY);
@@ -415,29 +427,50 @@ void ADC_LL_init(
         }
         g_adc_multimode = true; // Enable multimode for ADC1 and ADC2
         // Initialize both ADC1 and ADC2
-        adc_handle_initialization(ADC_1, adc_trigger_timer);
-        adc_channel_configuration(ADC_1, adc_buf, sz);
-
-        adc_handle_initialization(ADC_2, adc_trigger_timer);
-        adc_channel_configuration(ADC_2, adc_buf, sz);
+        if (adc_handle_initialization(ADC_1, adc_trigger_timer) != HAL_OK) {
+            THROW(ERROR_HARDWARE_FAULT);
+            return;
+        }
+        if (adc_channel_configuration(ADC_1, adc_buf, sz) != HAL_OK) {
+            THROW(ERROR_HARDWARE_FAULT);
+            return;
+        }
+        g_adc1_initialized = true; // Set the ADC1 initialized flag
+        if (adc_handle_initialization(ADC_2, adc_trigger_timer) != HAL_OK) {
+            THROW(ERROR_HARDWARE_FAULT);
+            return;
+        }
+        if (adc_channel_configuration(ADC_2, adc_buf, sz) != HAL_OK) {
+            THROW(ERROR_HARDWARE_FAULT);
+            return;
+        }
+        g_adc2_initialized = true; // Set the ADC2 initialized flag
 
         ADCInstance *instance = &g_adc_instances[adc_num];
 
-        ADC_MultiModeTypeDef multimode_config = { 0 };
-        multimode_config.Mode = ADC_DUALMODE_INTERL; // Set to interleaved mode
-        multimode_config.DMAAccessMode = ADC_DMAACCESSMODE_12_10_BITS;
-        multimode_config.TwoSamplingDelay = ADC_TWOSAMPLINGDELAY_12CYCLES;
+        if (g_adc1_initialized && g_adc2_initialized) {
+            ADC_MultiModeTypeDef multimode_config = { 0 };
+            multimode_config.Mode =
+                ADC_DUALMODE_INTERL; // Set to interleaved mode
+            multimode_config.DMAAccessMode = ADC_DMAACCESSMODE_12_10_BITS;
+            multimode_config.TwoSamplingDelay = ADC_TWOSAMPLINGDELAY_12CYCLES;
 
-        if (HAL_ADCEx_MultiModeConfigChannel(&g_hadc1, &multimode_config) !=
-            HAL_OK) {
+            if (HAL_ADCEx_MultiModeConfigChannel(&g_hadc1, &multimode_config) !=
+                HAL_OK) {
+                THROW(ERROR_HARDWARE_FAULT);
+            } // Configure multimode
+            instance->adc_handle = &g_hadc1;
+            // Use ADC1 handle for multimode(adding this again here to
+            // ensure that when this pointer is called later for
+            // example in ADC_LL_start, it points to ADC1 handle)
+            instance->adc_buffer_data = adc_buf;
+            instance->adc_buffer_size = sz;
+        } else {
             THROW(ERROR_HARDWARE_FAULT);
-        } // Configure multimode
-        instance->adc_handle = &g_hadc1;
-        // Use ADC1 handle for multimode(adding this again here to
-        // ensure that when this pointer is called later for
-        // example in ADC_LL_start, it points to ADC1 handle)
-        instance->adc_buffer_data = adc_buf;
-        instance->adc_buffer_size = sz;
+            LOG_LL_ERROR("ADC multimode initialization failed");
+            return;
+        }
+
     } else {
         THROW(ERROR_INVALID_ARGUMENT);
         return;

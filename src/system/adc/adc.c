@@ -148,6 +148,7 @@ void ADC_deinit(ADC_Handle *handle)
 
         handle->initialized = false;
 
+        g_active_adc_handles[handle->adc_id] = nullptr;
         free(handle); // Free the ADC handle memory
     }
 
@@ -208,27 +209,6 @@ void ADC_stop(ADC_Handle *handle)
     TIM_stop(ADC_TIM_NUM); // Stop the timer used for ADC conversions
     // Stop the ADC conversion
     ADC_LL_stop(handle->adc_id);
-}
-
-uint32_t ADC_read(ADC_Handle *handle, uint32_t *const adc_buf, uint32_t sz)
-{
-    if (!handle || !handle->initialized) {
-        THROW(ERROR_DEVICE_NOT_READY);
-        return 0;
-    }
-
-    if (!adc_buf || sz == 0) {
-        THROW(ERROR_INVALID_ARGUMENT);
-        return 0;
-    }
-
-    uint32_t samples_read = 0;
-    while (samples_read < sz) {
-        adc_buf[samples_read] = handle->adc_buffer[samples_read];
-        samples_read++;
-    }
-
-    return samples_read; // Return the number of samples read
 }
 
 void ADC_set_callback(ADC_Handle *handle, ADC_Callback callback)

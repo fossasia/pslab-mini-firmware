@@ -80,19 +80,6 @@ void ADC_restart(ADC_Handle *handle);
 void ADC_stop(ADC_Handle *handle);
 
 /**
- * @brief Reads data from the ADC buffer.
- *
- * This function reads data from the ADC circular buffer into the provided
- * buffer. It checks if the ADC is initialized and if the input buffer is valid.
- *
- * @param adc_buf Pointer to the buffer where ADC data will be stored.
- * @param sz Size of the buffer in bytes.
- *
- * @return Number of bytes read from the ADC buffer.
- */
-uint32_t ADC_read(ADC_Handle *handle, uint32_t *adc_buf, uint32_t sz);
-
-/**
  * @brief Sets the callback function to be called when an ADC conversion is
  * complete.
  *
