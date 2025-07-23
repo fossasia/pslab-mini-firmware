@@ -127,31 +127,24 @@ int main(void) // NOLINT
         if (g_adc_ready) {
             g_adc_ready = false;
             LED_toggle();
-            uint32_t num_samples = sizeof(g_adc_buffer_data);
-            if (num_samples >
-                1) // As the g_adc_buffer_data is initialised with a single
-                   // element so it needs to be greater than that
-            {
-                if (CONVERSION_ADC == 2) {
-                    for (uint32_t i = 0; i < num_samples; i++) {
-                        uint16_t adc2_value = (g_adc_buffer_data[i] >> 16) &
-                                              0xFFF; // Extract ADC2 data
-                        uint16_t adc1_value =
-                            g_adc_buffer_data[i] & 0xFFF; // Extract ADC1 data
-                        LOG_INFO(
-                            "Sample %u: ADC1: %u, ADC2: %u",
-                            i + 1,
-                            adc1_value,
-                            adc2_value
-                        );
-                    }
-                } else {
-                    for (uint32_t i = 0; i < num_samples; i++) {
-                        LOG_INFO("Sample %u: %u", i + 1, g_adc_buffer_data[i]);
-                    }
+            uint32_t buf_size = sizeof(g_adc_buffer_data);
+            if (CONVERSION_ADC == 2) {
+                for (uint32_t i = 0; i < buf_size; i++) {
+                    uint16_t adc2_value = (g_adc_buffer_data[i] >> 16) &
+                                          0xFFF; // Extract ADC2 data
+                    uint16_t adc1_value =
+                        g_adc_buffer_data[i] & 0xFFF; // Extract ADC1 data
+                    LOG_INFO(
+                        "Sample %u: ADC1: %u, ADC2: %u",
+                        i + 1,
+                        adc1_value,
+                        adc2_value
+                    );
                 }
             } else {
-                LOG_ERROR("No data available");
+                for (uint32_t i = 0; i < buf_size; i++) {
+                    LOG_INFO("Sample %u: %u", i + 1, g_adc_buffer_data[i]);
+                }
             }
             ADC_restart(hadc); // Restart ADC for next conversion
         }
