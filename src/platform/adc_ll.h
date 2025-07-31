@@ -43,6 +43,12 @@ typedef enum {
     ADC_LL_CHANNEL_15 = 15
 } ADC_LL_Channel;
 
+typedef enum {
+    ADC_LL_MODE_SINGLE = 0,      // Single ADC operation (current mode)
+    ADC_LL_MODE_SIMULTANEOUS,    // Simultaneous sampling on ADC1 and ADC2
+    ADC_LL_MODE_INTERLEAVED     // Interleaved sampling on ADC1 and ADC2
+} ADC_LL_Mode;
+
 /**
  * @brief ADC configuration structure
  */
@@ -57,12 +63,39 @@ typedef struct {
 } ADC_LL_Config;
 
 /**
+ * @brief Dual ADC configuration structure for simultaneous and interleaved modes
+ */
+typedef struct {
+    ADC_LL_Mode mode;            // ADC operation mode
+    ADC_LL_Channel channel1;     // ADC1 channel to use
+    ADC_LL_Channel channel2;     // ADC2 channel to use (for dual modes)
+    ADC_LL_TriggerSource
+        trigger_source;          // Timer trigger source
+    uint16_t *output_buffer;     // Output buffer for DMA transfer (interleaved data)
+    uint32_t buffer_size;        // Buffer size (number of samples per ADC)
+    uint32_t oversampling_ratio; // Oversampling ratio (1, 2, 4, 8, 16, 32, 64,
+                                 // 128, 256)
+} ADC_LL_DualConfig;
+
+/**
  * @brief Callback function type for ADC complete events.
  *
  * This callback is called when the ADC conversion is complete.
  * The callback is invoked when the DMA buffer is full.
  */
 typedef void (*ADC_LL_CompleteCallback)(ADC_Num adc_num);
+
+/**
+ * @brief Callback function type for dual ADC complete events.
+ *
+ * This callback is called when the dual ADC conversion is complete.
+ * The callback is invoked when the DMA buffer is full.
+ *
+ * @param adc1_data Pointer to ADC1 data in the buffer
+ * @param adc2_data Pointer to ADC2 data in the buffer
+ * @param sample_count Number of samples per ADC
+ */
+typedef void (*ADC_LL_DualCompleteCallback)(uint16_t *adc1_data, uint16_t *adc2_data, uint32_t sample_count);
 
 /**
  * @brief Initializes the ADC1 peripheral.
@@ -76,11 +109,30 @@ typedef void (*ADC_LL_CompleteCallback)(ADC_Num adc_num);
 void ADC_LL_init(ADC_LL_Config const *config);
 
 /**
+ * @brief Initializes dual ADC peripherals for simultaneous or interleaved sampling.
+ *
+ * This function configures ADC1 and ADC2 peripherals for dual-mode operation.
+ * In simultaneous mode, both ADCs sample at the same time on different channels.
+ * In interleaved mode, ADCs alternate sampling on the same or different channels
+ * effectively doubling the sample rate.
+ *
+ * @param config Pointer to dual ADC configuration structure.
+ */
+void ADC_LL_dual_init(ADC_LL_DualConfig const *config);
+
+/**
  * @brief Starts an ADC conversion.
  *
  * Starts timer-triggered conversions with DMA.
  */
 void ADC_LL_start(void);
+
+/**
+ * @brief Starts dual ADC conversions.
+ *
+ * Starts timer-triggered conversions with DMA for both ADC1 and ADC2.
+ */
+void ADC_LL_dual_start(void);
 
 /**
  * @brief Deinitializes the ADC peripheral.
@@ -91,12 +143,27 @@ void ADC_LL_start(void);
 void ADC_LL_deinit(ADC_Num adc_num);
 
 /**
+ * @brief Deinitializes dual ADC peripherals.
+ *
+ * This function deinitializes both ADC1 and ADC2 peripherals and releases
+ * any resources used.
+ */
+void ADC_LL_dual_deinit(void);
+
+/**
  * @brief Stops the ADC conversion.
  *
  * This function stops the ongoing ADC conversion process. It can be called
  * to halt conversions before deinitializing the ADC or when no longer needed.
  */
 void ADC_LL_stop(ADC_Num adc_num);
+
+/**
+ * @brief Stops dual ADC conversions.
+ *
+ * This function stops the ongoing dual ADC conversion process.
+ */
+void ADC_LL_dual_stop(void);
 
 /**
  * @brief Sets the callback for ADC completion events.
@@ -110,6 +177,23 @@ void ADC_LL_set_complete_callback(
     ADC_Num adc_num,
     ADC_LL_CompleteCallback callback
 );
+
+/**
+ * @brief Sets the callback for dual ADC completion events.
+ *
+ * This function sets a user-defined callback that will be called when
+ * the dual ADC conversion is complete.
+ *
+ * @param callback Pointer to the dual callback function to be set.
+ */
+void ADC_LL_dual_set_complete_callback(ADC_LL_DualCompleteCallback callback);
+
+/**
+ * @brief Gets the current ADC operation mode.
+ *
+ * @return Current ADC mode (single, simultaneous, or interleaved).
+ */
+ADC_LL_Mode ADC_LL_get_mode(void);
 
 /**
  * @brief Gets the current ADC sample rate.
