@@ -12,6 +12,19 @@
 
 #include <stdint.h>
 
+#define MAX_SIMULTANEOUS_CHANNELS 2
+
+/**
+ * @brief Union type for ADC sample data to prevent strict aliasing violations
+ *
+ * This union allows safe casting between 16-bit and 32-bit representations
+ * of ADC data without violating strict aliasing rules.
+ */
+typedef union {
+    uint32_t u32;      ///< 32-bit representation for DMA operations
+    uint16_t u16[2];   ///< 16-bit array for accessing individual samples
+} ADC_LL_Sample;
+
 typedef enum {
     ADC_TRIGGER_TIMER1 = 1,
     ADC_TRIGGER_TIMER1_TRGO2 = 11, // TIM1 TRGO2
@@ -44,7 +57,7 @@ typedef enum {
 } ADC_LL_Channel;
 
 typedef enum {
-    ADC_LL_MODE_SINGLE = 0,      // Single ADC operation (current mode)
+    ADC_LL_MODE_SINGLE = 0,      // Single ADC operation
     ADC_LL_MODE_SIMULTANEOUS,    // Simultaneous sampling on ADC1 and ADC2
     ADC_LL_MODE_INTERLEAVED     // Interleaved sampling on ADC1 and ADC2
 } ADC_LL_Mode;
@@ -53,117 +66,78 @@ typedef enum {
  * @brief ADC configuration structure
  */
 typedef struct {
-    ADC_LL_Channel channel; // ADC channel to use
+    ADC_LL_Channel channels[MAX_SIMULTANEOUS_CHANNELS]; // ADC channels to use
+    uint8_t channel_count; // Number of channels (1 for single/interleaved, 2 for simultaneous)
+    ADC_LL_Mode mode; // ADC operation mode
     ADC_LL_TriggerSource
         trigger_source; // Timer trigger source
-    uint16_t *output_buffer; // Output buffer for DMA transfer
-    uint32_t buffer_size; // Buffer size (number of samples)
+    ADC_LL_Sample *output_buffers[MAX_SIMULTANEOUS_CHANNELS]; // Output buffers for DMA transfer
+    uint32_t buffer_size; // Buffer size (number of samples per channel)
     uint32_t oversampling_ratio; // Oversampling ratio (1, 2, 4, 8, 16, 32, 64,
                                  // 128, 256)
 } ADC_LL_Config;
-
-/**
- * @brief Dual ADC configuration structure for simultaneous and interleaved modes
- */
-typedef struct {
-    ADC_LL_Mode mode;            // ADC operation mode
-    ADC_LL_Channel channel1;     // ADC1 channel to use
-    ADC_LL_Channel channel2;     // ADC2 channel to use (for dual modes)
-    ADC_LL_TriggerSource
-        trigger_source;          // Timer trigger source
-    uint16_t *output_buffer;     // Output buffer for DMA transfer (interleaved data)
-    uint32_t buffer_size;        // Buffer size (number of samples per ADC)
-    uint32_t oversampling_ratio; // Oversampling ratio (1, 2, 4, 8, 16, 32, 64,
-                                 // 128, 256)
-} ADC_LL_DualConfig;
 
 /**
  * @brief Callback function type for ADC complete events.
  *
  * This callback is called when the ADC conversion is complete.
  * The callback is invoked when the DMA buffer is full.
+ *
+ * Data Format:
+ * - Single mode: Single buffer contains samples from one ADC channel
+ * - Simultaneous mode: Separate buffers for each ADC
+ *   buffer1 contains samples from ADC1, buffer2 contains samples from ADC2
+ * - Interleaved mode: Single buffer contains time-sequential samples alternating between ADCs
+ *   [ADC1_sample0, ADC2_sample1, ADC1_sample2, ADC2_sample3, ...]
+ *
+ * @param buffers Array of buffer pointers (single element for single/interleaved, two elements for simultaneous)
+ * @param buffer_count Number of buffers (1 for single/interleaved, 2 for simultaneous)
+ * @param buffer_size Number of samples per buffer
  */
-typedef void (*ADC_LL_CompleteCallback)(ADC_Num adc_num);
+typedef void (*ADC_LL_CompleteCallback)(ADC_LL_Sample *buffers[], uint8_t buffer_count, uint32_t buffer_size);
 
 /**
- * @brief Callback function type for dual ADC complete events.
+ * @brief Initializes the ADC peripheral(s).
  *
- * This callback is called when the dual ADC conversion is complete.
- * The callback is invoked when the DMA buffer is full.
- *
- * @param adc1_data Pointer to ADC1 data in the buffer
- * @param adc2_data Pointer to ADC2 data in the buffer
- * @param sample_count Number of samples per ADC
- */
-typedef void (*ADC_LL_DualCompleteCallback)(uint16_t *adc1_data, uint16_t *adc2_data, uint32_t sample_count);
-
-/**
- * @brief Initializes the ADC1 peripheral.
- *
- * This function configures the ADC1 peripheral with the specified settings.
+ * This function configures the ADC peripheral(s) with the specified settings.
+ * For single-channel mode, only ADC1 is used. For dual-channel modes,
+ * both ADC1 and ADC2 are configured.
  * The ADC uses timer-triggered conversions with DMA for all operations.
  * Oversampling is available for all configurations.
+ *
+ * Buffer Requirements:
+ * - Single mode: Single buffer (output_buffers[0]) accommodates buffer_size samples
+ * - Simultaneous mode: Separate buffers for each ADC (output_buffers[0] and output_buffers[1])
+ *   Each buffer accommodates buffer_size samples
+ * - Interleaved mode: Single buffer (output_buffers[0]) accommodates 2x buffer_size samples
+ *   Data format: [ADC1_sample0, ADC2_sample1, ADC1_sample2, ADC2_sample3, ...]
  *
  * @param config Pointer to ADC configuration structure.
  */
 void ADC_LL_init(ADC_LL_Config const *config);
 
 /**
- * @brief Initializes dual ADC peripherals for simultaneous or interleaved sampling.
+ * @brief Starts ADC conversion(s).
  *
- * This function configures ADC1 and ADC2 peripherals for dual-mode operation.
- * In simultaneous mode, both ADCs sample at the same time on different channels.
- * In interleaved mode, ADCs alternate sampling on the same or different channels
- * effectively doubling the sample rate.
- *
- * @param config Pointer to dual ADC configuration structure.
- */
-void ADC_LL_dual_init(ADC_LL_DualConfig const *config);
-
-/**
- * @brief Starts an ADC conversion.
- *
- * Starts timer-triggered conversions with DMA.
+ * Starts timer-triggered conversions with DMA for the configured ADC(s).
  */
 void ADC_LL_start(void);
 
 /**
- * @brief Starts dual ADC conversions.
+ * @brief Deinitializes the ADC peripheral(s).
  *
- * Starts timer-triggered conversions with DMA for both ADC1 and ADC2.
- */
-void ADC_LL_dual_start(void);
-
-/**
- * @brief Deinitializes the ADC peripheral.
- *
- * This function deinitializes the ADC peripheral and releases any resources
+ * This function deinitializes the ADC peripheral(s) and releases any resources
  * used.
  */
 void ADC_LL_deinit(ADC_Num adc_num);
 
 /**
- * @brief Deinitializes dual ADC peripherals.
- *
- * This function deinitializes both ADC1 and ADC2 peripherals and releases
- * any resources used.
- */
-void ADC_LL_dual_deinit(void);
-
-/**
- * @brief Stops the ADC conversion.
+ * @brief Stops the ADC conversion(s).
  *
  * This function stops the ongoing ADC conversion process. It can be called
  * to halt conversions before deinitializing the ADC or when no longer needed.
  */
 void ADC_LL_stop(ADC_Num adc_num);
-
-/**
- * @brief Stops dual ADC conversions.
- *
- * This function stops the ongoing dual ADC conversion process.
- */
-void ADC_LL_dual_stop(void);
 
 /**
  * @brief Sets the callback for ADC completion events.
@@ -177,16 +151,6 @@ void ADC_LL_set_complete_callback(
     ADC_Num adc_num,
     ADC_LL_CompleteCallback callback
 );
-
-/**
- * @brief Sets the callback for dual ADC completion events.
- *
- * This function sets a user-defined callback that will be called when
- * the dual ADC conversion is complete.
- *
- * @param callback Pointer to the dual callback function to be set.
- */
-void ADC_LL_dual_set_complete_callback(ADC_LL_DualCompleteCallback callback);
 
 /**
  * @brief Gets the current ADC operation mode.

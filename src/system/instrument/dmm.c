@@ -25,7 +25,7 @@
  */
 struct DMM_Handle {
     DMM_Config config;
-    uint16_t adc_buffer; // Single value buffer for single sample mode
+    ADC_LL_Sample adc_buffer; // Single value buffer for single sample mode
     bool volatile conversion_complete;
     bool initialized;
 };
@@ -63,17 +63,16 @@ static ADC_LL_Channel dmm_channel_to_adc_ll(DMM_Channel channel)
 }
 
 /**
- * @brief ADC conversion complete callback
+ * @brief ADC completion callback.
  *
- * @note This function has extern linkage to facilitate testing. It is not part
- * of the public API.
+ * Called when an ADC conversion is complete.
  */
-void dmm_adc_complete_callback(void)
+void dmm_adc_complete_callback(ADC_LL_Sample **buffers, uint8_t buffer_count, uint32_t buffer_size)
 {
     if (g_dmm_handle != NULL) {
         g_dmm_handle->conversion_complete = true;
         LOG_DEBUG(
-            "DMM: ADC conversion complete, value = %u", g_dmm_handle->adc_buffer
+            "DMM: ADC conversion complete, value = %u", g_dmm_handle->adc_buffer.u16[0]
         );
     }
 }
@@ -145,7 +144,7 @@ DMM_Handle *DMM_init(DMM_Config const *config)
 
     // Initialize handle
     handle->config = *config;
-    handle->adc_buffer = 0;
+    handle->adc_buffer.u32 = 0;
     handle->conversion_complete = false;
     handle->initialized = true;
     g_dmm_handle = handle;
@@ -165,9 +164,11 @@ DMM_Handle *DMM_init(DMM_Config const *config)
 
     // Initialize ADC with the configured channel
     ADC_LL_Config adc_config = {
-        .channel = dmm_channel_to_adc_ll(config->channel),
+        .channels = {dmm_channel_to_adc_ll(config->channel)},
+        .channel_count = 1,
+        .mode = ADC_LL_MODE_SINGLE,
         .trigger_source = ADC_TRIGGER_TIMER6,
-        .output_buffer = &handle->adc_buffer,
+        .output_buffers = {&handle->adc_buffer},
         .buffer_size = 1,  // Single sample
         .oversampling_ratio = handle->config.oversampling_ratio
     };
@@ -296,7 +297,7 @@ static void read_raw(
     }
 
     // Get the result
-    *raw_value_out = handle->adc_buffer;
+    *raw_value_out = handle->adc_buffer.u16[0];
 
     // Stop current conversion but keep ADC initialized for next measurement
     ADC_LL_stop();
