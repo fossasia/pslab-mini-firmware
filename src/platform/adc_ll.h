@@ -14,17 +14,6 @@
 
 #define MAX_SIMULTANEOUS_CHANNELS 2
 
-/**
- * @brief Union type for ADC sample data to prevent strict aliasing violations
- *
- * This union allows safe casting between 16-bit and 32-bit representations
- * of ADC data without violating strict aliasing rules.
- */
-typedef union {
-    uint32_t u32;      ///< 32-bit representation for DMA operations
-    uint16_t u16[2];   ///< 16-bit array for accessing individual samples
-} ADC_LL_Sample;
-
 typedef enum {
     ADC_TRIGGER_TIMER1 = 1,
     ADC_TRIGGER_TIMER1_TRGO2 = 11, // TIM1 TRGO2
@@ -57,9 +46,9 @@ typedef enum {
 } ADC_LL_Channel;
 
 typedef enum {
-    ADC_LL_MODE_SINGLE = 0,      // Single ADC operation
-    ADC_LL_MODE_SIMULTANEOUS,    // Simultaneous sampling on ADC1 and ADC2
-    ADC_LL_MODE_INTERLEAVED     // Interleaved sampling on ADC1 and ADC2
+    ADC_LL_MODE_SINGLE = 0, // Single ADC operation
+    ADC_LL_MODE_SIMULTANEOUS, // Simultaneous sampling on ADC1 and ADC2
+    ADC_LL_MODE_INTERLEAVED // Interleaved sampling on ADC1 and ADC2
 } ADC_LL_Mode;
 
 /**
@@ -67,11 +56,11 @@ typedef enum {
  */
 typedef struct {
     ADC_LL_Channel channels[MAX_SIMULTANEOUS_CHANNELS]; // ADC channels to use
-    uint8_t channel_count; // Number of channels (1 for single/interleaved, 2 for simultaneous)
+    uint8_t channel_count; // Number of channels (1 for single/interleaved,
+                           // 2 for simultaneous)
     ADC_LL_Mode mode; // ADC operation mode
-    ADC_LL_TriggerSource
-        trigger_source; // Timer trigger source
-    ADC_LL_Sample *output_buffers[MAX_SIMULTANEOUS_CHANNELS]; // Output buffers for DMA transfer
+    ADC_LL_TriggerSource trigger_source; // Timer trigger source
+    uint16_t *output_buffer; // Output buffer for DMA transfer
     uint32_t buffer_size; // Buffer size (number of samples per channel)
     uint32_t oversampling_ratio; // Oversampling ratio (1, 2, 4, 8, 16, 32, 64,
                                  // 128, 256)
@@ -80,37 +69,39 @@ typedef struct {
 /**
  * @brief Callback function type for ADC complete events.
  *
- * This callback is called when the ADC conversion is complete.
- * The callback is invoked when the DMA buffer is full.
+ * This callback is called when the ADC conversion is complete and the buffer
+ * is full.
  *
  * Data Format:
- * - Single mode: Single buffer contains samples from one ADC channel
- * - Simultaneous mode: Separate buffers for each ADC
- *   buffer1 contains samples from ADC1, buffer2 contains samples from ADC2
- * - Interleaved mode: Single buffer contains time-sequential samples alternating between ADCs
+ * - Single mode: Buffer contains samples from one ADC channel
+ * - Simultaneous mode: Buffer contains simultaneous sample pairs from both
+ *   ADCs / channels
+ *   [ADC1_sample0, ADC2_sample0, ADC1_sample1, ADC2_sample1, ...]
+ *   Total buffer size is 2 * buffer_size samples
+ * - Interleaved mode: Buffer contains time-sequential samples from one channel
+ *   alternating between ADCs
  *   [ADC1_sample0, ADC2_sample1, ADC1_sample2, ADC2_sample3, ...]
+ *   Total buffer size is 2 * buffer_size samples
  *
- * @param buffers Array of buffer pointers (single element for single/interleaved, two elements for simultaneous)
- * @param buffer_count Number of buffers (1 for single/interleaved, 2 for simultaneous)
- * @param buffer_size Number of samples per buffer
+ * @param buffer Pointer to the output buffer
+ * @param total_samples Total number of samples in the buffer
  */
-typedef void (*ADC_LL_CompleteCallback)(ADC_LL_Sample *buffers[], uint8_t buffer_count, uint32_t buffer_size);
+typedef void (*ADC_LL_CompleteCallback)(
+    uint16_t *buffer,
+    uint32_t total_samples
+);
 
 /**
  * @brief Initializes the ADC peripheral(s).
  *
  * This function configures the ADC peripheral(s) with the specified settings.
- * For single-channel mode, only ADC1 is used. For dual-channel modes,
- * both ADC1 and ADC2 are configured.
- * The ADC uses timer-triggered conversions with DMA for all operations.
- * Oversampling is available for all configurations.
+ * For single-channel mode, only ADC1 is used. For simultaneous and interleaved
+ * modes, both ADC1 and ADC2 are configured.
  *
  * Buffer Requirements:
- * - Single mode: Single buffer (output_buffers[0]) accommodates buffer_size samples
- * - Simultaneous mode: Separate buffers for each ADC (output_buffers[0] and output_buffers[1])
- *   Each buffer accommodates buffer_size samples
- * - Interleaved mode: Single buffer (output_buffers[0]) accommodates 2x buffer_size samples
- *   Data format: [ADC1_sample0, ADC2_sample1, ADC1_sample2, ADC2_sample3, ...]
+ * - Single mode: Buffer accommodates buffer_size samples
+ * - Simultaneous mode: Buffer accommodates 2 * buffer_size samples
+ * - Interleaved mode: Buffer accommodates 2 * buffer_size samples
  *
  * @param config Pointer to ADC configuration structure.
  */
@@ -163,14 +154,16 @@ ADC_LL_Mode ADC_LL_get_mode(void);
  * @brief Gets the current ADC sample rate.
  *
  * This function calculates and returns the current ADC sample rate based on:
- * - Sample time (currently 12.5 clock cycles)
- * - Conversion time (12.5 clock cycles for 12-bit resolution)
+ * - Sample time
+ * - Conversion time
  * - ADC clock frequency
- * - Clock prescaler (currently 1)
+ * - Clock prescaler
  *
- * Formula: Sample Rate = ADC_Clock_Rate / ((Sample_Time + Conversion_Time) * Prescaler)
+ * Formula: Sample Rate = ADC_Clock_Rate / ((Sample_Time + Conversion_Time) *
+ * Prescaler)
  *
- * @return The sample rate in Hz, or 0 if ADC is not initialized or error occurs.
+ * @return The sample rate in Hz, or 0 if ADC is not initialized or error
+ * occurs.
  */
 uint32_t ADC_LL_get_sample_rate(void);
 

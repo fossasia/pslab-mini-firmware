@@ -134,10 +134,7 @@ static inline Fixed fixed_div_int(Fixed a, int32_t b)
  * Equivalent to: FIXED_FROM_INT(num) / FIXED_FROM_INT(den)
  * But more efficient for cases where both are integers.
  */
-static inline Fixed fixed_from_fraction(
-    int32_t numerator,
-    int32_t denominator
-)
+static inline Fixed fixed_from_fraction(int32_t numerator, int32_t denominator)
 {
     if (denominator == 0) {
         return (numerator >= 0) ? INT32_MAX : INT32_MIN;

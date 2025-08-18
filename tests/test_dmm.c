@@ -1,17 +1,28 @@
 /**
  * @file test_dmm.c
- * @brief Unit tests for Digital Multimeter (DMM) module
+ * @brief Unit tests for Digital Multimeter (DMM) implementation
  *
- * This file contains comprehensive unit tests for the DMM module,
- * testing all public functions with various scenarios including
- * success cases, error conditions, and edge cases.
- *
- * @author PSLab Team
- * @date 2025-07-19
+ * This file contains comprehensive unit tests for the DMM API, including
+ * initialization, configuration validation, voltage measurements, and
+ * error handling. The ADC and Timer low-level drivers are mocked using     // Simulate a completed conversion by calling the callback
+    if (g_stored_callback != NULL) {
+        g_stored_callback(NULL, 0);
+    }
+
+    // Expect ADC to be restarted for next conversion (but not timer)
+    ADC_LL_start_Expect();
+
+    // Act
+    result = DMM_read_voltage(g_test_handle, &voltage_out);
+
+    // Assert
+    TEST_ASSERT_TRUE(result); @author PSLab Team
+ * @date 2025-08-12
  */
 
 #include "unity.h"
 #include "mock_adc_ll.h"
+#include "mock_tim_ll.h"
 #include "dmm.h"
 #include "error.h"
 #include "fixed_point.h"
@@ -19,23 +30,38 @@
 #include <stdbool.h>
 #include <string.h>
 
+// External function declaration for testing
+// This function is intentionally non-static in dmm.c to enable testing
+extern void dmm_adc_complete_callback(uint16_t *buffer, uint32_t total_samples);
+
 // Test fixtures
 static DMM_Handle *g_test_handle;
+static uint16_t g_mock_adc_value;
+static bool g_adc_callback_called;
+static ADC_LL_CompleteCallback g_stored_callback;
+static uint16_t *g_captured_adc_buffer; // Captured from ADC_LL_init
 
 void setUp(void)
 {
-    // Initialize test handle to NULL
+    // Initialize test data
     g_test_handle = NULL;
+    g_mock_adc_value = 0;
+    g_adc_callback_called = false;
+    g_stored_callback = NULL;
+    g_captured_adc_buffer = NULL;
 
     // Initialize mocks
     mock_adc_ll_Init();
+    mock_tim_ll_Init();
 }
 
 void tearDown(void)
 {
     // Clean up DMM handle if it exists
     if (g_test_handle != NULL) {
-        // Set up expectations for deinit
+        // Set up expectations for deinit - use Ignore to be flexible
+        ADC_LL_stop_Ignore();
+        TIM_LL_stop_Ignore();
         ADC_LL_deinit_Ignore();
 
         DMM_deinit(g_test_handle);
@@ -44,16 +70,60 @@ void tearDown(void)
 
     // Clean up mocks after each test
     mock_adc_ll_Destroy();
+    mock_tim_ll_Destroy();
 }
 
-// Test DMM_init with valid configuration
-void test_DMM_init_success(void)
+// Helper function to capture ADC callback
+void capture_adc_callback_stub(ADC_LL_CompleteCallback callback, int cmock_num_calls)
+{
+    (void)cmock_num_calls;
+    g_stored_callback = callback;
+}
+
+// Helper function to simulate ADC conversion with specific value
+void simulate_adc_conversion(uint16_t adc_value)
+{
+    // Set the ADC value in the captured buffer (simulates hardware writing to buffer)
+    if (g_captured_adc_buffer != NULL) {
+        *g_captured_adc_buffer = adc_value;
+    }
+
+    // Call the completion callback to notify DMM
+    if (g_stored_callback != NULL) {
+        g_stored_callback(NULL, 0);
+    }
+}
+
+// Stub function to simulate ADC initialization success
+void adc_init_success_stub(ADC_LL_Config const *config, int cmock_num_calls)
+{
+    (void)cmock_num_calls;
+    // Verify config is reasonable
+    TEST_ASSERT_NOT_NULL(config);
+    TEST_ASSERT_EQUAL(1, config->channel_count);
+    TEST_ASSERT_EQUAL(ADC_LL_MODE_SINGLE, config->mode);
+    TEST_ASSERT_EQUAL(ADC_TRIGGER_TIMER6, config->trigger_source);
+    TEST_ASSERT_NOT_NULL(config->output_buffer);
+    TEST_ASSERT_EQUAL(1, config->buffer_size);
+
+    // Capture the output buffer for later use
+    g_captured_adc_buffer = config->output_buffer;
+}
+
+// Test: Successful DMM initialization with default configuration
+void test_DMM_init_success_default_config(void)
 {
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
 
-    // Set expectations for ADC_LL calls - just ignore the callback for simplicity
-    ADC_LL_set_complete_callback_Ignore();
+    // Set expectations
+    ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
+    ADC_LL_init_Stub(adc_init_success_stub);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000); // 1 kHz sample rate for timer init
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000); // 1 kHz sample rate for logging
+    TIM_LL_init_Expect(TIM_NUM_0, 1000);
+    TIM_LL_start_Expect(TIM_NUM_0); // Expect timer start for initial conversion
+    ADC_LL_start_Expect(); // Expect ADC start for initial conversion
 
     // Act
     g_test_handle = DMM_init(&config);
@@ -62,483 +132,593 @@ void test_DMM_init_success(void)
     TEST_ASSERT_NOT_NULL(g_test_handle);
 }
 
-// Test DMM_init with NULL configuration
+// Test: DMM initialization with custom configuration
+void test_DMM_init_success_custom_config(void)
+{
+    // Arrange
+    DMM_Config config = {
+        .channel = DMM_CHANNEL_5,
+        .oversampling_ratio = 64,
+        .reference_voltage = FIXED_FROM_FLOAT(5.0f)
+    };
+
+    // Set expectations
+    ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
+    ADC_LL_init_Ignore();
+    ADC_LL_get_sample_rate_ExpectAndReturn(2000); // 2 kHz sample rate for timer init
+    ADC_LL_get_sample_rate_ExpectAndReturn(2000); // 2 kHz sample rate for logging
+    TIM_LL_init_Expect(TIM_NUM_0, 2000);
+    TIM_LL_start_Expect(TIM_NUM_0); // Expect timer start for initial conversion
+    ADC_LL_start_Expect(); // Expect ADC start for initial conversion
+
+    // Act
+    g_test_handle = DMM_init(&config);
+
+    // Assert
+    TEST_ASSERT_NOT_NULL(g_test_handle);
+}
+
+// Test: DMM initialization with NULL config
 void test_DMM_init_null_config(void)
 {
     // Arrange
-    DMM_Handle *handle = NULL;
-    Error exception = ERROR_NONE;
+    CEXCEPTION_T exception = CEXCEPTION_NONE;
 
-    // Act
-    TRY
-    {
-        handle = DMM_init(NULL);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
+    // Act & Assert
+    TRY {
+        g_test_handle = DMM_init(NULL);
+        TEST_FAIL_MESSAGE("Expected exception for NULL config");
     }
-    CATCH(exception)
-    {
-        // Assert
+    CATCH(exception) {
         TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
-        TEST_ASSERT_NULL(handle);
+        TEST_ASSERT_NULL(g_test_handle);
     }
 }
 
-// Test DMM_init with invalid oversampling ratio
-void test_DMM_init_invalid_oversampling(void)
+// Test: DMM initialization with invalid channel
+void test_DMM_init_invalid_channel(void)
 {
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
-    config.oversampling_ratio = 0; // Invalid: must be > 0
-    DMM_Handle *handle = NULL;
-    Error exception = ERROR_NONE;
+    config.channel = (DMM_Channel)999; // Invalid channel
+    CEXCEPTION_T exception = CEXCEPTION_NONE;
 
-    // Act
-    TRY
-    {
-        handle = DMM_init(&config);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
+    // Act & Assert
+    TRY {
+        g_test_handle = DMM_init(&config);
+        TEST_FAIL_MESSAGE("Expected exception for invalid channel");
     }
-    CATCH(exception)
-    {
-        // Assert
+    CATCH(exception) {
         TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
-        TEST_ASSERT_NULL(handle);
+        TEST_ASSERT_NULL(g_test_handle);
     }
 }
 
-// Test DMM_deinit with valid handle
-void test_DMM_deinit_success(void)
+// Test: DMM initialization with invalid oversampling ratio
+void test_DMM_init_invalid_oversampling_ratio(void)
 {
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
-    ADC_LL_set_complete_callback_Ignore();
-    g_test_handle = DMM_init(&config);
+    config.oversampling_ratio = 7; // Not power of 2
+    CEXCEPTION_T exception = CEXCEPTION_NONE;
 
-    // Set expectations for deinit
-    ADC_LL_deinit_Expect();
-
-    // Act
-    DMM_deinit(g_test_handle);
-    g_test_handle = NULL; // Prevent double cleanup in tearDown
-
-    // Assert - no assertion needed, function should complete without error
-}
-
-// Test DMM_deinit with NULL handle
-void test_DMM_deinit_null_handle(void)
-{
-    // Act - should not crash or throw
-    DMM_deinit(NULL);
-
-    // Assert - no assertion needed, function should complete without error
-}
-
-// Test DMM_read_voltage with NULL handle
-void test_DMM_read_voltage_null_handle(void)
-{
-    // Arrange
-    Fixed voltage_out;
-    Error exception = ERROR_NONE;
-
-    // Act
-    TRY
-    {
-        DMM_read_voltage(NULL, DMM_CHANNEL_0, &voltage_out);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
+    // Act & Assert
+    TRY {
+        g_test_handle = DMM_init(&config);
+        TEST_FAIL_MESSAGE("Expected exception for invalid oversampling ratio");
     }
-    CATCH(exception)
-    {
-        // Assert
+    CATCH(exception) {
         TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
+        TEST_ASSERT_NULL(g_test_handle);
     }
 }
 
-// Test DMM_read_voltage with NULL output pointer
-void test_DMM_read_voltage_null_output(void)
+// Test: DMM initialization with invalid reference voltage
+void test_DMM_init_invalid_reference_voltage(void)
 {
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
-    ADC_LL_set_complete_callback_Ignore();
-    g_test_handle = DMM_init(&config);
-    Error exception = ERROR_NONE;
+    config.reference_voltage = FIXED_ZERO; // Invalid reference voltage
+    CEXCEPTION_T exception = CEXCEPTION_NONE;
 
-    // Act
-    TRY
-    {
-        DMM_read_voltage(g_test_handle, DMM_CHANNEL_0, NULL);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
+    // Act & Assert
+    TRY {
+        g_test_handle = DMM_init(&config);
+        TEST_FAIL_MESSAGE("Expected exception for invalid reference voltage");
     }
-    CATCH(exception)
-    {
-        // Assert
+    CATCH(exception) {
         TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
+        TEST_ASSERT_NULL(g_test_handle);
     }
 }
 
-// Test DMM_read_voltage with invalid channel
-void test_DMM_read_voltage_invalid_channel(void)
-{
-    // Arrange
-    DMM_Config config = DMM_CONFIG_DEFAULT;
-    ADC_LL_set_complete_callback_Ignore();
-    g_test_handle = DMM_init(&config);
-
-    Fixed voltage_out;
-    Error exception = ERROR_NONE;
-
-    // Act
-    TRY
-    {
-        DMM_read_voltage(g_test_handle, (DMM_Channel)16, &voltage_out);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
-    }
-    CATCH(exception)
-    {
-        // Assert
-        TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
-    }
-}
-
-// Test DMM_read_raw with NULL handle
-void test_DMM_read_raw_null_handle(void)
-{
-    // Arrange
-    uint16_t raw_value_out;
-    Error exception = ERROR_NONE;
-
-    // Act
-    TRY
-    {
-        DMM_read_raw(NULL, DMM_CHANNEL_0, &raw_value_out);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
-    }
-    CATCH(exception)
-    {
-        // Assert
-        TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
-    }
-}
-
-// Test DMM_read_raw with NULL output pointer
-void test_DMM_read_raw_null_output(void)
-{
-    // Arrange
-    DMM_Config config = DMM_CONFIG_DEFAULT;
-    ADC_LL_set_complete_callback_Ignore();
-    g_test_handle = DMM_init(&config);
-    Error exception = ERROR_NONE;
-
-    // Act
-    TRY
-    {
-        DMM_read_raw(g_test_handle, DMM_CHANNEL_0, NULL);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
-    }
-    CATCH(exception)
-    {
-        // Assert
-        TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
-    }
-}
-
-// Test DMM_read_millivolts with NULL handle
-void test_DMM_read_millivolts_null_handle(void)
-{
-    // Arrange
-    uint32_t millivolts_out;
-    Error exception = ERROR_NONE;
-
-    // Act
-    TRY
-    {
-        DMM_read_millivolts(NULL, DMM_CHANNEL_0, &millivolts_out);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
-    }
-    CATCH(exception)
-    {
-        // Assert
-        TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
-    }
-}
-
-// Test configuration validation with various valid oversampling ratios
-void test_DMM_valid_oversampling_ratios(void)
-{
-    // Test all valid power-of-2 oversampling ratios
-    uint32_t valid_ratios[] = {1, 2, 4, 8, 16, 32, 64, 128, 256};
-    size_t num_ratios = sizeof(valid_ratios) / sizeof(valid_ratios[0]);
-
-    for (size_t i = 0; i < num_ratios; i++) {
-        DMM_Config config = DMM_CONFIG_DEFAULT;
-        config.oversampling_ratio = valid_ratios[i];
-
-        // Set expectations for ADC_LL calls
-        ADC_LL_set_complete_callback_Ignore();
-
-        // Act
-        DMM_Handle *handle = DMM_init(&config);
-
-        // Assert
-        TEST_ASSERT_NOT_NULL(handle);
-
-        // Clean up
-        ADC_LL_deinit_Ignore();
-        DMM_deinit(handle);
-    }
-}
-
-// Test DMM_init with invalid oversampling ratios (more cases)
-void test_DMM_init_invalid_oversampling_not_power_of_2(void)
-{
-    // Arrange
-    DMM_Config config = DMM_CONFIG_DEFAULT;
-    config.oversampling_ratio = 3; // Invalid: not power of 2
-    DMM_Handle *handle = NULL;
-    Error exception = ERROR_NONE;
-
-    // Act
-    TRY
-    {
-        handle = DMM_init(&config);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
-    }
-    CATCH(exception)
-    {
-        // Assert
-        TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
-        TEST_ASSERT_NULL(handle);
-    }
-}
-
-// Test DMM_init with invalid oversampling ratio (too large)
-void test_DMM_init_invalid_oversampling_too_large(void)
-{
-    // Arrange
-    DMM_Config config = DMM_CONFIG_DEFAULT;
-    config.oversampling_ratio = 512; // Invalid: > 256
-    DMM_Handle *handle = NULL;
-    Error exception = ERROR_NONE;
-
-    // Act
-    TRY
-    {
-        handle = DMM_init(&config);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
-    }
-    CATCH(exception)
-    {
-        // Assert
-        TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
-        TEST_ASSERT_NULL(handle);
-    }
-}
-
-// Test DMM_init with invalid timeout
-void test_DMM_init_invalid_timeout(void)
-{
-    // Arrange
-    DMM_Config config = DMM_CONFIG_DEFAULT;
-    config.timeout_ms = 0; // Invalid: must be > 0
-    DMM_Handle *handle = NULL;
-    Error exception = ERROR_NONE;
-
-    // Act
-    TRY
-    {
-        handle = DMM_init(&config);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
-    }
-    CATCH(exception)
-    {
-        // Assert
-        TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
-        TEST_ASSERT_NULL(handle);
-    }
-}
-
-// Test DMM_init with invalid reference voltage (zero)
-void test_DMM_init_invalid_reference_voltage_zero(void)
-{
-    // Arrange
-    DMM_Config config = DMM_CONFIG_DEFAULT;
-    config.reference_voltage = FIXED_ZERO; // Invalid: must be > 0
-    DMM_Handle *handle = NULL;
-    Error exception = ERROR_NONE;
-
-    // Act
-    TRY
-    {
-        handle = DMM_init(&config);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
-    }
-    CATCH(exception)
-    {
-        // Assert
-        TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
-        TEST_ASSERT_NULL(handle);
-    }
-}
-
-// Test DMM_init with invalid reference voltage (too high)
-void test_DMM_init_invalid_reference_voltage_too_high(void)
-{
-    // Arrange
-    DMM_Config config = DMM_CONFIG_DEFAULT;
-    config.reference_voltage = FIXED_FROM_FLOAT(6.0f); // Invalid: > 5.0V
-    DMM_Handle *handle = NULL;
-    Error exception = ERROR_NONE;
-
-    // Act
-    TRY
-    {
-        handle = DMM_init(&config);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
-    }
-    CATCH(exception)
-    {
-        // Assert
-        TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
-        TEST_ASSERT_NULL(handle);
-    }
-}
-
-// Test DMM_init when already initialized
+// Test: DMM initialization when already initialized
 void test_DMM_init_already_initialized(void)
 {
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
-    DMM_Handle *handle1, *handle2 = NULL;
-    Error exception = ERROR_NONE;
+    CEXCEPTION_T exception = CEXCEPTION_NONE;
 
-    // Set expectations for first init
-    ADC_LL_set_complete_callback_Ignore();
+    // First initialization
+    ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
+    ADC_LL_init_Ignore();
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    TIM_LL_init_Expect(TIM_NUM_0, 1000);
+    TIM_LL_start_Expect(TIM_NUM_0);
+    ADC_LL_start_Expect();
 
-    // Act - first init should succeed
-    handle1 = DMM_init(&config);
-    TEST_ASSERT_NOT_NULL(handle1);
+    g_test_handle = DMM_init(&config);
+    TEST_ASSERT_NOT_NULL(g_test_handle);
 
-    // Act & Assert - second init should fail
-    TRY
-    {
-        handle2 = DMM_init(&config);
-        TEST_FAIL_MESSAGE("Expected ERROR_RESOURCE_BUSY exception");
+    // Act & Assert - Try to initialize again
+    TRY {
+        DMM_Handle *second_handle = DMM_init(&config);
+        TEST_FAIL_MESSAGE("Expected exception for double initialization");
     }
-    CATCH(exception)
-    {
+    CATCH(exception) {
         TEST_ASSERT_EQUAL(ERROR_RESOURCE_BUSY, exception);
-        TEST_ASSERT_NULL(handle2);
     }
-
-    // Clean up
-    ADC_LL_deinit_Ignore();
-    DMM_deinit(handle1);
-    g_test_handle = NULL; // Prevent double cleanup in tearDown
 }
 
-// Test DMM_read_raw with invalid channel
-void test_DMM_read_raw_invalid_channel(void)
+// Test: DMM initialization with ADC failure
+void test_DMM_init_adc_failure(void)
 {
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
-    ADC_LL_set_complete_callback_Ignore();
-    g_test_handle = DMM_init(&config);
+    CEXCEPTION_T exception = CEXCEPTION_NONE;
 
-    uint16_t raw_value_out;
-    Error exception = ERROR_NONE;
+    // Set expectations
+    ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
+    ADC_LL_init_ExpectAndThrow(NULL, ERROR_HARDWARE_FAULT);
+    ADC_LL_init_IgnoreArg_config(); // Ignore the config parameter
+
+    // Act & Assert
+    TRY {
+        g_test_handle = DMM_init(&config);
+        TEST_FAIL_MESSAGE("Expected exception for ADC initialization failure");
+    }
+    CATCH(exception) {
+        TEST_ASSERT_EQUAL(ERROR_HARDWARE_FAULT, exception);
+        TEST_ASSERT_NULL(g_test_handle);
+    }
+}
+
+// Test: DMM initialization with timer failure
+void test_DMM_init_timer_failure(void)
+{
+    // Arrange
+    DMM_Config config = DMM_CONFIG_DEFAULT;
+    CEXCEPTION_T exception = CEXCEPTION_NONE;
+
+    // Set expectations - ADC init succeeds, but timer init fails
+    ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
+    ADC_LL_init_Ignore(); // ADC init succeeds
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000); // For timer init
+    TIM_LL_init_ExpectAndThrow(TIM_NUM_0, 1000, ERROR_HARDWARE_FAULT);
+    ADC_LL_deinit_Expect(); // Cleanup after timer failure
+
+    // Act & Assert
+    TRY {
+        g_test_handle = DMM_init(&config);
+        TEST_FAIL_MESSAGE("Expected exception for timer initialization failure");
+    }
+    CATCH(exception) {
+        TEST_ASSERT_EQUAL(ERROR_HARDWARE_FAULT, exception);
+        TEST_ASSERT_NULL(g_test_handle);
+    }
+}
+
+// Test: DMM deinitialization with valid handle
+void test_DMM_deinit_valid_handle(void)
+{
+    // Arrange - Initialize DMM first
+    DMM_Config config = DMM_CONFIG_DEFAULT;
+
+    ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
+    ADC_LL_init_Ignore();
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    TIM_LL_init_Expect(TIM_NUM_0, 1000);
+    TIM_LL_start_Expect(TIM_NUM_0);
+    ADC_LL_start_Expect();
+
+    g_test_handle = DMM_init(&config);
+    TEST_ASSERT_NOT_NULL(g_test_handle);
+
+    // Set expectations for deinit
+    ADC_LL_stop_Expect();
+    TIM_LL_stop_Expect(TIM_NUM_0);
+    ADC_LL_deinit_Expect();
 
     // Act
-    TRY
-    {
-        DMM_read_raw(g_test_handle, (DMM_Channel)16, &raw_value_out);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
+    DMM_deinit(g_test_handle);
+    g_test_handle = NULL; // Prevent tearDown from attempting cleanup
+
+    // Assert - No crash, expectations verified by mock
+}
+
+// Test: DMM deinitialization with NULL handle
+void test_DMM_deinit_null_handle(void)
+{
+    // Act
+    DMM_deinit(NULL);
+
+    // Assert - No crash, no expectations needed
+    TEST_PASS();
+}
+
+// Test: Successful voltage reading with conversion ready
+void test_DMM_read_voltage_success_conversion_ready(void)
+{
+    // Arrange
+    DMM_Config config = DMM_CONFIG_DEFAULT;
+    Fixed voltage_out;
+    bool result;
+
+    // Initialize DMM
+    ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
+    ADC_LL_init_Ignore();
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    TIM_LL_init_Expect(TIM_NUM_0, 1000);
+    TIM_LL_start_Expect(TIM_NUM_0);
+    ADC_LL_start_Expect();
+
+    g_test_handle = DMM_init(&config);
+    TEST_ASSERT_NOT_NULL(g_test_handle);
+
+    // Simulate a completed conversion by calling the callback directly
+    dmm_adc_complete_callback(NULL, 0);
+
+    // Expect next conversion to be started (only ADC restart, timer keeps running)
+    ADC_LL_start_Expect();
+
+    // Act
+    result = DMM_read_voltage(g_test_handle, &voltage_out);
+
+    // Assert
+    TEST_ASSERT_TRUE(result);
+}
+
+// Test: Voltage reading with no conversion ready
+void test_DMM_read_voltage_no_conversion_ready(void)
+{
+    // Arrange
+    DMM_Config config = DMM_CONFIG_DEFAULT;
+    Fixed voltage_out;
+    bool result;
+
+    // Initialize DMM
+    ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
+    ADC_LL_init_Ignore();
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    TIM_LL_init_Expect(TIM_NUM_0, 1000);
+    TIM_LL_start_Expect(TIM_NUM_0);
+    ADC_LL_start_Expect();
+
+    g_test_handle = DMM_init(&config);
+    TEST_ASSERT_NOT_NULL(g_test_handle);
+
+    // Don't simulate conversion completion
+
+    // Act
+    result = DMM_read_voltage(g_test_handle, &voltage_out);
+
+    // Assert
+    TEST_ASSERT_FALSE(result);
+    TEST_ASSERT_EQUAL(FIXED_ZERO, voltage_out);
+}
+
+// Test: Voltage reading with NULL handle
+void test_DMM_read_voltage_null_handle(void)
+{
+    // Arrange
+    Fixed voltage_out;
+    CEXCEPTION_T exception = CEXCEPTION_NONE;
+
+    // Act & Assert
+    TRY {
+        DMM_read_voltage(NULL, &voltage_out);
+        TEST_FAIL_MESSAGE("Expected exception for NULL handle");
     }
-    CATCH(exception)
-    {
-        // Assert
+    CATCH(exception) {
         TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
     }
 }
 
-// Test DMM_read_millivolts with NULL output pointer
-void test_DMM_read_millivolts_null_output(void)
+// Test: Voltage reading with NULL output pointer
+void test_DMM_read_voltage_null_output(void)
 {
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
-    ADC_LL_set_complete_callback_Ignore();
-    g_test_handle = DMM_init(&config);
-    Error exception = ERROR_NONE;
+    CEXCEPTION_T exception = CEXCEPTION_NONE;
 
-    // Act
-    TRY
-    {
-        DMM_read_millivolts(g_test_handle, DMM_CHANNEL_0, NULL);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
+    // Initialize DMM
+    ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
+    ADC_LL_init_Ignore();
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    TIM_LL_init_Expect(TIM_NUM_0, 1000);
+    TIM_LL_start_Expect(TIM_NUM_0);
+    ADC_LL_start_Expect();
+
+    g_test_handle = DMM_init(&config);
+    TEST_ASSERT_NOT_NULL(g_test_handle);
+
+    // Act & Assert
+    TRY {
+        bool result = DMM_read_voltage(g_test_handle, NULL);
+        TEST_FAIL_MESSAGE("Expected exception for NULL output pointer");
     }
-    CATCH(exception)
-    {
-        // Assert
+    CATCH(exception) {
         TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
     }
 }
 
-// Test DMM_read_millivolts with invalid channel
-void test_DMM_read_millivolts_invalid_channel(void)
+// Test: Voltage reading with ADC start failure
+void test_DMM_read_voltage_adc_start_failure(void)
 {
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
-    ADC_LL_set_complete_callback_Ignore();
+    Fixed voltage_out;
+    bool result;
+
+    // Initialize DMM first
+    ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
+    ADC_LL_init_Ignore();
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    TIM_LL_init_Expect(TIM_NUM_0, 1000);
+    TIM_LL_start_Expect(TIM_NUM_0);
+    ADC_LL_start_Expect(); // Initial start succeeds
+
     g_test_handle = DMM_init(&config);
+    TEST_ASSERT_NOT_NULL(g_test_handle);
 
-    uint32_t millivolts_out;
-    Error exception = ERROR_NONE;
+    // Simulate a completed conversion
+    dmm_adc_complete_callback(NULL, 0);
 
-    // Act
-    TRY
-    {
-        DMM_read_millivolts(g_test_handle, (DMM_Channel)16, &millivolts_out);
-        TEST_FAIL_MESSAGE("Expected ERROR_INVALID_ARGUMENT exception");
+    // Expect ADC restart to fail (but this doesn't throw in the current implementation)
+    // The current implementation logs the error but doesn't throw
+    ADC_LL_start_ExpectAndThrow(ERROR_HARDWARE_FAULT);
+
+    // Act - this should still return the valid measurement despite restart failure
+    result = DMM_read_voltage(g_test_handle, &voltage_out);
+
+    // Assert - the function should still return true with valid data
+    // even though the restart failed (as per current implementation)
+    TEST_ASSERT_TRUE(result);
+}
+
+// Test: DMM initialization with ADC start failure
+void test_DMM_read_voltage_timer_start_failure(void)
+{
+    // Arrange
+    DMM_Config config = DMM_CONFIG_DEFAULT;
+    CEXCEPTION_T exception = CEXCEPTION_NONE;
+
+    // Set expectations - ADC and timer init succeed, timer start succeeds, but ADC start fails
+    ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
+    ADC_LL_init_Ignore(); // ADC init succeeds
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000); // For timer init
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000); // For logging
+    TIM_LL_init_Expect(TIM_NUM_0, 1000); // Timer init succeeds
+    TIM_LL_start_Expect(TIM_NUM_0); // Timer start succeeds
+    ADC_LL_start_ExpectAndThrow(ERROR_HARDWARE_FAULT); // ADC start fails
+    TIM_LL_stop_Expect(TIM_NUM_0); // Cleanup after start failure
+    ADC_LL_deinit_Expect(); // Cleanup after start failure
+
+    // Act & Assert
+    TRY {
+        g_test_handle = DMM_init(&config);
+        TEST_FAIL_MESSAGE("Expected exception for ADC start failure during initialization");
     }
-    CATCH(exception)
-    {
-        // Assert
-        TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
+    CATCH(exception) {
+        TEST_ASSERT_EQUAL(ERROR_HARDWARE_FAULT, exception);
+        TEST_ASSERT_NULL(g_test_handle);
     }
 }
 
-// Test channel mapping function indirectly
+// Test: Voltage calculation with different ADC values
+void test_DMM_voltage_calculation_values(void)
+{
+    // Arrange
+    DMM_Config config = DMM_CONFIG_DEFAULT;
+    config.reference_voltage = FIXED_FROM_FLOAT(3.3f); // 3.3V reference
+    config.oversampling_ratio = 1; // No oversampling for simpler calculation
+    Fixed voltage_out;
+    bool result;
+
+    // Initialize DMM
+    ADC_LL_set_complete_callback_Stub(capture_adc_callback_stub);
+    ADC_LL_init_Stub(adc_init_success_stub);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    TIM_LL_init_Expect(TIM_NUM_0, 1000);
+    TIM_LL_start_Expect(TIM_NUM_0);
+    ADC_LL_start_Expect();
+
+    g_test_handle = DMM_init(&config);
+    TEST_ASSERT_NOT_NULL(g_test_handle);
+
+    // Test Case 1: Zero ADC value should give zero voltage
+    simulate_adc_conversion(0);
+
+    ADC_LL_start_Expect(); // Only expect ADC restart, timer keeps running
+
+    result = DMM_read_voltage(g_test_handle, &voltage_out);
+    TEST_ASSERT_TRUE(result);
+    TEST_ASSERT_EQUAL(FIXED_ZERO, voltage_out);
+
+    // Test Case 2: Half-scale ADC value should give half reference voltage
+    // ADC is 12-bit, so max value is 4095
+    // Half-scale = 2047, should give ~1.65V with 3.3V reference
+    simulate_adc_conversion(2047);
+
+    ADC_LL_start_Expect(); // Only expect ADC restart, timer keeps running
+
+    result = DMM_read_voltage(g_test_handle, &voltage_out);
+    TEST_ASSERT_TRUE(result);
+    // Expected: (2047 * 3.3V) / 4095 ≈ 1.648V
+    Fixed expected_half = FIXED_FROM_FLOAT(1.648f);
+    // Allow some tolerance for fixed-point calculation
+    Fixed tolerance = FIXED_FROM_FLOAT(0.01f);
+    TEST_ASSERT_TRUE((voltage_out >= (expected_half - tolerance)) &&
+                     (voltage_out <= (expected_half + tolerance)));
+
+    // Test Case 3: Full-scale ADC value should give full reference voltage
+    simulate_adc_conversion(4095);
+
+    ADC_LL_start_Expect(); // Only expect ADC restart, timer keeps running
+
+    result = DMM_read_voltage(g_test_handle, &voltage_out);
+    TEST_ASSERT_TRUE(result);
+    // Should be very close to 3.3V
+    Fixed expected_full = FIXED_FROM_FLOAT(3.3f);
+    tolerance = FIXED_FROM_FLOAT(0.01f);
+    TEST_ASSERT_TRUE((voltage_out >= (expected_full - tolerance)) &&
+                     (voltage_out <= (expected_full + tolerance)));
+
+    // Test Case 4: Test with oversampling
+    // Reinitialize with oversampling ratio of 16
+    ADC_LL_stop_Expect();
+    TIM_LL_stop_Expect(TIM_NUM_0);
+    ADC_LL_deinit_Expect();
+    DMM_deinit(g_test_handle);
+
+    config.oversampling_ratio = 16;
+
+    ADC_LL_set_complete_callback_Stub(capture_adc_callback_stub);
+    ADC_LL_init_Stub(adc_init_success_stub);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    TIM_LL_init_Expect(TIM_NUM_0, 1000);
+    TIM_LL_start_Expect(TIM_NUM_0);
+    ADC_LL_start_Expect();
+
+    g_test_handle = DMM_init(&config);
+    TEST_ASSERT_NOT_NULL(g_test_handle);
+
+    // With 16x oversampling, max value is 4095 * 16 = 65520
+    // Half-scale would be 32760, should still give ~1.65V
+    simulate_adc_conversion(32760);
+
+    ADC_LL_start_Expect(); // Only expect ADC restart, timer keeps running
+
+    result = DMM_read_voltage(g_test_handle, &voltage_out);
+    TEST_ASSERT_TRUE(result);
+    // Expected: (32760 * 3.3V) / 65520 ≈ 1.65V
+    expected_half = FIXED_FROM_FLOAT(1.65f);
+    tolerance = FIXED_FROM_FLOAT(0.01f);
+    TEST_ASSERT_TRUE((voltage_out >= (expected_half - tolerance)) &&
+                     (voltage_out <= (expected_half + tolerance)));
+}
+
+// Test: DMM configuration validation edge cases
+void test_DMM_config_validation_edge_cases(void)
+{
+    CEXCEPTION_T exception = CEXCEPTION_NONE;
+
+    // Test maximum valid oversampling ratio
+    {
+        DMM_Config config = DMM_CONFIG_DEFAULT;
+        config.oversampling_ratio = 256; // Maximum valid
+
+        ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
+        ADC_LL_init_Ignore();
+        ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+        ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+        TIM_LL_init_Expect(TIM_NUM_0, 1000);
+        TIM_LL_start_Expect(TIM_NUM_0);
+        ADC_LL_start_Expect();
+
+        g_test_handle = DMM_init(&config);
+        TEST_ASSERT_NOT_NULL(g_test_handle);
+
+        ADC_LL_stop_Expect();
+        TIM_LL_stop_Expect(TIM_NUM_0);
+        ADC_LL_deinit_Expect();
+        DMM_deinit(g_test_handle);
+        g_test_handle = NULL;
+    }
+
+    // Test oversampling ratio too large
+    {
+        DMM_Config config = DMM_CONFIG_DEFAULT;
+        config.oversampling_ratio = 512; // Too large
+
+        TRY {
+            g_test_handle = DMM_init(&config);
+            TEST_FAIL_MESSAGE("Expected exception for oversampling ratio too large");
+        }
+        CATCH(exception) {
+            TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
+        }
+    }
+
+    // Test maximum valid reference voltage
+    {
+        DMM_Config config = DMM_CONFIG_DEFAULT;
+        config.reference_voltage = FIXED_FROM_FLOAT(5.0f); // Maximum valid
+
+        ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
+        ADC_LL_init_Ignore();
+        ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+        ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+        TIM_LL_init_Expect(TIM_NUM_0, 1000);
+        TIM_LL_start_Expect(TIM_NUM_0);
+        ADC_LL_start_Expect();
+
+        g_test_handle = DMM_init(&config);
+        TEST_ASSERT_NOT_NULL(g_test_handle);
+
+        ADC_LL_stop_Expect();
+        TIM_LL_stop_Expect(TIM_NUM_0);
+        ADC_LL_deinit_Expect();
+        DMM_deinit(g_test_handle);
+        g_test_handle = NULL;
+    }
+
+    // Test reference voltage too large
+    {
+        DMM_Config config = DMM_CONFIG_DEFAULT;
+        config.reference_voltage = FIXED_FROM_FLOAT(5.1f); // Too large
+
+        TRY {
+            g_test_handle = DMM_init(&config);
+            TEST_FAIL_MESSAGE("Expected exception for reference voltage too large");
+        }
+        CATCH(exception) {
+            TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
+        }
+    }
+}
+
+// Test: ADC channel mapping
 void test_DMM_channel_mapping(void)
 {
-    // Arrange
-    DMM_Config config = DMM_CONFIG_DEFAULT;
-    ADC_LL_set_complete_callback_Ignore();
-    g_test_handle = DMM_init(&config);
+    // Test that all DMM channels map correctly to ADC_LL channels
+    for (int i = DMM_CHANNEL_0; i <= DMM_CHANNEL_15; i++) {
+        DMM_Config config = DMM_CONFIG_DEFAULT;
+        config.channel = (DMM_Channel)i;
 
-    // Test different channels - the mapping should work correctly
-    // We test a few representative channels rather than all 16 to keep test time reasonable
-    DMM_Channel test_channels[] = {DMM_CHANNEL_0, DMM_CHANNEL_5, DMM_CHANNEL_10, DMM_CHANNEL_15};
-    size_t num_channels = sizeof(test_channels) / sizeof(test_channels[0]);
-
-    for (size_t i = 0; i < num_channels; i++) {
-        uint16_t raw_value_out;
-        Error exception = ERROR_NONE;
-
-        // Set expectations for ADC operations - since we can't easily simulate the callback,
-        // we expect it to timeout and check that the channel validation works
+        ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
         ADC_LL_init_Ignore();
-        ADC_LL_start_Ignore();
-        ADC_LL_stop_Ignore();
-        ADC_LL_deinit_Ignore();
+        ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+        ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+        TIM_LL_init_Expect(TIM_NUM_0, 1000);
+        TIM_LL_start_Expect(TIM_NUM_0);
+        ADC_LL_start_Expect();
 
-        // Act - this will likely timeout, but that's ok for this test
-        TRY
-        {
-            DMM_read_raw(g_test_handle, test_channels[i], &raw_value_out);
-            // If we get here, the channel was valid (even if timeout occurred)
-        }
-        CATCH(exception)
-        {
-            // We expect timeout, not invalid argument for valid channels
-            TEST_ASSERT_NOT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
-        }
+        g_test_handle = DMM_init(&config);
+        TEST_ASSERT_NOT_NULL(g_test_handle);
+
+        ADC_LL_stop_Expect();
+        TIM_LL_stop_Expect(TIM_NUM_0);
+        ADC_LL_deinit_Expect();
+        DMM_deinit(g_test_handle);
+        g_test_handle = NULL;
     }
 }
