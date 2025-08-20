@@ -69,12 +69,10 @@ void USB_LL_init(USB_Bus bus)
 {
     if (bus >= USB_BUS_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
-        return;
     }
 
     if (g_usb_instances[bus].initialized) {
         THROW(ERROR_RESOURCE_BUSY);
-        return;
     }
 
     HAL_PWREx_EnableVddUSB();
@@ -85,7 +83,6 @@ void USB_LL_init(USB_Bus bus)
     periph_init.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
     if (HAL_RCCEx_PeriphCLKConfig(&periph_init) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
-        return;
     }
 
     // Enable USB-related clocks.
@@ -112,7 +109,6 @@ void USB_LL_init(USB_Bus bus)
     // incorrect) to call HAL_NVIC_EnableIRQ(USB_DRD_FS_IRQn) here.
     if (!tusb_init()) {
         THROW(ERROR_HARDWARE_FAULT);
-        return;
     }
 
     if (__HAL_RCC_GET_USB_SOURCE() == RCC_USBCLKSOURCE_HSI48) {

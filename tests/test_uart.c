@@ -2,6 +2,7 @@
 #include "syscalls_config.h"
 #include "mock_uart_ll.h"
 #include "uart.h"
+#include "error.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -67,12 +68,18 @@ void test_UART_init_null_rx_buffer(void)
 {
     // Arrange
     size_t bus = 0;
-    UART_Handle *handle;
+    UART_Handle *handle = nullptr;
+    Error caught_error = ERROR_NONE;
 
     // Act - pass nullptr rx_buffer
-    handle = UART_init(bus, nullptr, &g_tx_buffer);
+    TRY {
+        handle = UART_init(bus, nullptr, &g_tx_buffer);
+    } CATCH(caught_error) {
+        // Expected to catch an error
+    }
 
     // Assert
+    TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, caught_error);
     TEST_ASSERT_NULL(handle);
 }
 
@@ -80,12 +87,18 @@ void test_UART_init_null_tx_buffer(void)
 {
     // Arrange
     size_t bus = 0;
-    UART_Handle *handle;
+    UART_Handle *handle = nullptr;
+    Error caught_error = ERROR_NONE;
 
     // Act - pass nullptr tx_buffer
-    handle = UART_init(bus, &g_rx_buffer, nullptr);
+    TRY {
+        handle = UART_init(bus, &g_rx_buffer, nullptr);
+    } CATCH(caught_error) {
+        // Expected to catch an error
+    }
 
     // Assert
+    TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, caught_error);
     TEST_ASSERT_NULL(handle);
 }
 
@@ -93,12 +106,18 @@ void test_UART_init_invalid_bus(void)
 {
     // Arrange
     size_t bus = UART_BUS_COUNT; // Invalid bus number
-    UART_Handle *handle;
+    UART_Handle *handle = nullptr;
+    Error caught_error = ERROR_NONE;
 
     // Act
-    handle = UART_init(bus, &g_rx_buffer, &g_tx_buffer);
+    TRY {
+        handle = UART_init(bus, &g_rx_buffer, &g_tx_buffer);
+    } CATCH(caught_error) {
+        // Expected to catch an error
+    }
 
     // Assert
+    TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, caught_error);
     TEST_ASSERT_NULL(handle);
 }
 
@@ -106,18 +125,19 @@ void test_UART_init_syscalls_bus(void)
 {
     // Arrange
     size_t bus = SYSCALLS_UART_BUS;
-
-    // Set up expectations for init
-    UART_LL_init_Expect(SYSCALLS_UART_BUS, g_rx_data, sizeof(g_rx_data));
-    UART_LL_set_idle_callback_Ignore();
-    UART_LL_set_rx_complete_callback_Ignore();
-    UART_LL_set_tx_complete_callback_Ignore();
+    UART_Handle *handle = nullptr;
+    Error caught_error = ERROR_NONE;
 
     // Act
-    g_test_handle = UART_init(bus, &g_rx_buffer, &g_tx_buffer);
+    TRY {
+        handle = UART_init(bus, &g_rx_buffer, &g_tx_buffer);
+    } CATCH(caught_error) {
+        // Expected to catch an error since only syscalls can claim this bus
+    }
 
     // Assert - Should fail since only syscalls can claim this bus
-    TEST_ASSERT_NULL(g_test_handle);
+    TEST_ASSERT_EQUAL(ERROR_RESOURCE_UNAVAILABLE, caught_error);
+    TEST_ASSERT_NULL(handle);
 }
 
 void test_UART_get_bus_count(void)

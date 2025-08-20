@@ -22,3 +22,32 @@ void SYSTEM_init(void)
     LOG_task(max_log_entries);
     LED_init();
 }
+
+/**
+ * @brief Handler for uncaught CException throws
+ *
+ * This function is called when a THROW occurs outside of any TRY context.
+ * It provides a last-resort error handler that logs the exception and
+ * resets the system to prevent undefined behavior.
+ *
+ * @param exception_id The exception ID that was thrown but not caught
+ *
+ * @note This function does not return; it resets the system
+ */
+__attribute__((noreturn)) void EXCEPTION_halt(uint32_t exception_id)
+{
+    LOG_ERROR(
+        "FATAL: Uncaught exception 0x%08X - system will reset",
+        (unsigned int)exception_id
+    );
+
+    // Force a small delay to allow log message to be transmitted
+    // This is a simple busy wait since we're about to reset anyway
+    // TODO(bessman): Replace with proper delay function
+    // This is about 2 ms on STM32H563xx
+    uint32_t volatile delay = 100000; // NOLINT[readability-magic-numbers]
+    while (delay--);
+
+    // Reset the system - this function does not return
+    PLATFORM_reset();
+}
