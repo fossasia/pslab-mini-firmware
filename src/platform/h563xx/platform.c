@@ -115,21 +115,26 @@ static void system_clock_config(void)
         THROW(ERROR_HARDWARE_FAULT);
     }
 
-    /* Configure PLL2 for ADC clock (75 MHz) using unified configuration macro */
+    /* Configure PLL2 for ADC clock (75 MHz) using unified configuration macro
+     */
     // Configure PLL2: 8 MHz HSE / 4 = 2 MHz input
     // 2 MHz * 75 = 150 MHz VCO, 150 MHz / 2 = 75 MHz output on all outputs
-    __HAL_RCC_PLL2_CONFIG(RCC_PLL2_SOURCE_HSE,    // Source: HSE
-                          4,                        // M divider: 8 MHz / 4 = 2 MHz
-                          75,                       // N multiplier: 2 MHz * 75 = 150 MHz VCO
-                          2,                        // P divider: 150 MHz / 2 = 75 MHz
-                          2,                        // Q divider: 150 MHz / 2 = 75 MHz
-                          2);                       // R divider: 150 MHz / 2 = 75 MHz (for ADC)
+    __HAL_RCC_PLL2_CONFIG(
+        RCC_PLL2_SOURCE_HSE, // Source: HSE
+        4, // M divider: 8 MHz / 4 = 2 MHz
+        75, // N multiplier: 2 MHz * 75 = 150 MHz VCO
+        2, // P divider: 150 MHz / 2 = 75 MHz
+        2, // Q divider: 150 MHz / 2 = 75 MHz
+        2
+    ); // R divider: 150 MHz / 2 = 75 MHz (for ADC)
 
     // Set PLL2 VCI range for 2 MHz input (1-2 MHz range)
     MODIFY_REG(RCC->PLL2CFGR, RCC_PLL2CFGR_PLL2RGE, RCC_PLL2_VCIRANGE_0);
 
     // Set PLL2 VCO range for 150 MHz VCO (medium range 150-420 MHz)
-    MODIFY_REG(RCC->PLL2CFGR, RCC_PLL2CFGR_PLL2VCOSEL, RCC_PLL2_VCORANGE_MEDIUM);
+    MODIFY_REG(
+        RCC->PLL2CFGR, RCC_PLL2CFGR_PLL2VCOSEL, RCC_PLL2_VCORANGE_MEDIUM
+    );
 
     // Enable PLL2
     __HAL_RCC_PLL2_ENABLE();
