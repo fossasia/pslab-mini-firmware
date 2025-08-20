@@ -115,8 +115,7 @@ static void system_clock_config(void)
         THROW(ERROR_HARDWARE_FAULT);
     }
 
-    /* Configure PLL2 for ADC clock (75 MHz) using unified configuration macro
-     */
+    // Configure PLL2 for ADC clock (75 MHz) using unified configuration macro
     // Configure PLL2: 8 MHz HSE / 4 = 2 MHz input
     // 2 MHz * 75 = 150 MHz VCO, 150 MHz / 2 = 75 MHz output on all outputs
     __HAL_RCC_PLL2_CONFIG(
