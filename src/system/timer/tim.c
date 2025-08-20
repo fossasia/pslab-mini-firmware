@@ -44,17 +44,15 @@ TIM_Handle *TIM_init(size_t tim, uint32_t freq)
 {
     if (tim >= TIM_NUM_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
-        return nullptr; // Invalid timer
     }
 
     if (g_active_timers[tim] != nullptr) {
         THROW(ERROR_RESOURCE_BUSY);
-        return nullptr; // timer already started
     }
 
     TIM_Handle *handle = malloc(sizeof(TIM_Handle));
     if (handle == nullptr) {
-        return nullptr; // Memory allocation failed
+        THROW(ERROR_OUT_OF_MEMORY);
     }
 
     handle->tim_id = tim;
@@ -79,12 +77,10 @@ void TIM_start(size_t tim)
 {
     if (tim >= TIM_NUM_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
-        return;
     }
 
     if (g_active_timers[tim] == nullptr) {
         THROW(ERROR_INVALID_ARGUMENT);
-        return;
     }
 
     TIM_LL_start((TIM_Num)tim);
@@ -102,7 +98,6 @@ void TIM_stop(size_t tim)
 {
     if (tim >= TIM_NUM_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
-        return;
     }
 
     if (g_active_timers[tim] == nullptr) {

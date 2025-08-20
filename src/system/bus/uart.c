@@ -68,7 +68,6 @@ size_t UART_get_bus_count(void) { return UART_BUS_COUNT; }
 static UART_Handle *get_handle_from_bus(UART_Bus bus)
 {
     if (bus >= UART_BUS_COUNT) {
-        THROW(ERROR_INVALID_ARGUMENT);
         return nullptr;
     }
     return g_active_handles[bus];
@@ -244,7 +243,6 @@ UART_Handle *UART_init(
 {
     if (!rx_buffer || !tx_buffer || bus >= UART_BUS_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
-        return nullptr;
     }
 
 /* Check if syscalls is claiming the UART */
@@ -252,7 +250,6 @@ UART_Handle *UART_init(
     if (bus == SYSCALLS_UART_BUS && !g_SYSCALLS_uart_claim) {
         /* Only syscalls can claim this bus */
         THROW(ERROR_RESOURCE_UNAVAILABLE);
-        return nullptr;
     }
 #endif
 
@@ -261,14 +258,12 @@ UART_Handle *UART_init(
     /* Check if bus is already initialized */
     if (g_active_handles[bus_id] != nullptr) {
         THROW(ERROR_RESOURCE_BUSY);
-        return nullptr;
     }
 
     /* Allocate handle */
     UART_Handle *handle = malloc(sizeof(UART_Handle));
     if (!handle) {
         THROW(ERROR_OUT_OF_MEMORY);
-        return nullptr;
     }
 
     /* Initialize handle */

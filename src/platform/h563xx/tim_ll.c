@@ -113,7 +113,6 @@ static void calculate_timer_values(TIM_Num tim)
     if (instance->frequency == 0) {
         // frequency should not be zero
         THROW(ERROR_INVALID_ARGUMENT);
-        return;
     }
 
     uint32_t tim_clock = get_timer_clock_frequency(tim);
@@ -121,7 +120,6 @@ static void calculate_timer_values(TIM_Num tim)
     if (tim_clock == 0) {
         // Invalid timer clock frequency
         THROW(ERROR_INVALID_ARGUMENT);
-        return;
     }
 
     instance->period = (tim_clock / instance->frequency) - 1;
@@ -160,12 +158,10 @@ void TIM_LL_init(TIM_Num tim, uint32_t freq)
 {
     if (tim >= TIM_NUM_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
-        return;
     }
 
     if (g_timer_instances[tim].initialized) {
         THROW(ERROR_RESOURCE_BUSY);
-        return;
     }
 
     TimerInstance *instance = &g_timer_instances[tim];
@@ -190,7 +186,6 @@ void TIM_LL_init(TIM_Num tim, uint32_t freq)
 
     if (HAL_TIM_Base_Init(instance->htim) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
-        return;
     }
 
     TIM_MasterConfigTypeDef s_master_config = { 0 };
@@ -202,7 +197,6 @@ void TIM_LL_init(TIM_Num tim, uint32_t freq)
             instance->htim, &s_master_config
         ) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
-        return;
     }
 
     instance->initialized = true;
@@ -217,7 +211,6 @@ void TIM_LL_deinit(TIM_Num tim)
 {
     if (tim >= TIM_NUM_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
-        return;
     }
 
     if (!g_timer_instances[tim].initialized) {
@@ -244,11 +237,9 @@ void TIM_LL_start(TIM_Num tim)
     TimerInstance *instance = &g_timer_instances[tim];
     if (HAL_TIM_Base_Start(instance->htim) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
-        return;
     }
     if (HAL_TIM_PWM_Start(instance->htim, TIM_CHANNEL_1) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
-        return;
     }
 }
 
@@ -262,6 +253,5 @@ void TIM_LL_stop(TIM_Num tim)
     TimerInstance *instance = &g_timer_instances[tim];
     if (HAL_TIM_Base_Stop(instance->htim) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
-        return;
     }
 }

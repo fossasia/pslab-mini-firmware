@@ -169,7 +169,6 @@ USB_Handle *USB_init(size_t interface, CircularBuffer *rx_buffer)
 {
     if (!rx_buffer || interface >= USB_INTERFACE_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
-        return nullptr;
     }
 
     uint8_t interface_id = (uint8_t)interface;
@@ -177,14 +176,12 @@ USB_Handle *USB_init(size_t interface, CircularBuffer *rx_buffer)
     /* Check if interface is already initialized */
     if (g_active_handles[interface_id] != nullptr) {
         THROW(ERROR_RESOURCE_BUSY);
-        return nullptr;
     }
 
     /* Allocate handle */
     USB_Handle *handle = malloc(sizeof(USB_Handle));
     if (!handle) {
         THROW(ERROR_OUT_OF_MEMORY);
-        return nullptr;
     }
 
     /* Initialize handle */

@@ -68,4 +68,20 @@ typedef enum {
  */
 uint32_t PLATFORM_get_peripheral_clock_speed(PLATFORM_PeripheralClock clock);
 
+/**
+ * @brief Reset the platform/system
+ *
+ * This function performs a software reset of the entire system. It triggers
+ * a system-wide reset that will restart the microcontroller, equivalent to
+ * a hardware reset or power cycle.
+ *
+ * @note This function does not return - the system will be reset immediately
+ * @note All system state will be lost and the system will restart from the
+ *       reset vector
+ * @note This is a non-recoverable operation
+ *
+ * @return None (function does not return)
+ */
+[[noreturn]] void PLATFORM_reset(void);
+
 #endif // PSLAB_LL_PLATFORM_H

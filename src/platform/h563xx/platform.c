@@ -103,7 +103,6 @@ static void system_clock_config(void)
     if (HAL_RCC_OscConfig(&osc_init) != HAL_OK) {
         /* Clock configuration incorrect or hardware failure */
         THROW(ERROR_HARDWARE_FAULT);
-        return;
     }
 
     // Wait for HSI48.
@@ -122,7 +121,6 @@ static void system_clock_config(void)
     if (HAL_RCC_ClockConfig(&clk_init, FLASH_LATENCY_5) != HAL_OK) {
         /* Clock configuration incorrect or hardware failure */
         THROW(ERROR_HARDWARE_FAULT);
-        return;
     }
 }
 
@@ -157,7 +155,6 @@ void PLATFORM_init(void)
 {
     if (HAL_Init() != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
-        return;
     }
     system_clock_config();
     LOG_init();
@@ -243,4 +240,39 @@ uint32_t PLATFORM_get_peripheral_clock_speed(PLATFORM_PeripheralClock clock)
     }
 
     return 0; // Invalid timer clock
+}
+
+/**
+ * @brief Reset the platform/system
+ *
+ * This function performs a software reset of the entire STM32H563xx system.
+ * It uses the NVIC (Nested Vectored Interrupt Controller) system reset request
+ * to trigger a complete system reset, equivalent to a hardware reset or power
+ * cycle.
+ *
+ * The reset process:
+ * 1. All registers are reset to their default values
+ * 2. All peripherals are reset and disabled
+ * 3. System clock configuration is reset to default (HSI)
+ * 4. All GPIO pins are reset to their default state
+ * 5. System restarts from the reset vector
+ *
+ * This is useful for:
+ * - Recovering from error conditions
+ * - Implementing software-triggered system restart
+ * - Ensuring clean system state after configuration changes
+ *
+ * @note This function does not return - the system reset occurs immediately
+ * @note All volatile memory content will be lost
+ * @note Non-volatile settings (flash, backup registers) are preserved
+ * @note Watchdog timers are reset
+ */
+__attribute__((noreturn)) void PLATFORM_reset(void)
+{
+    // Ensure all pending operations complete before reset
+    __DSB(); // Data Synchronization Barrier
+    __ISB(); // Instruction Synchronization Barrier
+
+    NVIC_SystemReset();
+    __builtin_unreachable();
 }

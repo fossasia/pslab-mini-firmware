@@ -11,6 +11,7 @@
 #define PSLAB_ERROR_H
 
 #include "CException.h"
+#include "exception.h"
 #include <errno.h>
 #include <stdint.h>
 
@@ -27,7 +28,16 @@
 #define TRY Try
 // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
 #define CATCH Catch
-#define THROW Throw
+#define THROW(error)                                                           \
+    do {                                                                       \
+        Throw(error);                                                          \
+        /* At this point, control flow has passed to either:                   \
+           1. Catch block                                                      \
+           2. Last resort noreturn exception handler (EXCEPTION_halt)          \
+           This means that control never reaches this point.                   \
+         */                                                                    \
+        __builtin_unreachable();                                               \
+    } while (0)
 
 /**
  * @brief PSLab-specific error codes

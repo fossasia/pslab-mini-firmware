@@ -302,17 +302,14 @@ void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz)
 {
     if (bus >= UART_BUS_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
-        return;
     }
 
     if (!rx_buf || sz == 0) {
         THROW(ERROR_INVALID_ARGUMENT);
-        return;
     }
 
     if (g_uart_instances[bus].initialized) {
         THROW(ERROR_RESOURCE_BUSY);
-        return;
     }
 
     UARTInstance *instance = &g_uart_instances[bus];
@@ -336,7 +333,6 @@ void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz)
 
     if (HAL_UART_Init(instance->huart) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
-        return;
     }
 
     instance->rx_buffer_data = rx_buf;
@@ -350,7 +346,6 @@ void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz)
             instance->huart, instance->rx_buffer_data, instance->rx_buffer_size
         ) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
-        return;
     }
 
     /* Enable UART idle line interrupt for packet detection */
@@ -370,7 +365,6 @@ void UART_LL_deinit(UART_Bus bus)
 {
     if (bus >= UART_BUS_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
-        return;
     }
 
     if (!g_uart_instances[bus].initialized) {
@@ -415,17 +409,14 @@ void UART_LL_start_dma_tx(UART_Bus bus, uint8_t *buffer, uint32_t size)
 {
     if (bus >= UART_BUS_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
-        return;
     }
 
     if (!buffer || size == 0) {
         THROW(ERROR_INVALID_ARGUMENT);
-        return;
     }
 
     if (!g_uart_instances[bus].initialized) {
         THROW(ERROR_DEVICE_NOT_READY);
-        return;
     }
 
     UARTInstance *instance = &g_uart_instances[bus];
