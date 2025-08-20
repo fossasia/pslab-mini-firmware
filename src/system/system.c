@@ -36,8 +36,6 @@ void SYSTEM_init(void)
  */
 __attribute__((noreturn)) void EXCEPTION_halt(uint32_t exception_id)
 {
-    // Attempt to log the uncaught exception
-    // Use LOG_ERROR since this is a critical system error
     LOG_ERROR(
         "FATAL: Uncaught exception 0x%08X - system will reset",
         (unsigned int)exception_id
