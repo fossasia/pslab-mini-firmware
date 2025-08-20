@@ -82,6 +82,6 @@ uint32_t PLATFORM_get_peripheral_clock_speed(PLATFORM_PeripheralClock clock);
  *
  * @return None (function does not return)
  */
-[[noreturn]] void PLATFORM_reset(void);
+__attribute__((noreturn)) void PLATFORM_reset(void);
 
 #endif // PSLAB_LL_PLATFORM_H
