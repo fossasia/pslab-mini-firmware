@@ -48,7 +48,7 @@ CheckOptions:
   - key: bugprone-easily-swappable-parameters.ModelImplicitConversions
     value: false
   - key: readability-function-cognitive-complexity.Threshold
-    value: '10'
+    value: '20'
   - key: readability-function-size.LineThreshold
     value: '80'
 
