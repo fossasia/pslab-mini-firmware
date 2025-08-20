@@ -46,6 +46,7 @@ __attribute__((noreturn)) void EXCEPTION_halt(uint32_t exception_id)
     // Force a small delay to allow log message to be transmitted
     // This is a simple busy wait since we're about to reset anyway
     // TODO: Replace with proper delay function
+    // This is about 2 ms on STM32H563xx
     uint32_t volatile delay = 100000; // NOLINT[readability-magic-numbers]
     while (delay--);
 
