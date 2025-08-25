@@ -92,7 +92,7 @@ typedef void (*ADC_LL_CompleteCallback)(
 );
 
 /**
- * @brief Initializes the ADC peripheral(s).
+ * @brief Initialize the ADC peripheral(s).
  *
  * This function configures the ADC peripheral(s) with the specified settings.
  * For single-channel mode, only ADC1 is used. For simultaneous and interleaved
@@ -108,54 +108,51 @@ typedef void (*ADC_LL_CompleteCallback)(
 void ADC_LL_init(ADC_LL_Config const *config);
 
 /**
- * @brief Starts ADC conversion(s).
+ * @brief Start ADC conversion(s).
  *
  * Starts timer-triggered conversions with DMA for the configured ADC(s).
  */
 void ADC_LL_start(void);
 
 /**
- * @brief Deinitializes the ADC peripheral(s).
+ * @brief Deinitialize the ADC peripheral(s).
  *
  * This function deinitializes the ADC peripheral(s) and releases any resources
  * used.
  */
-void ADC_LL_deinit(ADC_Num adc_num);
+void ADC_LL_deinit(void);
 
 /**
- * @brief Stops the ADC conversion(s).
+ * @brief Stop the ADC conversion(s).
  *
  * This function stops the ongoing ADC conversion process. It can be called
  * to halt conversions before deinitializing the ADC or when no longer needed.
  */
-void ADC_LL_stop(ADC_Num adc_num);
+void ADC_LL_stop(void);
 
 /**
- * @brief Sets the callback for ADC completion events.
+ * @brief Set the callback for ADC completion events.
  *
  * This function sets a user-defined callback that will be called when
  * the ADC conversion is complete.
  *
  * @param callback Pointer to the callback function to be set.
  */
-void ADC_LL_set_complete_callback(
-    ADC_Num adc_num,
-    ADC_LL_CompleteCallback callback
-);
+void ADC_LL_set_complete_callback(ADC_LL_CompleteCallback callback);
 
 /**
- * @brief Gets the current ADC operation mode.
+ * @brief Get the current ADC operation mode.
  *
  * @return Current ADC mode (single, simultaneous, or interleaved).
  */
 ADC_LL_Mode ADC_LL_get_mode(void);
 
 /**
- * @brief Gets the current ADC sample rate.
+ * @brief Get the current ADC sample rate.
  *
  * This function calculates and returns the current ADC sample rate based on:
  * - Sample time
- * - Conversion time
+ * - Resolution (affects conversion time)
  * - ADC clock frequency
  * - Clock prescaler
  *
@@ -166,5 +163,17 @@ ADC_LL_Mode ADC_LL_get_mode(void);
  * occurs.
  */
 uint32_t ADC_LL_get_sample_rate(void);
+
+/**
+ * @brief Get the reference voltage reading.
+ *
+ * This function returns the reference voltage that was measured during ADC
+ * initialization. The value is obtained by reading the internal VREFINT
+ * channel and calculating the actual reference voltage using factory
+ * calibration data.
+ *
+ * @return Reference voltage in millivolts, or 0 if ADC is not initialized.
+ */
+uint32_t ADC_LL_get_reference_voltage(void);
 
 #endif // ADC_LL_H

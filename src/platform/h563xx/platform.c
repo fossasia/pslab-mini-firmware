@@ -124,8 +124,8 @@ static void system_clock_config(void)
         75, // N multiplier: 2 MHz * 75 = 150 MHz VCO
         2, // P divider: 150 MHz / 2 = 75 MHz
         2, // Q divider: 150 MHz / 2 = 75 MHz
-        2
-    ); // R divider: 150 MHz / 2 = 75 MHz (for ADC)
+        2 // R divider: 150 MHz / 2 = 75 MHz (for ADC)
+    );
 
     // Set PLL2 VCI range for 2 MHz input (1-2 MHz range)
     MODIFY_REG(RCC->PLL2CFGR, RCC_PLL2CFGR_PLL2RGE, RCC_PLL2_VCIRANGE_0);
@@ -277,19 +277,19 @@ uint32_t PLATFORM_get_peripheral_clock_speed(PLATFORM_PeripheralClock clock)
         return 0;
     }
     if (clock == PLATFORM_CLOCK_ADC1 || clock == PLATFORM_CLOCK_ADC2) {
-        return 75000000U; // ADCs use PLL2R clock at 75 MHz
+        return HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_ADC);
     }
     if (clock == PLATFORM_CLOCK_TIMER2 || clock == PLATFORM_CLOCK_TIMER3 ||
         clock == PLATFORM_CLOCK_TIMER4 || clock == PLATFORM_CLOCK_TIMER5 ||
         clock == PLATFORM_CLOCK_TIMER6 || clock == PLATFORM_CLOCK_TIMER7) {
-        return get_clock_speed(APB1_CLK); // These timers use APB1 frequency
+        return get_clock_speed(APB1_CLK);
     }
     if (clock == PLATFORM_CLOCK_TIMER1 || clock == PLATFORM_CLOCK_TIMER8 ||
         clock == PLATFORM_CLOCK_TIMER16 || clock == PLATFORM_CLOCK_TIMER17) {
-        return get_clock_speed(APB2_CLK); // These timers use APB2 frequency
+        return get_clock_speed(APB2_CLK);
     }
 
-    return 0; // Invalid timer clock
+    return 0; // Unknown clock
 }
 
 /**

@@ -15,6 +15,7 @@
 #include "error.h"
 #include "fixed_point.h"
 #include "logging.h"
+#include "si_prefix.h"
 #include "tim_ll.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -83,13 +84,134 @@ static ADC_LL_Channel dmm_channel_to_adc_ll(DMM_Channel channel)
  *
  * Called when an ADC conversion is complete.
  */
+// NOLINTNEXTLINE(readability-non-const-parameter)
 void dmm_adc_complete_callback(uint16_t *buffer, uint32_t total_samples)
 {
+    (void)buffer;
+    (void)total_samples;
+
     if (g_dmm_handle != NULL) {
         g_dmm_handle->conversion_complete = true;
         LOG_DEBUG(
             "DMM: ADC conversion complete, value = %u", g_dmm_handle->adc_value
         );
+    }
+}
+
+/**
+ * @brief Allocate and initialize DMM handle
+ */
+static DMM_Handle *dmm_create_handle(DMM_Config const *config)
+{
+    // Check if already initialized
+    if (g_dmm_handle != NULL) {
+        LOG_ERROR("DMM: Already initialized");
+        THROW(ERROR_RESOURCE_BUSY);
+    }
+
+    // Allocate handle
+    DMM_Handle *handle = (DMM_Handle *)malloc(sizeof(DMM_Handle));
+    if (handle == NULL) {
+        LOG_ERROR("DMM: Failed to allocate memory for handle");
+        THROW(ERROR_OUT_OF_MEMORY);
+    }
+
+    // Initialize handle
+    handle->config = *config;
+    handle->adc_value = 0;
+    handle->conversion_complete = false;
+    handle->initialized = true;
+    g_dmm_handle = handle;
+
+    LOG_INFO(
+        "DMM: Initializing with channel %d, oversampling ratio %u",
+        config->channel,
+        config->oversampling_ratio
+    );
+
+    return handle;
+}
+
+/**
+ * @brief Create ADC configuration for DMM
+ */
+static ADC_LL_Config dmm_create_adc_config(DMM_Handle *handle)
+{
+    ADC_LL_Config adc_config = {
+        .channels = { dmm_channel_to_adc_ll(handle->config.channel) },
+        .channel_count = 1,
+        .mode = ADC_LL_MODE_SINGLE,
+        .trigger_source = ADC_TRIGGER_TIMER6,
+        .output_buffer = &handle->adc_value,
+        .buffer_size = 1, // Single sample
+        .oversampling_ratio = handle->config.oversampling_ratio
+    };
+    return adc_config;
+}
+
+/**
+ * @brief Initialize ADC for DMM operation
+ */
+static void dmm_init_adc(DMM_Handle *handle)
+{
+    // Set up ADC callback
+    ADC_LL_set_complete_callback(dmm_adc_complete_callback);
+
+    // Initialize ADC with the configured channel
+    ADC_LL_Config adc_config = dmm_create_adc_config(handle);
+
+    Error error = ERROR_NONE;
+    TRY { ADC_LL_init(&adc_config); }
+    CATCH(error)
+    {
+        LOG_ERROR("DMM: ADC initialization failed with error %d", error);
+        g_dmm_handle = NULL;
+        free(handle);
+        THROW(error);
+    }
+}
+
+/**
+ * @brief Initialize timer for ADC triggering
+ */
+static void dmm_init_timer(DMM_Handle *handle)
+{
+    Error error = ERROR_NONE;
+    TRY { TIM_LL_init(TIM_NUM_0, ADC_LL_get_sample_rate()); }
+    CATCH(error)
+    {
+        LOG_ERROR("DMM: Timer initialization failed with error %d", error);
+        ADC_LL_deinit();
+        g_dmm_handle = NULL;
+        free(handle);
+        THROW(error);
+    }
+    LOG_DEBUG(
+        "DMM: Timer initialized with frequency %u Hz", ADC_LL_get_sample_rate()
+    );
+}
+
+/**
+ * @brief Start ADC and timer for continuous operation
+ */
+static void dmm_start_conversion(DMM_Handle *handle)
+{
+    Error error = ERROR_NONE;
+    TRY
+    {
+        TIM_LL_start(TIM_NUM_0); // Start timer for ADC triggering
+        ADC_LL_start();
+    }
+    CATCH(error)
+    {
+        LOG_ERROR(
+            "DMM: Failed to start initial conversion with error %d", error
+        );
+        TIM_LL_stop(TIM_NUM_0);
+        ADC_LL_deinit();
+        g_dmm_handle = NULL;
+        free(handle);
+        THROW(error);
     }
 }
 
@@ -116,17 +238,6 @@ static bool dmm_validate_config(DMM_Config const *config)
         return false;
     }
 
-    // Validate reference voltage
-    if (config->reference_voltage <= FIXED_ZERO ||
-        config->reference_voltage > FIXED_FROM_FLOAT(5.0f)) {
-        LOG_ERROR(
-            "DMM: Invalid reference voltage: %d.%04d V",
-            fixed_get_integer_part(config->reference_voltage),
-            (fixed_get_fractional_part(config->reference_voltage) * 10000) >> 16
-        );
-        return false;
-    }
-
     return true;
 }
 
@@ -139,90 +250,10 @@ DMM_Handle *DMM_init(DMM_Config const *config)
         THROW(ERROR_INVALID_ARGUMENT);
     }
 
-    // Check if already initialized
-    if (g_dmm_handle != NULL) {
-        LOG_ERROR("DMM: Already initialized");
-        THROW(ERROR_RESOURCE_BUSY);
-    }
-
-    // Allocate handle
-    DMM_Handle *handle = (DMM_Handle *)malloc(sizeof(DMM_Handle));
-    if (handle == NULL) {
-        LOG_ERROR("DMM: Failed to allocate memory for handle");
-        THROW(ERROR_OUT_OF_MEMORY);
-    }
-
-    // Initialize handle
-    handle->config = *config;
-    handle->adc_value = 0;
-    handle->conversion_complete = false;
-    handle->initialized = true;
-    g_dmm_handle = handle;
-
-    LOG_INFO(
-        "DMM: Initializing with channel %d, oversampling ratio %u, "
-        "reference %d.%04d V",
-        config->channel,
-        config->oversampling_ratio,
-        fixed_get_integer_part(config->reference_voltage),
-        (fixed_get_fractional_part(config->reference_voltage) * 10000) >> 16
-    );
-
-    // Set up ADC callback
-    ADC_LL_set_complete_callback(dmm_adc_complete_callback);
-
-    // Initialize ADC with the configured channel
-    ADC_LL_Config adc_config = {
-        .channels = { dmm_channel_to_adc_ll(config->channel) },
-        .channel_count = 1,
-        .mode = ADC_LL_MODE_SINGLE,
-        .trigger_source = ADC_TRIGGER_TIMER6,
-        .output_buffer = &handle->adc_value,
-        .buffer_size = 1, // Single sample
-        .oversampling_ratio = handle->config.oversampling_ratio
-    };
-
-    Error error = ERROR_NONE;
-    TRY { ADC_LL_init(&adc_config); }
-    CATCH(error)
-    {
-        LOG_ERROR("DMM: ADC initialization failed with error %d", error);
-        g_dmm_handle = NULL;
-        free(handle);
-        THROW(error);
-    }
-
-    // Initialize timer for ADC triggering
-    TRY { TIM_LL_init(TIM_NUM_0, ADC_LL_get_sample_rate()); }
-    CATCH(error)
-    {
-        LOG_ERROR("DMM: Timer initialization failed with error %d", error);
-        ADC_LL_deinit();
-        g_dmm_handle = NULL;
-        free(handle);
-        THROW(error);
-    }
-    LOG_DEBUG(
-        "DMM: Timer initialized with frequency %u Hz", ADC_LL_get_sample_rate()
-    );
-
-    // Start the first conversion for continuous operation
-    TRY
-    {
-        TIM_LL_start(TIM_NUM_0); // Start timer for ADC triggering
-        ADC_LL_start();
-    }
-    CATCH(error)
-    {
-        LOG_ERROR(
-            "DMM: Failed to start initial conversion with error %d", error
-        );
-        TIM_LL_stop(TIM_NUM_0);
-        ADC_LL_deinit();
-        g_dmm_handle = NULL;
-        free(handle);
-        THROW(error);
-    }
+    DMM_Handle *handle = dmm_create_handle(config);
+    dmm_init_adc(handle);
+    dmm_init_timer(handle);
+    dmm_start_conversion(handle);
 
     LOG_INFO("DMM: Initialized successfully and first conversion started");
     LOG_FUNCTION_EXIT();
@@ -285,6 +316,10 @@ bool DMM_read_voltage(DMM_Handle *handle, Fixed *voltage_out)
     bool conversion_ready = handle->conversion_complete;
 
     if (conversion_ready) {
+        // Get reference voltage from ADC driver
+        uint32_t ref_voltage_mv = ADC_LL_get_reference_voltage();
+        Fixed reference_voltage = FIXED_FROM_INT(ref_voltage_mv) / SI_MILLI_DIV;
+
         // Convert raw ADC value to voltage using fixed-point arithmetic
         // ADC is 12-bit with oversampling, so max value depends on oversampling
         // ratio
@@ -293,8 +328,7 @@ bool DMM_read_voltage(DMM_Handle *handle, Fixed *voltage_out)
         // voltage = (raw_value * reference_voltage) / max_value
         // Use 64-bit intermediate to avoid overflow
         int64_t temp =
-            ((int64_t)handle->adc_value *
-             (int64_t)handle->config.reference_voltage);
+            ((int64_t)handle->adc_value * (int64_t)reference_voltage);
         *voltage_out = (Fixed)(temp / (int64_t)max_value);
 
         LOG_DEBUG(
