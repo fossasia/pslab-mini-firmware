@@ -63,7 +63,7 @@ typedef int32_t Fixed;
 /**
  * @brief Convert float to fixed-point (for constants and initialization)
  *
- * Note: This uses floating-point arithmetic and should only be used
+ * @note This uses floating-point arithmetic and should only be used
  * for compile-time constants or initialization where FPU is available.
  */
 #define FIXED_FROM_FLOAT(f) ((Fixed)((f) * FIXED_SCALE))
@@ -71,20 +71,7 @@ typedef int32_t Fixed;
 /**
  * @brief Convert fixed-point to float (for debugging/output)
  */
-static inline float FIXED_TO_FLOAT(Fixed x)
-{
-    return (float)x / (float)FIXED_SCALE;
-}
-
-/**
- * @brief Fixed-point addition
- */
-static inline Fixed fixed_add(Fixed a, Fixed b) { return a + b; }
-
-/**
- * @brief Fixed-point subtraction
- */
-static inline Fixed fixed_sub(Fixed a, Fixed b) { return a - b; }
+#define FIXED_TO_FLOAT(x) ((float)(x) / (float)FIXED_SCALE)
 
 /**
  * @brief Fixed-point multiplication
@@ -94,7 +81,18 @@ static inline Fixed fixed_sub(Fixed a, Fixed b) { return a - b; }
 static inline Fixed fixed_mul(Fixed a, Fixed b)
 {
     int64_t temp = (int64_t)a * (int64_t)b;
-    return (Fixed)(temp >> FIXED_FRAC_BITS);
+    temp >>= FIXED_FRAC_BITS;
+
+    // Saturate if result is out of 32-bit range
+    if (temp > INT32_MAX) {
+        return INT32_MAX;
+    }
+
+    if (temp < INT32_MIN) {
+        return INT32_MIN;
+    }
+
+    return (Fixed)temp;
 }
 
 /**
@@ -105,27 +103,20 @@ static inline Fixed fixed_mul(Fixed a, Fixed b)
 static inline Fixed fixed_div(Fixed a, Fixed b)
 {
     if (b == 0) {
-        return (a >= 0) ? INT32_MAX
-                        : INT32_MIN; // Return max/min on divide by zero
-    }
-    int64_t temp = ((int64_t)a << FIXED_FRAC_BITS) / (int64_t)b;
-    return (Fixed)temp;
-}
-
-/**
- * @brief Fixed-point multiplication by integer
- */
-static inline Fixed fixed_mul_int(Fixed a, int32_t b) { return a * b; }
-
-/**
- * @brief Fixed-point division by integer
- */
-static inline Fixed fixed_div_int(Fixed a, int32_t b)
-{
-    if (b == 0) {
         return (a >= 0) ? INT32_MAX : INT32_MIN;
     }
-    return a / b;
+    int64_t temp = ((int64_t)a << FIXED_FRAC_BITS) / (int64_t)b;
+
+    // Saturate if result is out of 32-bit range
+    if (temp > INT32_MAX) {
+        return INT32_MAX;
+    }
+
+    if (temp < INT32_MIN) {
+        return INT32_MIN;
+    }
+
+    return (Fixed)temp;
 }
 
 /**
@@ -140,24 +131,6 @@ static inline Fixed fixed_from_fraction(int32_t numerator, int32_t denominator)
         return (numerator >= 0) ? INT32_MAX : INT32_MIN;
     }
     return fixed_div(FIXED_FROM_INT(numerator), FIXED_FROM_INT(denominator));
-}
-
-/**
- * @brief Convert millivolts (integer) to fixed-point volts
- */
-static inline Fixed fixed_from_millivolts(uint32_t millivolts)
-{
-    return fixed_from_fraction((int32_t)millivolts, 1000);
-}
-
-/**
- * @brief Convert fixed-point volts to millivolts (integer)
- */
-static inline uint32_t fixed_to_millivolts(Fixed volts)
-{
-    Fixed mv = fixed_mul_int(volts, 1000);
-    int32_t result = FIXED_TO_INT(mv);
-    return (result >= 0) ? (uint32_t)result : 0;
 }
 
 /**

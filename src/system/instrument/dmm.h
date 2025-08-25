@@ -13,9 +13,10 @@
 #ifndef PSLAB_DMM_H
 #define PSLAB_DMM_H
 
+#include <stdint.h>
+
 #include "error.h"
 #include "fixed_point.h"
-#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,7 +59,6 @@ typedef struct {
     DMM_Channel channel; // ADC channel to use for measurements
     uint32_t oversampling_ratio; // Oversampling ratio (1, 2, 4, 8, 16, 32, 64,
                                  // 128, 256)
-    Fixed reference_voltage; // ADC reference voltage in volts (fixed-point)
 } DMM_Config;
 
 /**
@@ -66,8 +66,7 @@ typedef struct {
  */
 #define DMM_CONFIG_DEFAULT                                                     \
     {                                                                          \
-        .channel = DMM_CHANNEL_0, .oversampling_ratio = 16,                    \
-        .reference_voltage = FIXED_FROM_FLOAT(3.3f)                            \
+        .channel = DMM_CHANNEL_0, .oversampling_ratio = 16                     \
     }
 
 /**

@@ -20,6 +20,7 @@
 #include "error.h"
 #include "logging.h"
 #include "platform.h"
+#include "si_prefix.h"
 
 enum { ADC_IRQ_PRIORITY = 1 }; // ADC interrupt priority
 
@@ -41,10 +42,11 @@ typedef struct {
     uint8_t channel_count; // Number of channels being used
     ADC_LL_Mode mode; // Current ADC mode
     uint32_t oversampling_ratio; // Oversampling ratio
+    uint32_t vref_mv; // Reference voltage in millivolts
     bool initialized; // Flag to indicate if the ADC is initialized
 } ADCInstance;
 
-static ADC_HandleTypeDef g_hadc = { nullptr };
+static ADC_HandleTypeDef g_hadc1 = { nullptr };
 
 static ADC_HandleTypeDef g_hadc2 = { nullptr };
 
@@ -62,12 +64,13 @@ typedef struct {
 } ADC_LL_PinConfig;
 
 static ADCInstance g_adc_instance = {
-    .adc_handles = { &g_hadc, &g_hadc2 },
+    .adc_handles = { &g_hadc1, &g_hadc2 },
     .dma_handle = &g_hdma_adc,
     .channels = { ADC_LL_CHANNEL_0, ADC_LL_CHANNEL_1 },
     .channel_count = 1,
     .mode = ADC_LL_MODE_SINGLE,
     .oversampling_ratio = 1,
+    .vref_mv = 0,
     .initialized = false,
 };
 
@@ -412,7 +415,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
             configure_dual_mode_dma(
                 &g_hdma_adc1_dual, GPDMA1_Channel7, GPDMA1_REQUEST_ADC1
             );
-            __HAL_LINKDMA(&g_hadc, DMA_Handle, g_hdma_adc1_dual);
+            __HAL_LINKDMA(&g_hadc1, DMA_Handle, g_hdma_adc1_dual);
         }
 
         // Enable interrupts for dual mode
@@ -426,7 +429,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
         configure_single_mode_dma(
             &g_hdma_adc, GPDMA1_Channel6, GPDMA1_REQUEST_ADC1
         );
-        __HAL_LINKDMA(&g_hadc, DMA_Handle, g_hdma_adc);
+        __HAL_LINKDMA(&g_hadc1, DMA_Handle, g_hdma_adc);
 
         // Enable interrupts for single mode
         enable_single_mode_interrupts();
@@ -434,22 +437,33 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
 }
 
 /**
- * @brief Validates ADC configuration parameters.
+ * @brief Validates basic ADC configuration structure.
  *
  * @param config ADC configuration to validate.
  */
-static void validate_adc_config(ADC_LL_Config const *config)
+static void validate_adc_config_structure(ADC_LL_Config const *config)
 {
     if (config == nullptr || config->buffer_size == 0) {
         THROW(ERROR_INVALID_ARGUMENT);
     }
 
-    // Validate channel count and mode consistency
+    if (config->output_buffer == nullptr) {
+        THROW(ERROR_INVALID_ARGUMENT);
+    }
+
     if (config->channel_count == 0 ||
         config->channel_count > MAX_SIMULTANEOUS_CHANNELS) {
         THROW(ERROR_INVALID_ARGUMENT);
     }
+}
 
+/**
+ * @brief Validates ADC mode and channel count consistency.
+ *
+ * @param config ADC configuration to validate.
+ */
+static void validate_adc_mode_consistency(ADC_LL_Config const *config)
+{
     // Validate single-channel input in single- and interleaved modes
     if ((config->mode == ADC_LL_MODE_SINGLE ||
          config->mode == ADC_LL_MODE_INTERLEAVED) &&
@@ -462,23 +476,34 @@ static void validate_adc_config(ADC_LL_Config const *config)
         config->channel_count != 2) {
         THROW(ERROR_INVALID_ARGUMENT);
     }
+}
 
-    // Validate buffers
-    if (config->output_buffer == nullptr) {
+/**
+ * @brief Validates oversampling ratio is a power of 2 between 1 and 256.
+ *
+ * @param ratio Oversampling ratio to validate.
+ */
+static void validate_oversampling_ratio(uint32_t ratio)
+{
+    // Check if ratio is a power of 2 and within valid range (1 to 256)
+    if (ratio == 0 || ratio > 256 || (ratio & (ratio - 1)) != 0) {
         THROW(ERROR_INVALID_ARGUMENT);
     }
+}
+
+/**
+ * @brief Validates ADC configuration parameters.
+ *
+ * @param config ADC configuration to validate.
+ */
+static void validate_adc_config(ADC_LL_Config const *config)
+{
+    validate_adc_config_structure(config);
+    validate_adc_mode_consistency(config);
+    validate_oversampling_ratio(config->oversampling_ratio);
 
     if (g_adc_instance.initialized) {
         THROW(ERROR_RESOURCE_BUSY);
-    }
-
-    // Validate oversampling ratio
-    if (config->oversampling_ratio != 1 && config->oversampling_ratio != 2 &&
-        config->oversampling_ratio != 4 && config->oversampling_ratio != 8 &&
-        config->oversampling_ratio != 16 && config->oversampling_ratio != 32 &&
-        config->oversampling_ratio != 64 && config->oversampling_ratio != 128 &&
-        config->oversampling_ratio != 256) {
-        THROW(ERROR_INVALID_ARGUMENT);
     }
 }
 
@@ -614,7 +639,7 @@ static void configure_adc_channel(
     *channel_config = (ADC_ChannelConfTypeDef){ 0 };
     channel_config->Channel = get_hal_adc_channel(channel);
     channel_config->Rank = ADC_REGULAR_RANK_1;
-    channel_config->SamplingTime = ADC_SAMPLETIME_12CYCLES_5;
+    channel_config->SamplingTime = ADC_SAMPLETIME_92CYCLES_5;
     channel_config->SingleDiff = ADC_SINGLE_ENDED;
     channel_config->OffsetNumber = ADC_OFFSET_NONE;
     channel_config->Offset = 0;
@@ -641,9 +666,59 @@ static void configure_dual_mode(ADC_LL_Config const *config)
     multimode.DMAAccessMode = ADC_DMAACCESSMODE_12_10_BITS;
     multimode.TwoSamplingDelay = ADC_TWOSAMPLINGDELAY_1CYCLE;
 
-    if (HAL_ADCEx_MultiModeConfigChannel(&g_hadc, &multimode) != HAL_OK) {
+    if (HAL_ADCEx_MultiModeConfigChannel(&g_hadc1, &multimode) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     }
+}
+
+/**
+ * @brief Reads the reference voltage using the internal VREFINT channel.
+ *
+ * This function temporarily configures ADC1 to read the internal VREFINT
+ * channel and calculates the actual reference voltage using the factory
+ * calibration value.
+ *
+ * @param instance Pointer to ADC instance structure.
+ */
+static void read_vref_voltage(ADCInstance *instance)
+{
+    ADC_ChannelConfTypeDef vref_config = { 0 };
+    uint32_t vref_adc_value = 0;
+
+    // Configure VREFINT channel
+    vref_config.Channel = ADC_CHANNEL_VREFINT;
+    vref_config.Rank = ADC_REGULAR_RANK_1;
+    // Longer sampling for internal channels
+    vref_config.SamplingTime = ADC_SAMPLETIME_247CYCLES_5;
+    vref_config.SingleDiff = ADC_SINGLE_ENDED;
+    vref_config.OffsetNumber = ADC_OFFSET_NONE;
+    vref_config.Offset = 0;
+
+    if (HAL_ADC_ConfigChannel(&g_hadc1, &vref_config)) {
+        THROW(ERROR_HARDWARE_FAULT);
+    }
+
+    // Start ADC conversion
+    if (HAL_ADC_Start(&g_hadc1)) {
+        THROW(ERROR_HARDWARE_FAULT);
+    }
+
+    // Wait for conversion completion
+    uint32_t const sample_rate_khz = ADC_LL_get_sample_rate() / SI_KILO_INT;
+    if (!sample_rate_khz) {
+        THROW(ERROR_HARDWARE_FAULT);
+    }
+    uint32_t timeout_ms = 2 * sample_rate_khz; // 2 samples timeout
+    timeout_ms = timeout_ms ? 1 : timeout_ms; // Ensure at least 1 ms timeout
+    if (HAL_ADC_PollForConversion(&g_hadc1, timeout_ms)) {
+        HAL_ADC_Stop(&g_hadc1);
+        THROW(ERROR_HARDWARE_FAULT);
+    }
+
+    vref_adc_value = HAL_ADC_GetValue(&g_hadc1);
+    HAL_ADC_Stop(&g_hadc1);
+    instance->vref_mv =
+        __HAL_ADC_CALC_VREFANALOG_VOLTAGE(vref_adc_value, ADC_RESOLUTION_12B);
 }
 
 /**
@@ -653,7 +728,7 @@ static void configure_dual_mode(ADC_LL_Config const *config)
  */
 static void calibrate_adc(ADC_LL_Config const *config)
 {
-    if (HAL_ADCEx_Calibration_Start(&g_hadc, ADC_SINGLE_ENDED) != HAL_OK) {
+    if (HAL_ADCEx_Calibration_Start(&g_hadc1, ADC_SINGLE_ENDED) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     }
 
@@ -680,9 +755,13 @@ void ADC_LL_init(ADC_LL_Config const *config)
 
     ADCInstance *instance = &g_adc_instance;
 
+    // Calibrate ADC and read VREF
+    calibrate_adc(config);
+    read_vref_voltage(instance);
+
     // Initialize and configure ADC1
     configure_adc1_init(config);
-    if (HAL_ADC_Init(&g_hadc) != HAL_OK) {
+    if (HAL_ADC_Init(&g_hadc1) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     }
     configure_adc_channel(
@@ -701,15 +780,13 @@ void ADC_LL_init(ADC_LL_Config const *config)
         );
         configure_dual_mode(config);
     }
-
-    calibrate_adc(config);
 }
 
 /**
  * @brief Deinitializes the ADC peripheral(s).
  *
  */
-void ADC_LL_deinit(ADC_Num adc_num)
+void ADC_LL_deinit(void)
 {
     if (!g_adc_instance.initialized) {
         THROW(ERROR_RESOURCE_UNAVAILABLE);
@@ -721,10 +798,10 @@ void ADC_LL_deinit(ADC_Num adc_num)
     if (instance->mode == ADC_LL_MODE_SIMULTANEOUS ||
         instance->mode == ADC_LL_MODE_INTERLEAVED) {
         // Stop multimode DMA transfer
-        HAL_ADCEx_MultiModeStop_DMA(&g_hadc);
+        HAL_ADCEx_MultiModeStop_DMA(&g_hadc1);
     } else {
         // Single mode
-        HAL_ADC_Stop_DMA(&g_hadc);
+        HAL_ADC_Stop_DMA(&g_hadc1);
     }
 
     // Disable interrupts
@@ -756,6 +833,7 @@ void ADC_LL_deinit(ADC_Num adc_num)
     instance->channel_count = 1;
     instance->mode = ADC_LL_MODE_SINGLE;
     instance->oversampling_ratio = 1;
+    instance->vref_mv = 0;
     instance->initialized = false;
 }
 
@@ -765,13 +843,13 @@ void ADC_LL_deinit(ADC_Num adc_num)
  * Starts timer-triggered conversions with DMA.
  *
  */
-void ADC_LL_start(ADC_Num adc_num)
+void ADC_LL_start(void)
 {
     if (!g_adc_instance.initialized) {
         THROW(ERROR_RESOURCE_UNAVAILABLE);
     }
 
-    __HAL_ADC_CLEAR_FLAG(&g_hadc, ADC_FLAG_EOC | ADC_FLAG_EOS | ADC_FLAG_OVR);
+    __HAL_ADC_CLEAR_FLAG(&g_hadc1, ADC_FLAG_EOC | ADC_FLAG_EOS | ADC_FLAG_OVR);
     if (g_adc_instance.channel_count > 1) {
         __HAL_ADC_CLEAR_FLAG(
             &g_hadc2, ADC_FLAG_EOC | ADC_FLAG_EOS | ADC_FLAG_OVR
@@ -789,7 +867,7 @@ void ADC_LL_start(ADC_Num adc_num)
         }
 
         if (HAL_ADCEx_MultiModeStart_DMA(
-                &g_hadc,
+                &g_hadc1,
                 (uint32_t *)g_adc_instance
                     .buffer_data, // Cast to uint32_t for multimode
                 dma_buffer_size /
@@ -800,7 +878,7 @@ void ADC_LL_start(ADC_Num adc_num)
     } else {
         // Single mode DMA conversion
         if (HAL_ADC_Start_DMA(
-                &g_hadc,
+                &g_hadc1,
                 (uint32_t *)g_adc_instance.buffer_data,
                 g_adc_instance.buffer_size
             ) != HAL_OK) {
@@ -815,7 +893,7 @@ void ADC_LL_start(ADC_Num adc_num)
  * This function stops the ongoing ADC conversion process. It can be called
  * to halt conversions before deinitializing the ADC or when no longer needed.
  */
-void ADC_LL_stop(ADC_Num adc_num)
+void ADC_LL_stop(void)
 {
     if (!g_adc_instance.initialized) {
         return;
@@ -824,10 +902,10 @@ void ADC_LL_stop(ADC_Num adc_num)
     if (g_adc_instance.mode == ADC_LL_MODE_SIMULTANEOUS ||
         g_adc_instance.mode == ADC_LL_MODE_INTERLEAVED) {
         // Stop multimode DMA conversion
-        HAL_ADCEx_MultiModeStop_DMA(&g_hadc);
+        HAL_ADCEx_MultiModeStop_DMA(&g_hadc1);
     } else {
         // Single mode
-        HAL_ADC_Stop_DMA(&g_hadc);
+        HAL_ADC_Stop_DMA(&g_hadc1);
     }
 }
 
@@ -839,10 +917,7 @@ void ADC_LL_stop(ADC_Num adc_num)
  *
  * @param callback Pointer to the callback function to be set.
  */
-void ADC_LL_set_complete_callback(
-    ADC_Num adc_num,
-    ADC_LL_CompleteCallback callback
-)
+void ADC_LL_set_complete_callback(ADC_LL_CompleteCallback callback)
 {
     g_adc_instance.complete_callback = callback;
 }
@@ -861,43 +936,45 @@ ADC_LL_Mode ADC_LL_get_mode(void)
 }
 
 /**
- * @brief Gets the maximum ADC sample rate.
- *
- * This function calculates and returns the maximum ADC sample rate based on:
- * - Sample time
- * - Conversion time
- * - ADC clock frequency
- * - Clock prescale
- *
- * @return The maximum sample rate in Hz, or 0 if ADC is not initialized or
- * error occurs.
+ * @brief Lookup table entry structure for ADC timing parameters.
  */
-uint32_t ADC_LL_get_sample_rate(void)
+typedef struct {
+    uint32_t key;
+    uint32_t value;
+} Lookup;
+
+/**
+ * @brief Gets conversion time cycles for ADC resolution.
+ *
+ * @param resolution ADC resolution setting.
+ * @return Conversion time in cycles * 2, or 0 if unsupported.
+ */
+static uint32_t get_conversion_time_cycles_2x(uint32_t resolution)
 {
-    // Check if ADC is initialized
-    if (!g_adc_instance.initialized) {
-        return 0;
-    }
-
-    // Get ADC clock frequency
-    uint32_t adc_clock_hz =
-        PLATFORM_get_peripheral_clock_speed(PLATFORM_CLOCK_ADC1);
-    if (adc_clock_hz == 0) {
-        return 0;
-    }
-
-    // Lookup tables for conversion time, sample time, and prescaler
-    typedef struct {
-        uint32_t key;
-        uint32_t value;
-    } Lookup;
-
     static Lookup const conv_time_table[] = {
         { ADC_RESOLUTION_12B, 25 }, // 12.5 cycles * 2
         { ADC_RESOLUTION_10B, 21 }, // 10.5 cycles * 2
         { ADC_RESOLUTION_8B, 17 }, // 8.5 cycles * 2
         { ADC_RESOLUTION_6B, 13 }, // 6.5 cycles * 2
     };
+
+    for (size_t i = 0; i < sizeof(conv_time_table) / sizeof(conv_time_table[0]);
+         ++i) {
+        if (resolution == conv_time_table[i].key) {
+            return conv_time_table[i].value;
+        }
+    }
+    return 0;
+}
+
+/**
+ * @brief Gets sample time cycles for ADC sampling time setting.
+ *
+ * @param sample_time ADC sampling time setting.
+ * @return Sample time in cycles * 2, or 0 if unsupported.
+ */
+static uint32_t get_sample_time_cycles_2x(uint32_t sample_time)
+{
     static Lookup const sample_time_table[] = {
         { ADC_SAMPLETIME_2CYCLES_5, 5 }, // 2.5 cycles * 2
         { ADC_SAMPLETIME_6CYCLES_5, 13 }, // 6.5 cycles * 2
@@ -908,6 +985,25 @@ uint32_t ADC_LL_get_sample_rate(void)
         { ADC_SAMPLETIME_247CYCLES_5, 495 }, // 247.5 cycles * 2
         { ADC_SAMPLETIME_640CYCLES_5, 1281 }, // 640.5 cycles * 2
     };
+
+    for (size_t i = 0;
+         i < sizeof(sample_time_table) / sizeof(sample_time_table[0]);
+         ++i) {
+        if (sample_time == sample_time_table[i].key) {
+            return sample_time_table[i].value;
+        }
+    }
+    return 0;
+}
+
+/**
+ * @brief Gets prescaler value for ADC clock prescaler setting.
+ *
+ * @param clock_prescaler ADC clock prescaler setting.
+ * @return Prescaler value, or 0 if unsupported.
+ */
+static uint32_t get_clock_prescaler_value(uint32_t clock_prescaler)
+{
     static Lookup const prescaler_table[] = {
         { ADC_CLOCK_SYNC_PCLK_DIV1, 1 }, { ADC_CLOCK_SYNC_PCLK_DIV2, 2 },
         { ADC_CLOCK_SYNC_PCLK_DIV4, 4 }, { ADC_CLOCK_ASYNC_DIV1, 1 },
@@ -917,62 +1013,69 @@ uint32_t ADC_LL_get_sample_rate(void)
         { ADC_CLOCK_ASYNC_DIV128, 128 }, { ADC_CLOCK_ASYNC_DIV256, 256 },
     };
 
-    uint32_t conv_time_cycles_2x = 0;
-    uint32_t sample_time_cycles_2x = 0;
-    uint32_t prescaler = 0;
-    size_t i;
-
-    // Lookup conversion time
-    for (i = 0; i < sizeof(conv_time_table) / sizeof(conv_time_table[0]); ++i) {
-        if (g_adc_instance.adc_handles[0]->Init.Resolution ==
-            conv_time_table[i].key) {
-            conv_time_cycles_2x = conv_time_table[i].value;
-            break;
+    for (size_t i = 0; i < sizeof(prescaler_table) / sizeof(prescaler_table[0]);
+         ++i) {
+        if (clock_prescaler == prescaler_table[i].key) {
+            return prescaler_table[i].value;
         }
     }
+    return 0;
+}
+
+uint32_t ADC_LL_get_sample_rate(void)
+{
+    if (!g_adc_instance.initialized) {
+        return 0;
+    }
+
+    uint32_t adc_clock_hz =
+        PLATFORM_get_peripheral_clock_speed(PLATFORM_CLOCK_ADC1);
+    if (adc_clock_hz == 0) {
+        return 0;
+    }
+
+    uint32_t conv_time_cycles_2x = get_conversion_time_cycles_2x(
+        g_adc_instance.adc_handles[0]->Init.Resolution
+    );
     if (conv_time_cycles_2x == 0) {
         LOG_ERROR("ADC_LL_get_sample_rate: Unsupported ADC resolution");
         return 0;
     }
 
-    // Lookup sample time
-    for (i = 0; i < sizeof(sample_time_table) / sizeof(sample_time_table[0]);
-         ++i) {
-        if (g_adc_instance.adc_configs[0].SamplingTime ==
-            sample_time_table[i].key) {
-            sample_time_cycles_2x = sample_time_table[i].value;
-            break;
-        }
-    }
+    uint32_t sample_time_cycles_2x =
+        get_sample_time_cycles_2x(g_adc_instance.adc_configs[0].SamplingTime);
     if (sample_time_cycles_2x == 0) {
         LOG_ERROR("ADC_LL_get_sample_rate: Unsupported ADC sample time");
         return 0;
     }
 
-    // Lookup prescaler
-    for (i = 0; i < sizeof(prescaler_table) / sizeof(prescaler_table[0]); ++i) {
-        if (g_adc_instance.adc_handles[0]->Init.ClockPrescaler ==
-            prescaler_table[i].key) {
-            prescaler = prescaler_table[i].value;
-            break;
-        }
-    }
+    uint32_t prescaler = get_clock_prescaler_value(
+        g_adc_instance.adc_handles[0]->Init.ClockPrescaler
+    );
     if (prescaler == 0) {
         LOG_ERROR("ADC_LL_get_sample_rate: Unsupported ADC clock prescaler");
         return 0;
     }
 
     uint32_t total_cycles = (sample_time_cycles_2x + conv_time_cycles_2x) / 2;
-    uint32_t sample_rate_hz = adc_clock_hz / (total_cycles * prescaler);
+    return adc_clock_hz / (total_cycles * prescaler);
+}
 
-    return sample_rate_hz;
+uint32_t ADC_LL_get_reference_voltage(void)
+{
+    if (g_adc_instance.initialized) {
+        return g_adc_instance.vref_mv;
+    }
+    return 0;
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
+    (void)hadc;
+
     if (g_adc_instance.initialized &&
         g_adc_instance.complete_callback != nullptr) {
-        uint32_t total_samples;
+        uint32_t total_samples = 0;
 
         if (g_adc_instance.mode == ADC_LL_MODE_SIMULTANEOUS ||
             g_adc_instance.mode == ADC_LL_MODE_INTERLEAVED) {
@@ -991,8 +1094,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 }
 
 void ADC1_IRQHandler(void) { HAL_ADC_IRQHandler(&g_hadc1); }
-
-void ADC2_IRQHandler(void) { HAL_ADC_IRQHandler(&g_hadc2); }
 
 void ADC2_IRQHandler(void) { HAL_ADC_IRQHandler(&g_hadc2); }
 

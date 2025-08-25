@@ -85,7 +85,7 @@ int main(void) // NOLINT
         enum { PING_INTERVAL = 1000000 }; // Log every 1 million iterations
         if (log_counter++ % PING_INTERVAL == 0) {
             LOG_INFO("System running, USB active");
-            Fixed voltage;
+            Fixed voltage = FIXED_ZERO;
             DMM_read_voltage(dmmh, &voltage);
             LOG_INFO(
                 "DMM Channel 0 Voltage: %d.%04d V",

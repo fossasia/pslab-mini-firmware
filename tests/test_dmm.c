@@ -138,8 +138,7 @@ void test_DMM_init_success_custom_config(void)
     // Arrange
     DMM_Config config = {
         .channel = DMM_CHANNEL_5,
-        .oversampling_ratio = 64,
-        .reference_voltage = FIXED_FROM_FLOAT(5.0f)
+        .oversampling_ratio = 64
     };
 
     // Set expectations
@@ -206,25 +205,6 @@ void test_DMM_init_invalid_oversampling_ratio(void)
     TRY {
         g_test_handle = DMM_init(&config);
         TEST_FAIL_MESSAGE("Expected exception for invalid oversampling ratio");
-    }
-    CATCH(exception) {
-        TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
-        TEST_ASSERT_NULL(g_test_handle);
-    }
-}
-
-// Test: DMM initialization with invalid reference voltage
-void test_DMM_init_invalid_reference_voltage(void)
-{
-    // Arrange
-    DMM_Config config = DMM_CONFIG_DEFAULT;
-    config.reference_voltage = FIXED_ZERO; // Invalid reference voltage
-    CEXCEPTION_T exception = CEXCEPTION_NONE;
-
-    // Act & Assert
-    TRY {
-        g_test_handle = DMM_init(&config);
-        TEST_FAIL_MESSAGE("Expected exception for invalid reference voltage");
     }
     CATCH(exception) {
         TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
@@ -371,7 +351,8 @@ void test_DMM_read_voltage_success_conversion_ready(void)
     // Simulate a completed conversion by calling the callback directly
     dmm_adc_complete_callback(NULL, 0);
 
-    // Expect next conversion to be started (only ADC restart, timer keeps running)
+    // Expect reference voltage query and next conversion to be started
+    ADC_LL_get_reference_voltage_ExpectAndReturn(3300); // 3.3V in mV
     ADC_LL_start_Expect();
 
     // Act
@@ -480,8 +461,8 @@ void test_DMM_read_voltage_adc_start_failure(void)
     // Simulate a completed conversion
     dmm_adc_complete_callback(NULL, 0);
 
-    // Expect ADC restart to fail (but this doesn't throw in the current implementation)
-    // The current implementation logs the error but doesn't throw
+    // Expect reference voltage query and ADC restart to fail
+    ADC_LL_get_reference_voltage_ExpectAndReturn(3300); // 3.3V in mV
     ADC_LL_start_ExpectAndThrow(ERROR_HARDWARE_FAULT);
 
     // Act - this should still return the valid measurement despite restart failure
@@ -521,12 +502,11 @@ void test_DMM_read_voltage_timer_start_failure(void)
     }
 }
 
-// Test: Voltage calculation with different ADC values
-void test_DMM_voltage_calculation_values(void)
+// Test: Voltage calculation with zero ADC value
+void test_DMM_voltage_calculation_zero_adc(void)
 {
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
-    config.reference_voltage = FIXED_FROM_FLOAT(3.3f); // 3.3V reference
     config.oversampling_ratio = 1; // No oversampling for simpler calculation
     Fixed voltage_out;
     bool result;
@@ -543,23 +523,53 @@ void test_DMM_voltage_calculation_values(void)
     g_test_handle = DMM_init(&config);
     TEST_ASSERT_NOT_NULL(g_test_handle);
 
-    // Test Case 1: Zero ADC value should give zero voltage
+    // Zero ADC value should give zero voltage
     simulate_adc_conversion(0);
 
+    ADC_LL_get_reference_voltage_ExpectAndReturn(3300); // 3.3V in mV
     ADC_LL_start_Expect(); // Only expect ADC restart, timer keeps running
 
+    // Act
     result = DMM_read_voltage(g_test_handle, &voltage_out);
+
+    // Assert
     TEST_ASSERT_TRUE(result);
     TEST_ASSERT_EQUAL(FIXED_ZERO, voltage_out);
+}
 
-    // Test Case 2: Half-scale ADC value should give half reference voltage
+// Test: Voltage calculation with half-scale ADC value
+void test_DMM_voltage_calculation_half_scale_adc(void)
+{
+    // Arrange
+    DMM_Config config = DMM_CONFIG_DEFAULT;
+    config.oversampling_ratio = 1; // No oversampling for simpler calculation
+    Fixed voltage_out;
+    bool result;
+
+    // Initialize DMM
+    ADC_LL_set_complete_callback_Stub(capture_adc_callback_stub);
+    ADC_LL_init_Stub(adc_init_success_stub);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    TIM_LL_init_Expect(TIM_NUM_0, 1000);
+    TIM_LL_start_Expect(TIM_NUM_0);
+    ADC_LL_start_Expect();
+
+    g_test_handle = DMM_init(&config);
+    TEST_ASSERT_NOT_NULL(g_test_handle);
+
+    // Half-scale ADC value should give half reference voltage
     // ADC is 12-bit, so max value is 4095
     // Half-scale = 2047, should give ~1.65V with 3.3V reference
     simulate_adc_conversion(2047);
 
+    ADC_LL_get_reference_voltage_ExpectAndReturn(3300); // 3.3V in mV
     ADC_LL_start_Expect(); // Only expect ADC restart, timer keeps running
 
+    // Act
     result = DMM_read_voltage(g_test_handle, &voltage_out);
+
+    // Assert
     TEST_ASSERT_TRUE(result);
     // Expected: (2047 * 3.3V) / 4095 ≈ 1.648V
     Fixed expected_half = FIXED_FROM_FLOAT(1.648f);
@@ -567,29 +577,57 @@ void test_DMM_voltage_calculation_values(void)
     Fixed tolerance = FIXED_FROM_FLOAT(0.01f);
     TEST_ASSERT_TRUE((voltage_out >= (expected_half - tolerance)) &&
                      (voltage_out <= (expected_half + tolerance)));
+}
 
-    // Test Case 3: Full-scale ADC value should give full reference voltage
+// Test: Voltage calculation with full-scale ADC value
+void test_DMM_voltage_calculation_full_scale_adc(void)
+{
+    // Arrange
+    DMM_Config config = DMM_CONFIG_DEFAULT;
+    config.oversampling_ratio = 1; // No oversampling for simpler calculation
+    Fixed voltage_out;
+    bool result;
+
+    // Initialize DMM
+    ADC_LL_set_complete_callback_Stub(capture_adc_callback_stub);
+    ADC_LL_init_Stub(adc_init_success_stub);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    ADC_LL_get_sample_rate_ExpectAndReturn(1000);
+    TIM_LL_init_Expect(TIM_NUM_0, 1000);
+    TIM_LL_start_Expect(TIM_NUM_0);
+    ADC_LL_start_Expect();
+
+    g_test_handle = DMM_init(&config);
+    TEST_ASSERT_NOT_NULL(g_test_handle);
+
+    // Full-scale ADC value should give full reference voltage
     simulate_adc_conversion(4095);
 
+    ADC_LL_get_reference_voltage_ExpectAndReturn(3300); // 3.3V in mV
     ADC_LL_start_Expect(); // Only expect ADC restart, timer keeps running
 
+    // Act
     result = DMM_read_voltage(g_test_handle, &voltage_out);
+
+    // Assert
     TEST_ASSERT_TRUE(result);
     // Should be very close to 3.3V
     Fixed expected_full = FIXED_FROM_FLOAT(3.3f);
-    tolerance = FIXED_FROM_FLOAT(0.01f);
+    Fixed tolerance = FIXED_FROM_FLOAT(0.01f);
     TEST_ASSERT_TRUE((voltage_out >= (expected_full - tolerance)) &&
                      (voltage_out <= (expected_full + tolerance)));
+}
 
-    // Test Case 4: Test with oversampling
-    // Reinitialize with oversampling ratio of 16
-    ADC_LL_stop_Expect();
-    TIM_LL_stop_Expect(TIM_NUM_0);
-    ADC_LL_deinit_Expect();
-    DMM_deinit(g_test_handle);
-
+// Test: Voltage calculation with oversampling
+void test_DMM_voltage_calculation_with_oversampling(void)
+{
+    // Arrange
+    DMM_Config config = DMM_CONFIG_DEFAULT;
     config.oversampling_ratio = 16;
+    Fixed voltage_out;
+    bool result;
 
+    // Initialize DMM
     ADC_LL_set_complete_callback_Stub(capture_adc_callback_stub);
     ADC_LL_init_Stub(adc_init_success_stub);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
@@ -605,13 +643,17 @@ void test_DMM_voltage_calculation_values(void)
     // Half-scale would be 32760, should still give ~1.65V
     simulate_adc_conversion(32760);
 
+    ADC_LL_get_reference_voltage_ExpectAndReturn(3300); // 3.3V in mV
     ADC_LL_start_Expect(); // Only expect ADC restart, timer keeps running
 
+    // Act
     result = DMM_read_voltage(g_test_handle, &voltage_out);
+
+    // Assert
     TEST_ASSERT_TRUE(result);
     // Expected: (32760 * 3.3V) / 65520 ≈ 1.65V
-    expected_half = FIXED_FROM_FLOAT(1.65f);
-    tolerance = FIXED_FROM_FLOAT(0.01f);
+    Fixed expected_half = FIXED_FROM_FLOAT(1.65f);
+    Fixed tolerance = FIXED_FROM_FLOAT(0.01f);
     TEST_ASSERT_TRUE((voltage_out >= (expected_half - tolerance)) &&
                      (voltage_out <= (expected_half + tolerance)));
 }
@@ -652,43 +694,6 @@ void test_DMM_config_validation_edge_cases(void)
         TRY {
             g_test_handle = DMM_init(&config);
             TEST_FAIL_MESSAGE("Expected exception for oversampling ratio too large");
-        }
-        CATCH(exception) {
-            TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
-        }
-    }
-
-    // Test maximum valid reference voltage
-    {
-        DMM_Config config = DMM_CONFIG_DEFAULT;
-        config.reference_voltage = FIXED_FROM_FLOAT(5.0f); // Maximum valid
-
-        ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
-        ADC_LL_init_Ignore();
-        ADC_LL_get_sample_rate_ExpectAndReturn(1000);
-        ADC_LL_get_sample_rate_ExpectAndReturn(1000);
-        TIM_LL_init_Expect(TIM_NUM_0, 1000);
-        TIM_LL_start_Expect(TIM_NUM_0);
-        ADC_LL_start_Expect();
-
-        g_test_handle = DMM_init(&config);
-        TEST_ASSERT_NOT_NULL(g_test_handle);
-
-        ADC_LL_stop_Expect();
-        TIM_LL_stop_Expect(TIM_NUM_0);
-        ADC_LL_deinit_Expect();
-        DMM_deinit(g_test_handle);
-        g_test_handle = NULL;
-    }
-
-    // Test reference voltage too large
-    {
-        DMM_Config config = DMM_CONFIG_DEFAULT;
-        config.reference_voltage = FIXED_FROM_FLOAT(5.1f); // Too large
-
-        TRY {
-            g_test_handle = DMM_init(&config);
-            TEST_FAIL_MESSAGE("Expected exception for reference voltage too large");
         }
         CATCH(exception) {
             TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, exception);
