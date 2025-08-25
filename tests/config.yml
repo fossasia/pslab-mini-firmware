@@ -5,6 +5,9 @@
   :enforce_strict_ordering: false
   :plugins:
     - :ignore
+    - :ignore_arg
+    - :callback
+    - :cexception
   :treat_as:
     uint8:    HEX8
     uint16:   HEX16

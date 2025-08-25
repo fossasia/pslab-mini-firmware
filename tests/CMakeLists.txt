@@ -7,10 +7,14 @@ target_include_directories(unity PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/unity/src/)
 # CMock mocking framework
 add_library(cmock ${CMAKE_CURRENT_SOURCE_DIR}/cmock/src/cmock.c)
 target_include_directories(cmock PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cmock/src/)
-target_link_libraries(cmock cexception unity)
+target_link_libraries(cmock unity cexception)
 
 # Generate mocks for UART dependencies
 cmock_generate_mock(mock_uart_ll ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/uart_ll.h)
+
+# Generate mocks for DMM dependencies
+cmock_generate_mock(mock_adc_ll ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/adc_ll.h)
+cmock_generate_mock(mock_tim_ll ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/tim_ll.h)
 
 # Add UART test
 cmock_add_test(test_uart test_uart.c mock_uart_ll)
@@ -39,3 +43,7 @@ target_link_libraries(test_circular_buffer pslab-util)
 # Add logging test (no mocks needed - pure unit test)
 unity_add_test(test_logging test_logging.c)
 target_link_libraries(test_logging pslab-util)
+
+# Add DMM test
+cmock_add_test(test_dmm test_dmm.c mock_adc_ll mock_tim_ll)
+target_link_libraries(test_dmm pslab-util pslab-instrument)
