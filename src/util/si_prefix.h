@@ -20,7 +20,7 @@ extern "C" {
 #define SI_TERA_INT 1000000000000ULL
 
 /** Giga as integer constant */
-#define SI_GIGA_INT 1000000000UL
+#define SI_GIGA_INT 1000000000ULL
 
 /** Mega as integer constant */
 #define SI_MEGA_INT 1000000UL
@@ -35,7 +35,7 @@ extern "C" {
 #define SI_MICRO_DIV 1000000UL
 
 /** Nano as divisor (for multiplication) */
-#define SI_NANO_DIV 1000000000UL
+#define SI_NANO_DIV 1000000000ULL
 
 /** Pico as divisor (for multiplication) */
 #define SI_PICO_DIV 1000000000000ULL
