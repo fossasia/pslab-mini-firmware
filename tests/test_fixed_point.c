@@ -183,6 +183,10 @@ void test_FIXED_mul_overflow_and_rounding(void)
     // Should be very close to 10, allowing for the tiny increment
     TEST_ASSERT_TRUE(result > FIXED_FROM_INT(10));
     TEST_ASSERT_TRUE(result < FIXED_FROM_INT(11));
+
+    // Test multiply FIXED_MIN by -1
+    result = FIXED_mul(FIXED_MIN, -FIXED_ONE);
+    TEST_ASSERT_EQUAL(INT32_MAX, result);
 }
 
 /**
@@ -206,6 +210,9 @@ void test_FIXED_div_edge_cases(void)
     TEST_ASSERT_EQUAL(INT32_MAX, FIXED_div(FIXED_FROM_INT(1), FIXED_ZERO));
     TEST_ASSERT_EQUAL(INT32_MIN, FIXED_div(FIXED_FROM_INT(-1), FIXED_ZERO));
     TEST_ASSERT_EQUAL(INT32_MAX, FIXED_div(FIXED_ZERO, FIXED_ZERO)); // 0/0 -> +inf
+
+    // Division of FIXED_MIN by -1
+    TEST_ASSERT_EQUAL(INT32_MAX, FIXED_div(FIXED_MIN, -FIXED_ONE));
 
     // Division resulting in overflow
     FIXED_Q1616 result = FIXED_div(INT32_MAX, FIXED_HALF);

@@ -18,6 +18,8 @@ char *FIXED_to_string(
     size_t const buffer_size
 )
 {
+    // Worst case: 1 minus sign, 5 integer digits, 1 decimal point,
+    // 5 fractional digits, 1 null terminator == 13
     unsigned const buffer_min_size = 13;
     if (buffer == nullptr || buffer_size < buffer_min_size) {
         return nullptr;
@@ -52,7 +54,10 @@ char *FIXED_to_string(
             *end = '\0';
             end--;
         }
+
+        return buffer;
     }
 
-    return buffer;
+    // Should be unreachable
+    return nullptr;
 }
