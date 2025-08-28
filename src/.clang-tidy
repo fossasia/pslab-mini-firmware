@@ -70,14 +70,11 @@ CheckOptions:
 
   - key: readability-identifier-naming.EnumCase
     value: 'CamelCase'
+    # Public functions have capitalized prefix, while private (static)
+    # functions do not. clang-tidy cannot distinguish between 'static' and
+    # 'static inline' functions, so 'aNy_CasE' is the only option.
   - key: readability-identifier-naming.FunctionCase
-    value: 'lower_case'
-  # Public functions have capitalized prefix
-  - key: readability-identifier-naming.GlobalFunctionCase
     value: 'aNy_CasE'
-  # PIC24 Interrupt service routines
-  - key: readability-identifier-naming.GlobalFunctionIgnoredRegexp
-    value: '_[A-Z0-9]+Interrupt'
   - key: readability-identifier-naming.VariableCase
     value: 'lower_case'
   # Register names
