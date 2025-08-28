@@ -3,6 +3,7 @@ add_library(pslab-util STATIC)
 target_sources(pslab-util PRIVATE
     circular_buffer.c
     exception.c
+    fixed_point.c
     logging.c
 )
 
