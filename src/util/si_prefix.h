@@ -10,10 +10,6 @@
 #ifndef SI_PREFIX_H
 #define SI_PREFIX_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* Alternative integer-based constants for operations requiring larger ranges */
 
 /** Tera as integer constant */
@@ -39,9 +35,5 @@ extern "C" {
 
 /** Pico as divisor (for multiplication) */
 #define SI_PICO_DIV 1000000000000ULL
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* SI_PREFIX_H */
