@@ -709,7 +709,7 @@ static void read_vref_voltage(ADCInstance *instance)
         THROW(ERROR_HARDWARE_FAULT);
     }
     uint32_t timeout_ms = 2 * sample_rate_khz; // 2 samples timeout
-    timeout_ms = timeout_ms ? 1 : timeout_ms; // Ensure at least 1 ms timeout
+    timeout_ms = timeout_ms ? timeout_ms : 1; // Ensure at least 1 ms timeout
     if (HAL_ADC_PollForConversion(&g_hadc1, timeout_ms)) {
         HAL_ADC_Stop(&g_hadc1);
         THROW(ERROR_HARDWARE_FAULT);

@@ -1,4 +1,4 @@
-# Bus subsystem - target build configuration
+# Instrument subsystem - target build configuration
 
 target_sources(pslab-system
     PRIVATE

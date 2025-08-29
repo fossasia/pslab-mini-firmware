@@ -4,19 +4,10 @@
  *
  * This file contains comprehensive unit tests for the DMM API, including
  * initialization, configuration validation, voltage measurements, and
- * error handling. The ADC and Timer low-level drivers are mocked using     // Simulate a completed conversion by calling the callback
-    if (g_stored_callback != NULL) {
-        g_stored_callback(NULL, 0);
-    }
-
-    // Expect ADC to be restarted for next conversion (but not timer)
-    ADC_LL_start_Expect();
-
-    // Act
-    result = DMM_read_voltage(g_test_handle, &voltage_out);
-
-    // Assert
-    TEST_ASSERT_TRUE(result); @author PSLab Team
+ * error handling. The ADC and Timer low-level drivers are mocked using
+ * CMock.
+ *
+ * @author PSLab Team
  * @date 2025-08-12
  */
 
