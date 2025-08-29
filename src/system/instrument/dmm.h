@@ -110,7 +110,7 @@ void DMM_deinit(DMM_Handle *handle);
  * @throws ERROR_INVALID_ARGUMENT if handle or voltage_out is NULL
  * @throws ERROR_DEVICE_NOT_READY if DMM is not initialized
  */
-bool DMM_read_voltage(DMM_Handle *handle, Fixed *voltage_out);
+bool DMM_read_voltage(DMM_Handle *handle, FIXED_Q1616 *voltage_out);
 
 #ifdef __cplusplus
 }

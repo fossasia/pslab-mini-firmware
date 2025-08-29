@@ -294,7 +294,7 @@ void DMM_deinit(DMM_Handle *handle)
     LOG_FUNCTION_EXIT();
 }
 
-bool DMM_read_voltage(DMM_Handle *handle, Fixed *voltage_out)
+bool DMM_read_voltage(DMM_Handle *handle, FIXED_Q1616 *voltage_out)
 {
     LOG_FUNCTION_ENTRY();
 
@@ -318,7 +318,8 @@ bool DMM_read_voltage(DMM_Handle *handle, Fixed *voltage_out)
     if (conversion_ready) {
         // Get reference voltage from ADC driver
         uint32_t ref_voltage_mv = ADC_LL_get_reference_voltage();
-        Fixed reference_voltage = FIXED_FROM_INT(ref_voltage_mv) / SI_MILLI_DIV;
+        FIXED_Q1616 reference_voltage =
+            FIXED_from_fraction((int32_t)ref_voltage_mv, SI_MILLI_DIV);
 
         // Convert raw ADC value to voltage using fixed-point arithmetic
         // ADC is 12-bit with oversampling, so max value depends on oversampling
@@ -326,16 +327,15 @@ bool DMM_read_voltage(DMM_Handle *handle, Fixed *voltage_out)
         uint32_t max_value = (4095U * handle->config.oversampling_ratio);
 
         // voltage = (raw_value * reference_voltage) / max_value
-        // Use 64-bit intermediate to avoid overflow
-        int64_t temp =
-            ((int64_t)handle->adc_value * (int64_t)reference_voltage);
-        *voltage_out = (Fixed)(temp / (int64_t)max_value);
+        *voltage_out = FIXED_div(
+            FIXED_mul(handle->adc_value, reference_voltage), (int32_t)max_value
+        );
 
         LOG_DEBUG(
             "DMM: Channel %d voltage = %d.%04d V (raw = %u)",
             handle->config.channel,
-            fixed_get_integer_part(*voltage_out),
-            (fixed_get_fractional_part(*voltage_out) * 10000) >> 16,
+            FIXED_get_integer_part(*voltage_out),
+            (FIXED_get_fractional_part(*voltage_out) * 10000) >> 16,
             handle->adc_value
         );
 

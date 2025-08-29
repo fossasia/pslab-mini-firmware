@@ -333,7 +333,7 @@ void test_DMM_read_voltage_success_conversion_ready(void)
 {
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
-    Fixed voltage_out;
+    FIXED_Q1616 voltage_out;
     bool result;
 
     // Initialize DMM
@@ -367,7 +367,7 @@ void test_DMM_read_voltage_no_conversion_ready(void)
 {
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
-    Fixed voltage_out;
+    FIXED_Q1616 voltage_out;
     bool result;
 
     // Initialize DMM
@@ -396,7 +396,7 @@ void test_DMM_read_voltage_no_conversion_ready(void)
 void test_DMM_read_voltage_null_handle(void)
 {
     // Arrange
-    Fixed voltage_out;
+    FIXED_Q1616 voltage_out;
     CEXCEPTION_T exception = CEXCEPTION_NONE;
 
     // Act & Assert
@@ -443,7 +443,7 @@ void test_DMM_read_voltage_adc_start_failure(void)
 {
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
-    Fixed voltage_out;
+    FIXED_Q1616 voltage_out;
     bool result;
 
     // Initialize DMM first
@@ -508,7 +508,7 @@ void test_DMM_voltage_calculation_zero_adc(void)
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
     config.oversampling_ratio = 1; // No oversampling for simpler calculation
-    Fixed voltage_out;
+    FIXED_Q1616 voltage_out;
     bool result;
 
     // Initialize DMM
@@ -543,7 +543,7 @@ void test_DMM_voltage_calculation_half_scale_adc(void)
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
     config.oversampling_ratio = 1; // No oversampling for simpler calculation
-    Fixed voltage_out;
+    FIXED_Q1616 voltage_out;
     bool result;
 
     // Initialize DMM
@@ -572,11 +572,11 @@ void test_DMM_voltage_calculation_half_scale_adc(void)
     // Assert
     TEST_ASSERT_TRUE(result);
     // Expected: (2047 * 3.3V) / 4095 ≈ 1.648V
-    Fixed expected_half = FIXED_FROM_FLOAT(1.648f);
+    FIXED_Q1616 expected_half = FIXED_FROM_FLOAT(1.648f);
     // Allow some tolerance for fixed-point calculation
-    Fixed tolerance = FIXED_FROM_FLOAT(0.01f);
-    TEST_ASSERT_TRUE((voltage_out >= (expected_half - tolerance)) &&
-                     (voltage_out <= (expected_half + tolerance)));
+    FIXED_Q1616 tolerance = FIXED_FROM_FLOAT(0.01f);
+    TEST_ASSERT_GREATER_OR_EQUAL_INT32(expected_half - tolerance, voltage_out);
+    TEST_ASSERT_LESS_OR_EQUAL_INT32(expected_half + tolerance, voltage_out);
 }
 
 // Test: Voltage calculation with full-scale ADC value
@@ -585,7 +585,7 @@ void test_DMM_voltage_calculation_full_scale_adc(void)
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
     config.oversampling_ratio = 1; // No oversampling for simpler calculation
-    Fixed voltage_out;
+    FIXED_Q1616 voltage_out;
     bool result;
 
     // Initialize DMM
@@ -612,8 +612,8 @@ void test_DMM_voltage_calculation_full_scale_adc(void)
     // Assert
     TEST_ASSERT_TRUE(result);
     // Should be very close to 3.3V
-    Fixed expected_full = FIXED_FROM_FLOAT(3.3f);
-    Fixed tolerance = FIXED_FROM_FLOAT(0.01f);
+    FIXED_Q1616 expected_full = FIXED_FROM_FLOAT(3.3f);
+    FIXED_Q1616 tolerance = FIXED_FROM_FLOAT(0.01f);
     TEST_ASSERT_TRUE((voltage_out >= (expected_full - tolerance)) &&
                      (voltage_out <= (expected_full + tolerance)));
 }
@@ -624,7 +624,7 @@ void test_DMM_voltage_calculation_with_oversampling(void)
     // Arrange
     DMM_Config config = DMM_CONFIG_DEFAULT;
     config.oversampling_ratio = 16;
-    Fixed voltage_out;
+    FIXED_Q1616 voltage_out;
     bool result;
 
     // Initialize DMM
@@ -652,8 +652,8 @@ void test_DMM_voltage_calculation_with_oversampling(void)
     // Assert
     TEST_ASSERT_TRUE(result);
     // Expected: (32760 * 3.3V) / 65520 ≈ 1.65V
-    Fixed expected_half = FIXED_FROM_FLOAT(1.65f);
-    Fixed tolerance = FIXED_FROM_FLOAT(0.01f);
+    FIXED_Q1616 expected_half = FIXED_FROM_FLOAT(1.65f);
+    FIXED_Q1616 tolerance = FIXED_FROM_FLOAT(0.01f);
     TEST_ASSERT_TRUE((voltage_out >= (expected_half - tolerance)) &&
                      (voltage_out <= (expected_half + tolerance)));
 }
