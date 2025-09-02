@@ -25,10 +25,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "error.h"
+#include "platform/usb_ll.h"
+#include "util/error.h"
+#include "util/util.h"
+
 #include "usb.h"
-#include "usb_ll.h"
-#include "util.h"
 
 /* Maximum number of USB interfaces */
 #define USB_INTERFACE_COUNT USB_BUS_COUNT

@@ -6,9 +6,10 @@
  * for the CException library integration.
  */
 
+#include <stdint.h>
+
 #include "exception.h"
 #include "logging.h"
-#include <stdint.h>
 
 __attribute__((weak, noreturn)) void EXCEPTION_halt(uint32_t exception_id)
 {

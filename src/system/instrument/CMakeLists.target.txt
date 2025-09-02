@@ -1,11 +1,11 @@
 # Instrument subsystem - target build configuration
 
+target_include_directories(pslab-system
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 target_sources(pslab-system
     PRIVATE
         dmm.c
-)
-
-target_include_directories(pslab-system
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}
 )

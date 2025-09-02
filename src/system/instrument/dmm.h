@@ -15,8 +15,7 @@
 
 #include <stdint.h>
 
-#include "error.h"
-#include "fixed_point.h"
+#include "util/fixed_point.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -10,16 +10,18 @@
  * @date 2025-07-18
  */
 
-#include "dmm.h"
-#include "adc_ll.h"
-#include "error.h"
-#include "fixed_point.h"
-#include "logging.h"
-#include "si_prefix.h"
-#include "tim_ll.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+#include "platform/adc_ll.h"
+#include "platform/tim_ll.h"
+#include "util/error.h"
+#include "util/fixed_point.h"
+#include "util/logging.h"
+#include "util/si_prefix.h"
+
+#include "dmm.h"
 
 /**
  * @brief DMM handle structure

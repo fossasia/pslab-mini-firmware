@@ -16,6 +16,9 @@ else()
 endif()
 
 target_include_directories(pslab-platform
-    PUBLIC
+    INTERFACE
+        # Include paths for pslab-platform start with "platform/..."
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
+    PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )

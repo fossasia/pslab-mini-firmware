@@ -9,12 +9,14 @@
  * @date 2025-07-07
  */
 
-#include "tim.h"
-#include "error.h"
-#include "logging.h"
-#include "tim_ll.h"
 #include <stddef.h>
 #include <stdlib.h>
+
+#include "platform/tim_ll.h"
+#include "util/error.h"
+#include "util/logging.h"
+
+#include "tim.h"
 
 /**
  * @brief Timer handle structure

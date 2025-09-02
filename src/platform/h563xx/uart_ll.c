@@ -24,7 +24,8 @@
 
 #include "stm32h5xx_hal.h"
 
-#include "error.h"
+#include "util/error.h"
+
 #include "uart_ll.h"
 
 enum { UART_DEFAULT_BAUDRATE = 115200 }; // Default UART baud rate

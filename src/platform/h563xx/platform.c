@@ -23,8 +23,9 @@
  */
 #include "stm32h5xx_hal.h"
 
-#include "error.h"
-#include "logging.h"
+#include "util/error.h"
+#include "util/logging.h"
+
 #include "platform.h"
 
 enum { SYSTEM_CLOCK_FREQ = 250000000U }; // 250 MHz

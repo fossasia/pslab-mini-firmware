@@ -4,7 +4,11 @@ target_sources(tinyusb
 )
 
 target_include_directories(tinyusb
+    INTERFACE
+        # Include path for TinyUSB starts with "lib/tinyusb/..."
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../..
     PUBLIC
+        # TinyUSB's headers include each other without relative paths
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

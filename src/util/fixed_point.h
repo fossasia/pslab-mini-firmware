@@ -16,9 +16,10 @@
 #ifndef PSLAB_FIXED_POINT_H
 #define PSLAB_FIXED_POINT_H
 
-#include "logging.h"
 #include <stdint.h>
 #include <stdlib.h>
+
+#include "util/logging.h"
 
 #ifdef __cplusplus
 extern "C" {

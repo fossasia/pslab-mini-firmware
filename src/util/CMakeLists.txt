@@ -7,8 +7,16 @@ target_sources(pslab-util PRIVATE
     logging.c
 )
 
-target_include_directories(pslab-util PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
+target_include_directories(pslab-util
+    # Since many pslab-util components are header-only (and include each other)
+    # they need to be able to use the "util" namespace
+    PUBLIC
+        # Include paths for pslab-util start with "util/..."
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
+        # CException needs to be able to include "CExceptionConfig.h"
+        ${CMAKE_CURRENT_SOURCE_DIR}/CExceptionConfig
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_compile_definitions(pslab-util PUBLIC

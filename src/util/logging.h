@@ -19,10 +19,11 @@
 #ifndef PSLAB_LOGGING_H
 #define PSLAB_LOGGING_H
 
-#include "util.h" // Include circular buffer definition
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#include "util/util.h" // Include circular buffer definition
 
 #ifdef __cplusplus
 extern "C" {

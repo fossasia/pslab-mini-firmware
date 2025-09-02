@@ -27,11 +27,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "error.h"
+#include "platform/uart_ll.h"
+#include "util/error.h"
+#include "util/util.h"
+
 #include "syscalls_config.h"
 #include "uart.h"
-#include "uart_ll.h"
-#include "util.h"
 
 /* syscalls module sets this when claiming its bus */
 extern bool g_SYSCALLS_uart_claim;

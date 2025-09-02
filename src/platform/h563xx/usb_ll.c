@@ -12,12 +12,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "lib/tinyusb/src/tusb.h"
+#include "lib/tinyusb/src/tusb_config.h"
 #include "stm32h5xx_hal.h"
-#include "tusb.h"
-#include "tusb_config.h"
 
-#include "error.h"
 #include "usb_ll.h"
+#include "util/error.h"
 
 // USB clock, 48 MHz
 enum { USB_CRS_FRQ_TARGET = 48000000 };

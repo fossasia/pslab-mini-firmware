@@ -8,9 +8,10 @@
  * implementation.
  */
 
+#include "platform/led_ll.h"
+#include "util/error.h"
+
 #include "led.h"
-#include "error.h"
-#include "led_ll.h"
 
 void LED_init(void) { LED_LL_init(); }
 
