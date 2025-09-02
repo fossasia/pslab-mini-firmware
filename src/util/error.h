@@ -10,10 +10,12 @@
 #ifndef PSLAB_ERROR_H
 #define PSLAB_ERROR_H
 
-#include "CException.h"
-#include "exception.h"
 #include <errno.h>
 #include <stdint.h>
+
+#include "lib/CException/CException.h"
+
+#include "util/exception.h"
 
 /*
  * CException macro wrappers with clang-tidy suppressions

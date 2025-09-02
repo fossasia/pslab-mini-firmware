@@ -16,7 +16,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "tusb.h"
+#include "lib/tinyusb/src/tusb.h"
 
 #include "usb_ll.h"
 

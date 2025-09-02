@@ -16,11 +16,12 @@
 
 #include "stm32h5xx_hal.h"
 
+#include "util/error.h"
+#include "util/logging.h"
+#include "util/si_prefix.h"
+
 #include "adc_ll.h"
-#include "error.h"
-#include "logging.h"
 #include "platform.h"
-#include "si_prefix.h"
 
 enum { ADC_IRQ_PRIORITY = 1 }; // ADC interrupt priority
 

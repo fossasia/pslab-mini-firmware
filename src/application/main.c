@@ -7,15 +7,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "dmm.h"
-#include "error.h"
-#include "led.h"
-#include "logging.h"
-#include "syscalls_config.h"
-#include "system.h"
-#include "uart.h"
-#include "usb.h"
-#include "util.h"
+#include "system/bus/uart.h"
+#include "system/bus/usb.h"
+#include "system/instrument/dmm.h"
+#include "system/led.h"
+#include "system/syscalls_config.h"
+#include "system/system.h"
+#include "util/error.h"
+#include "util/logging.h"
+#include "util/util.h"
 
 /*****************************************************************************
  * Macros

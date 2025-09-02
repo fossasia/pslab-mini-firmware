@@ -39,8 +39,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "util/util.h"
+
 #include "syscalls_config.h"
-#include "util.h"
 
 // Only include UART headers if UART I/O is enabled
 #ifndef SYSCALLS_UART_BUS
@@ -48,7 +49,7 @@
 #endif
 
 #if SYSCALLS_UART_BUS >= 0
-#include "bus/uart.h"
+#include "system/bus/uart.h"
 
 #ifndef SYSCALLS_UART_TX_BUFFER_SIZE
 #define SYSCALLS_UART_TX_BUFFER_SIZE 1024

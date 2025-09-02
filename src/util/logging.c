@@ -6,12 +6,13 @@
  * @date 2025-07-14
  */
 
-#include "logging.h"
-#include "util.h"
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "logging.h"
+#include "util.h"
 
 /**
  * @brief Internal logging state

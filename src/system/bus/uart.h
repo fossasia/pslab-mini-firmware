@@ -51,10 +51,11 @@
 #ifndef UART_H
 #define UART_H
 
-#include "util.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#include "util/util.h"
 
 #ifdef __cplusplus
 extern "C" {

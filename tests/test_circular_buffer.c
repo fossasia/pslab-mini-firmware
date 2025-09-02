@@ -6,11 +6,13 @@
  * implementation used throughout the PSLab firmware.
  */
 
-#include "error.h"
-#include "unity.h"
-#include "util.h"
 #include <stdlib.h>
 #include <string.h>
+
+#include "unity.h"
+
+#include "util/error.h"
+#include "util/util.h"
 
 // Test fixtures
 static CircularBuffer g_test_buffer;

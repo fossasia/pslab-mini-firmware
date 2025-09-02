@@ -11,7 +11,7 @@
 #ifndef CEXCEPTION_CONFIG_H
 #define CEXCEPTION_CONFIG_H
 
-#include "exception.h"
+#include "util/exception.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,11 +1,15 @@
-#include "unity.h"
-#include "syscalls_config.h"
-#include "mock_uart_ll.h"
-#include "uart.h"
-#include "error.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+
+#include "unity.h"
+#include "mock_uart_ll.h"
+
+#include "util/error.h"
+
+#include "syscalls_config.h"
+#include "uart.h"
+
 
 // Test fixtures
 static CircularBuffer g_rx_buffer;

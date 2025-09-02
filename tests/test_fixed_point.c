@@ -9,11 +9,13 @@
  * @date 2025-08-26
  */
 
-#include "unity.h"
-#include "fixed_point.h"
 #include <stdint.h>
 #include <limits.h>
 #include <string.h>
+
+#include "unity.h"
+
+#include "util/fixed_point.h"
 
 void setUp(void)
 {

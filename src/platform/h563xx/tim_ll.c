@@ -13,11 +13,11 @@
 
 #include "stm32h5xx_hal.h"
 
-#include "error.h"
-#include "logging.h"
+#include "util/error.h"
+#include "util/logging.h"
+
 #include "platform.h"
 #include "tim_ll.h"
-#include <stdbool.h>
 
 enum { TIMER_DEFAULT_PRESCALER = 0 }; // Default prescaler value
 // 0 prescaler divides the timer clock by 1

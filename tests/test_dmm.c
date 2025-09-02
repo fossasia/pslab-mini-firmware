@@ -11,15 +11,18 @@
  * @date 2025-08-12
  */
 
-#include "unity.h"
-#include "mock_adc_ll.h"
-#include "mock_tim_ll.h"
-#include "dmm.h"
-#include "error.h"
-#include "fixed_point.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+
+#include "unity.h"
+#include "mock_adc_ll.h"
+#include "mock_tim_ll.h"
+
+#include "util/error.h"
+#include "util/fixed_point.h"
+
+#include "dmm.h"
 
 // External function declaration for testing
 // This function is intentionally non-static in dmm.c to enable testing

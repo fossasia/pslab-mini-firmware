@@ -1,8 +1,10 @@
+#include <string.h>
+
 #include "unity.h"
 
-#include "logging.h"
-#include "util.h"
-#include <string.h>
+#include "util/logging.h"
+#include "util/util.h"
+
 
 // Forward declarations of implementation-internals
 struct LOG_Handle {

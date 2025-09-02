@@ -1,6 +1,3 @@
-#include "unity.h"
-#include "mock_uart_ll.h"
-#include "uart.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -8,6 +5,12 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/stat.h>
+
+#include "unity.h"
+#include "mock_uart_ll.h"
+
+#include "uart.h"
+
 
 // Forward declarations of functions we'll test
 struct _reent;

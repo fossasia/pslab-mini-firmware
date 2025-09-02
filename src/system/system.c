@@ -7,11 +7,11 @@
  * other hardware access.
  */
 
-#include "error.h"
-#include "led.h"
-#include "logging.h"
-#include "platform.h"
+#include "platform/platform.h"
+#include "util/error.h"
+#include "util/logging.h"
 
+#include "led.h"
 #include "system.h"
 
 void SYSTEM_init(void)
