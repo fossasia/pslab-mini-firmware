@@ -31,6 +31,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ${{ matrix.deps }}
 
+      - name: Print dependency versions
+        run: |
+          echo "Dependency versions:"
+          if command -v clang-format &> /dev/null; then
+            echo "clang-format: $(clang-format --version)"
+          fi
+          if command -v clang-tidy &> /dev/null; then
+            echo "clang-tidy: $(clang-tidy --version)"
+          fi
+          if command -v arm-none-eabi-gcc &> /dev/null; then
+            echo "gcc-arm-none-eabi: $(arm-none-eabi-gcc --version | head -n1)"
+          fi
+          if dpkg -l | grep -q libnewlib-arm-none-eabi; then
+            echo "libnewlib-arm-none-eabi: $(dpkg -l | grep libnewlib-arm-none-eabi | awk '{print $3}')"
+          fi
+
       - name: Build and run ${{ matrix.name }}
         run: |
           mkdir -p build
