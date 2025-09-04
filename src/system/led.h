@@ -1,14 +1,14 @@
 /**
  * @file led.h
- * @brief LED system interface - simple wrapper around the led_ll interface
+ * @brief LED system interface
  *
- * This module provides a high-level LED interface that wraps the low-level
- * LED hardware abstraction layer (led_ll). It offers a clean,
- * platform-independent API for LED control operations.
+ * This module provides a high-level LED interface.
  */
 
 #ifndef SYSTEM_LED_H
 #define SYSTEM_LED_H
+
+typedef enum { LED_GREEN, LED_YELLOW, LED_RED, LED_COUNT } LED_ID;
 
 /**
  * @brief Initialize the LED system
@@ -19,10 +19,33 @@
 void LED_init(void);
 
 /**
+ * @brief Turn on the specified LED
+ *
+ * Activates the specified LED, turning it on.
+ *
+ * @param led_id The ID of the LED to turn on (LED_GREEN, LED_YELLOW, or
+ *               LED_RED)
+ */
+void LED_on(LED_ID led_id);
+
+/**
+ * @brief Turn off the specified LED
+ *
+ * Deactivates the specified LED, turning it off.
+ *
+ * @param led_id The ID of the LED to turn off (LED_GREEN, LED_YELLOW, or
+ *               LED_RED)
+ */
+void LED_off(LED_ID led_id);
+
+/**
  * @brief Toggle the LED state
  *
  * Switches the LED from its current state (on to off, or off to on).
+ *
+ * @param led_id The ID of the LED to toggle (LED_GREEN, LED_YELLOW, or
+ *               LED_RED)
  */
-void LED_toggle(void);
+void LED_toggle(LED_ID led_id);
 
 #endif // SYSTEM_LED_H
