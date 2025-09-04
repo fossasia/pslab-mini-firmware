@@ -97,7 +97,7 @@ int main(void) // NOLINT
 
         if (g_usb_service_requested) {
             g_usb_service_requested = false;
-            LED_toggle();
+            LED_toggle(LED_GREEN);
             uint8_t buf[CB_THRESHOLD + 1] = { 0 };
             uint32_t bytes_read = USB_read(husb, buf, CB_THRESHOLD);
             buf[bytes_read] = '\0';
