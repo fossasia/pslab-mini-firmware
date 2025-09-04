@@ -8,13 +8,17 @@
  * functionality.
  */
 
-#include <scpi/error.h>
-#include <scpi/scpi.h>
 #include <stdio.h>
 #include <string.h>
-#include <system/adc/adc.h>
-#include <system/bus/usb.h>
-#include <util/util.h>
+
+#include "lib/scpi/error.h"
+#include "lib/scpi/scpi.h"
+
+#include "system/instrument/dmm.h"
+#include "system/bus/usb.h"
+#include "util/fixed_point.h"
+#include "util/si_prefix.h"
+#include "util/util.h"
 
 // Buffer sizes for USB communication
 enum ProtocolBufferSizes {
@@ -27,7 +31,10 @@ enum ProtocolBufferSizes {
 // Static storage for buffers
 static uint8_t g_usb_rx_buffer_data[USB_RX_BUFFER_SIZE];
 static CircularBuffer g_usb_rx_buffer;
-static USB_Handle *g_usb_handle = NULL;
+static USB_Handle *g_usb_handle = nullptr;
+
+// Instrument handles
+static DMM_Handle *g_dmm_handle = nullptr;
 
 // SCPI context and buffers
 static scpi_t g_scpi_context;
@@ -312,29 +319,12 @@ static scpi_result_t scpi_cmd_wai(scpi_t *context)
  */
 static scpi_result_t scpi_cmd_measure_voltage_dc(scpi_t *context)
 {
-    // Fixed-point constants for 12-bit ADC with 3.3V reference
-    // Using Q16.16 format (16 integer bits, 16 fractional bits)
-    static uint32_t const k_adc_reference_voltage_q16 =
-        0x00034CCD; // 3.3V in Q16.16
-    static uint32_t const k_adc_max_value = 4095U;
-
-    uint32_t adc_value = 0;
-    uint32_t voltage_q16 = 0;
-    uint32_t voltage_millivolts = 0;
+    FIXED_Q1616 voltage;
 
     // Read ADC value
-    if (ADC_read(&adc_value) == 0) {
-        // Convert ADC value to voltage using fixed-point arithmetic
-        // voltage_q16 = (adc_value * k_adc_reference_voltage_q16) /
-        // k_adc_max_value
-        voltage_q16 =
-            (adc_value * k_adc_reference_voltage_q16) / k_adc_max_value;
-
+    if (DMM_read_voltage(g_dmm_handle, &voltage)) {
         // Convert Q16.16 to millivolts for SCPI output
-        // Multiply by 1000 and shift right by 16 to get millivolts
-        enum { milli = 1000 };
-        voltage_millivolts = (voltage_q16 * milli) >> 16;
-
+        int32_t voltage_millivolts = FIXED_TO_INT(voltage * SI_MILLI_DIV);
         SCPI_ResultUInt32(context, voltage_millivolts);
         return SCPI_RES_OK;
     }
@@ -393,9 +383,8 @@ bool protocol_init(void)
     // Set USB RX callback
     USB_set_rx_callback(g_usb_handle, usb_rx_callback, 1);
 
-    // Initialize ADC
-    ADC_init();
-    ADC_start();
+    // Initialize DMM
+    g_dmm_handle = DMM_init(&(DMM_Config)DMM_CONFIG_DEFAULT);
 
     // Initialize SCPI context
     SCPI_Init(
@@ -426,14 +415,14 @@ void protocol_deinit(void)
         return;
     }
 
-    // Stop and deinitialize ADC
-    ADC_stop();
-    ADC_deinit();
+    // Stop and deinitialize DMM
+    DMM_deinit(g_dmm_handle);
+    g_dmm_handle = nullptr;
 
     // Deinitialize USB
     if (g_usb_handle) {
         USB_deinit(g_usb_handle);
-        g_usb_handle = NULL;
+        g_usb_handle = nullptr;
     }
 
     g_protocol_initialized = false;
