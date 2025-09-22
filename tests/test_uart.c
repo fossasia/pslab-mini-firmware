@@ -4,6 +4,7 @@
 
 #include "unity.h"
 #include "mock_uart_ll.h"
+#include "mock_platform.h"
 
 #include "util/error.h"
 
@@ -29,6 +30,7 @@ void setUp(void)
 
     // Initialize mocks
     mock_uart_ll_Init();
+    mock_platform_Init();
 }
 
 void tearDown(void)
@@ -48,6 +50,7 @@ void tearDown(void)
     // Clean up mocks after each test
     // Note: mock_uart_ll_Destroy() automatically verifies all expectations
     mock_uart_ll_Destroy();
+    mock_platform_Destroy();
 }
 
 void test_UART_init_success(void)
@@ -380,4 +383,95 @@ void test_UART_deinit_with_null_handle(void)
 
     // Assert - No crash, no errors
     TEST_PASS();
+}
+
+void test_UART_flush_with_valid_handle_no_timeout(void)
+{
+    // Arrange
+    size_t bus = 0;
+
+    // Set up expectations for init
+    UART_LL_init_Expect(UART_BUS_0, g_rx_data, sizeof(g_rx_data));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    g_test_handle = UART_init(bus, &g_rx_buffer, &g_tx_buffer);
+
+    // Setup expectation - TX is not busy so transmission completes immediately
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_0, false);
+    PLATFORM_get_tick_ExpectAndReturn(100);
+
+    // Act - flush with no timeout (0 means wait indefinitely)
+    bool result = UART_flush(g_test_handle, 0);
+
+    // Assert - Should succeed since buffer is empty
+    TEST_ASSERT_TRUE(result);
+}
+
+void test_UART_flush_with_timeout_success(void)
+{
+    // Arrange
+    size_t bus = 0;
+
+    // Set up expectations for init
+    UART_LL_init_Expect(UART_BUS_0, g_rx_data, sizeof(g_rx_data));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    g_test_handle = UART_init(bus, &g_rx_buffer, &g_tx_buffer);
+
+    // Setup expectation - TX is not busy so no transmission needed
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_0, false);
+    PLATFORM_get_tick_ExpectAndReturn(1000);
+
+    // Act - flush with timeout (should succeed immediately since buffer is empty)
+    bool result = UART_flush(g_test_handle, 100); // 100ms timeout
+
+    // Assert - Should succeed since buffer is empty
+    TEST_ASSERT_TRUE(result);
+}
+
+void test_UART_flush_with_timeout_failure(void)
+{
+    // Arrange
+    size_t bus = 0;
+    uint32_t current_time = 1000;
+    uint8_t test_data[] = {0x01, 0x02, 0x03, 0x04};
+
+    // Set up expectations for init
+    UART_LL_init_Expect(UART_BUS_0, g_rx_data, sizeof(g_rx_data));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    g_test_handle = UART_init(bus, &g_rx_buffer, &g_tx_buffer);
+
+    // Add some data to the TX buffer
+    uint32_t bytes_written = circular_buffer_write(&g_tx_buffer, test_data, sizeof(test_data));
+    TEST_ASSERT_EQUAL(sizeof(test_data), bytes_written);
+
+    // Setup expectations - TX starts but never completes
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_0, false);
+    UART_LL_start_dma_tx_Expect(UART_BUS_0, test_data, sizeof(test_data));
+
+    // Mock time calls - start time, then time that exceeds timeout
+    PLATFORM_get_tick_ExpectAndReturn(current_time);  // start_time
+    PLATFORM_get_tick_ExpectAndReturn(current_time + 150);  // elapsed check - exceeds timeout
+
+    // Act
+    bool result = UART_flush(g_test_handle, 100); // 100ms timeout
+
+    // Assert - Should fail due to timeout
+    TEST_ASSERT_FALSE(result);
+}
+
+void test_UART_flush_with_null_handle(void)
+{
+    // Act
+    bool result = UART_flush(NULL, 100);
+
+    // Assert
+    TEST_ASSERT_FALSE(result);
 }

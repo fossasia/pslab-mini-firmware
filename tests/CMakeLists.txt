@@ -11,17 +11,18 @@ target_link_libraries(cmock unity cexception)
 
 # Generate mocks for UART dependencies
 cmock_generate_mock(mock_uart_ll ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/uart_ll.h)
+cmock_generate_mock(mock_platform ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/platform.h)
 
 # Generate mocks for DMM dependencies
 cmock_generate_mock(mock_adc_ll ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/adc_ll.h)
 cmock_generate_mock(mock_tim_ll ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/tim_ll.h)
 
 # Add UART test
-cmock_add_test(test_uart test_uart.c mock_uart_ll)
+cmock_add_test(test_uart test_uart.c mock_uart_ll mock_platform)
 target_link_libraries(test_uart pslab-bus pslab-util)
 
 # Add syscalls test (reuses uart_ll mock and tests real syscalls.c)
-cmock_add_test(test_syscalls test_syscalls.c mock_uart_ll)
+cmock_add_test(test_syscalls test_syscalls.c mock_uart_ll mock_platform)
 # Include the actual syscalls.c implementation
 target_sources(test_syscalls PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src/system/syscalls.c)
 target_sources(test_syscalls PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_headers/reent-stub.c)
