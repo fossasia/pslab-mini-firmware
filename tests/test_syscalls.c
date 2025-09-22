@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 
 #include "unity.h"
+#include "mock_platform.h"
 #include "mock_uart_ll.h"
 
 #include "uart.h"
