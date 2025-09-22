@@ -25,7 +25,9 @@ void SYSTEM_init(void);
 
 /**
  * @brief Reset system
+ *
+ * This function resets the system after flushing any pending log messages.
  */
-void SYSTEM_reset(void);
+__attribute__((noreturn)) void SYSTEM_reset(void);
 
 #endif // SYSTEM_H
