@@ -8,10 +8,13 @@
  */
 
 #include "platform/platform.h"
+#include "platform/uart_ll.h"
 #include "util/error.h"
 #include "util/logging.h"
+#include "util/si_prefix.h"
 
 #include "led.h"
+#include "syscalls_config.h"
 #include "system.h"
 
 void SYSTEM_init(void)
@@ -26,8 +29,20 @@ void SYSTEM_init(void)
 __attribute__((noreturn)) void SYSTEM_reset(void)
 {
     LOG_INFO("Resetting...");
+
+    // Flush any pending log messages
+    LOG_task(UINT32_MAX);
+    uint32_t timeout = (
+        (SYSCALLS_UART_TX_BUFFER_SIZE * SI_MILLI_DIV * 2 / UART_DEFAULT_BAUDRATE)
+    );
+
+    // 1 ms <= timeout <= 1000 ms
+    timeout = timeout < 1 ? 1 : timeout;
+    timeout = timeout > SI_MILLI_DIV ? SI_MILLI_DIV : timeout;
+
+    extern bool syscalls_uart_flush(uint32_t timeout);
+    syscalls_uart_flush(timeout);
     PLATFORM_reset();
-    __builtin_unreachable();
 }
 
 /**
@@ -47,15 +62,5 @@ __attribute__((noreturn)) void EXCEPTION_halt(uint32_t exception_id)
         "FATAL: Uncaught exception 0x%08X - system will reset",
         (unsigned int)exception_id
     );
-    LOG_task(0xFF); // Ensure log message is output
-
-    // Force a small delay to allow log message to be transmitted
-    // This is a simple busy wait since we're about to reset anyway
-    // TODO(bessman): Replace with proper delay function
-    // This is about 2 ms on STM32H563xx
-    uint32_t volatile delay = 1000000; // NOLINT[readability-magic-numbers]
-    while (delay--);
-
-    // Reset the system - this function does not return
-    PLATFORM_reset();
+    SYSTEM_reset();
 }
