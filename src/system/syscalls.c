@@ -44,16 +44,8 @@
 #include "syscalls_config.h"
 
 // Only include UART headers if UART I/O is enabled
-#ifndef SYSCALLS_UART_BUS
-#define SYSCALLS_UART_BUS -1 /* Disabled by default */
-#endif
-
 #if SYSCALLS_UART_BUS >= 0
 #include "system/bus/uart.h"
-
-#ifndef SYSCALLS_UART_TX_BUFFER_SIZE
-#define SYSCALLS_UART_TX_BUFFER_SIZE 1024
-#endif
 
 // Minimal RX buffer (required by UART driver)
 #define SYSCALLS_UART_RX_BUFFER_SIZE 1
@@ -101,16 +93,18 @@ static void syscalls_uart_init(void)
     g_uart_initialized = true;
 }
 
-/**
- * @brief Deinitialize UART for syscalls
- */
-void syscalls_uart_deinit(void)
+bool syscalls_uart_flush(uint32_t timeout)
 {
-    if (g_uart_handle != nullptr) {
-        UART_deinit(g_uart_handle);
-        g_uart_handle = nullptr;
+    if (!g_uart_initialized) {
+        syscalls_uart_init();
     }
-    g_uart_initialized = false;
+
+    if (g_uart_handle == nullptr) {
+        return false;
+    }
+
+    // Wait for the UART transmit buffer to be empty
+    return UART_flush(g_uart_handle, timeout);
 }
 
 #endif /* SYSCALLS_UART_BUS >= 0 */
