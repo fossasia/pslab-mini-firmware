@@ -40,6 +40,13 @@
  */
 void PLATFORM_init(void);
 
+/**
+ * @brief Get the current system tick value
+ *
+ * @return The current tick value in milliseconds
+ */
+uint32_t PLATFORM_get_tick(void);
+
 typedef enum {
     PLATFORM_CLOCK_ADC1 = 0,
     PLATFORM_CLOCK_ADC2 = 1,
