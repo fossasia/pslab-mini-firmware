@@ -32,9 +32,9 @@ __attribute__((noreturn)) void SYSTEM_reset(void)
 
     // Flush any pending log messages
     LOG_task(UINT32_MAX);
-    uint32_t timeout = (
-        (SYSCALLS_UART_TX_BUFFER_SIZE * SI_MILLI_DIV * 2 / UART_DEFAULT_BAUDRATE)
-    );
+    uint32_t timeout =
+        ((SYSCALLS_UART_TX_BUFFER_SIZE * SI_MILLI_DIV * 2) /
+         UART_DEFAULT_BAUDRATE);
 
     // 1 ms <= timeout <= 1000 ms
     timeout = timeout < 1 ? 1 : timeout;

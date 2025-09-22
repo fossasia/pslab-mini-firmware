@@ -232,10 +232,7 @@ void SysTick_Handler(void)
     HAL_SYSTICK_IRQHandler();
 }
 
-uint32_t PLATFORM_get_tick(void)
-{
-    return HAL_GetTick();
-}
+uint32_t PLATFORM_get_tick(void) { return HAL_GetTick(); }
 
 /**
  * @brief Get the clock speed for a specific clock type
