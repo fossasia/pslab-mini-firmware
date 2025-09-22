@@ -23,4 +23,9 @@
  */
 void SYSTEM_init(void);
 
+/**
+ * @brief Reset system
+ */
+void SYSTEM_reset(void);
+
 #endif // SYSTEM_H

@@ -23,6 +23,13 @@ void SYSTEM_init(void)
     LED_init();
 }
 
+__attribute__((noreturn)) void SYSTEM_reset(void)
+{
+    LOG_INFO("Resetting...");
+    PLATFORM_reset();
+    __builtin_unreachable();
+}
+
 /**
  * @brief Handler for uncaught CException throws
  *
