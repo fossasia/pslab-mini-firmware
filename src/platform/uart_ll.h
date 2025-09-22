@@ -25,6 +25,11 @@ typedef enum {
 } UART_Bus;
 
 /**
+ * @brief Default (and currently only supported) UART baudrate
+ */
+enum { UART_DEFAULT_BAUDRATE = 115200 };
+
+/**
  * @brief Initialize the UART peripheral and start DMA-based reception.
  *
  * @param bus UART bus instance to initialize

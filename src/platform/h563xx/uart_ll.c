@@ -28,7 +28,6 @@
 
 #include "uart_ll.h"
 
-enum { UART_DEFAULT_BAUDRATE = 115200 }; // Default UART baud rate
 enum { UART_IRQ_PRIO = 3 }; // NVIC priority for UART interrupts
 
 /* UART instance configuration */
