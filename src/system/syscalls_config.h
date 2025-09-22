@@ -6,4 +6,8 @@
 #define SYSCALLS_UART_BUS 2
 #endif
 
+#ifndef SYSCALLS_UART_TX_BUFFER_SIZE
+#define SYSCALLS_UART_TX_BUFFER_SIZE 1024
+#endif
+
 #endif // SYSCALLS_CONFIG_H
