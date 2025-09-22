@@ -93,6 +93,20 @@ static void syscalls_uart_init(void)
     g_uart_initialized = true;
 }
 
+/**
+ * @brief Deinitialize UART for syscalls
+ *
+ * @note This function is needed by tests.
+ */
+void syscalls_uart_deinit(void)
+{
+    if (g_uart_handle != nullptr) {
+        UART_deinit(g_uart_handle);
+        g_uart_handle = nullptr;
+    }
+    g_uart_initialized = false;
+}
+
 bool syscalls_uart_flush(uint32_t timeout)
 {
     if (!g_uart_initialized) {
