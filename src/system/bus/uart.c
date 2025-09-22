@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "platform/platform.h"
 #include "platform/uart_ll.h"
 #include "util/error.h"
 #include "util/util.h"
@@ -373,6 +374,27 @@ uint32_t UART_read(UART_Handle *handle, uint8_t *const rxbuf, uint32_t const sz)
 
     /* Read from circular buffer using common function */
     return circular_buffer_read(handle->rx_buffer, rxbuf, to_read);
+}
+
+bool UART_flush(UART_Handle *handle, uint32_t timeout)
+{
+    if (!handle || !handle->initialized) {
+        return false;
+    }
+
+    start_transmission(handle);
+    uint32_t start_time = PLATFORM_get_tick();
+    while (!circular_buffer_is_empty(handle->tx_buffer)) {
+        /* Wait for transmission to complete */
+        if (timeout) {
+            uint32_t elapsed = PLATFORM_get_tick() - start_time;
+            if (elapsed > timeout) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 /**
