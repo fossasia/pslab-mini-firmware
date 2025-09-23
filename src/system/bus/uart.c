@@ -387,8 +387,7 @@ bool UART_flush(UART_Handle *handle, uint32_t timeout)
     while (!circular_buffer_is_empty(handle->tx_buffer)) {
         /* Wait for transmission to complete */
         if (timeout) {
-            uint32_t elapsed = PLATFORM_get_tick() - start_time;
-            if (elapsed > timeout) {
+            if ((PLATFORM_get_tick() - start_time) > timeout) {
                 return false;
             }
         }
