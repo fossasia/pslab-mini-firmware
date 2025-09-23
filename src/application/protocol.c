@@ -185,6 +185,14 @@ bool protocol_init(void)
         SCPI_ERROR_QUEUE_SIZE
     );
 
+    char const *const welcome = "SCPI protocol initialized successfully\n"
+                                "Connect via USB and send SCPI commands:\n"
+                                "  *IDN?          - Get identification\n"
+                                "  *RST           - Reset instrument\n"
+                                "  MEAS:VOLT:DC?  - Measure DC voltage\n";
+
+    USB_write(g_usb_handle, (uint8_t *)welcome, strlen(welcome));
+
     g_protocol_initialized = true;
     return true;
 }
