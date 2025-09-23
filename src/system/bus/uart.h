@@ -132,8 +132,11 @@ uint32_t UART_read(UART_Handle *handle, uint8_t *rxbuf, uint32_t sz);
  * Wait for the UART transmit buffer to be empty or until the specified timeout
  * period elapses.
  *
+ * @note If timeout is zero, the function will wait indefinitely for the buffer
+ *       to be flushed.
+ *
  * @param handle Pointer to UART handle structure
- * @param timeout Timeout period in milliseconds
+ * @param timeout Timeout period in milliseconds, 0 for infinite
  * @return true if the buffer was flushed successfully, false on timeout
  */
 bool UART_flush(UART_Handle *handle, uint32_t timeout);
