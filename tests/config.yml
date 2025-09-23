@@ -8,6 +8,8 @@
     - :ignore_arg
     - :callback
     - :cexception
+  :strippables:
+    - '.*_reset\s*\(+.*?\)+;'
   :treat_as:
     uint8:    HEX8
     uint16:   HEX16
