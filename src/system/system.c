@@ -34,9 +34,12 @@ __attribute__((noreturn)) void SYSTEM_reset(void)
 
     // Flush any pending log messages
     LOG_task(UINT32_MAX);
+    unsigned const bits_per_uart_byte = 10;
+    uint64_t const buffer_size_bits =
+        (uint64_t)SYSCALLS_UART_TX_BUFFER_SIZE * bits_per_uart_byte;
+    // Timeout to wait for TX buffer to empty (2x time for safety)
     uint32_t timeout =
-        ((SYSCALLS_UART_TX_BUFFER_SIZE * SI_MILLI_DIV * 2) /
-         UART_DEFAULT_BAUDRATE);
+        ((buffer_size_bits * SI_MILLI_DIV * 2) / UART_DEFAULT_BAUDRATE);
 
     // 1 ms <= timeout <= 1000 ms
     timeout = timeout < 1 ? 1 : timeout;
