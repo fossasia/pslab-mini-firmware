@@ -23,11 +23,16 @@ typedef enum { TIM_NUM_0 = 0, TIM_NUM_1 = 1, TIM_NUM_COUNT = 2 } TIM_Num;
 
 /**
  * @brief Initialize the Timer Module
+ *
+ * @param tim Timer instance
+ * @param freq Frequency for the timer
  */
 void TIM_LL_init(TIM_Num tim, uint32_t freq);
 
 /**
  * @brief Deinitialize the Timer Module
+ *
+ * @param tim TIM instance to deinitialize
  */
 void TIM_LL_deinit(TIM_Num tim);
 
@@ -35,7 +40,6 @@ void TIM_LL_deinit(TIM_Num tim);
  * @brief Start the Timer Module
  *
  * @param tim TIM instance instance
- * @param freq Frequency for the timer
  */
 void TIM_LL_start(TIM_Num tim);
 
