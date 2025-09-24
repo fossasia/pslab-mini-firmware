@@ -24,6 +24,13 @@
 void SYSTEM_init(void);
 
 /**
+ * @brief Get the current system tick count
+ *
+ * @return The current tick count.
+ */
+uint32_t SYSTEM_get_tick(void);
+
+/**
  * @brief Reset system
  *
  * This function resets the system after flushing any pending log messages.

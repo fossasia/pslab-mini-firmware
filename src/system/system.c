@@ -26,6 +26,8 @@ void SYSTEM_init(void)
     LED_init();
 }
 
+uint32_t SYSTEM_get_tick(void) { return PLATFORM_get_tick(); }
+
 __attribute__((noreturn)) void SYSTEM_reset(void)
 {
     LOG_INFO("Resetting...");
