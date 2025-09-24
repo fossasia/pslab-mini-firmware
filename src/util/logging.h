@@ -130,6 +130,12 @@ bool LOG_read_entry(LOG_Entry *entry);
  */
 int LOG_task(uint32_t max_entries);
 
+// The preprocessor can't see the enum values
+#define LOG_LEVEL_ERROR 0
+#define LOG_LEVEL_WARN 1
+#define LOG_LEVEL_INFO 2
+#define LOG_LEVEL_DEBUG 3
+
 /**
  * @brief Core logging macros with compile-time filtering
  */
@@ -156,6 +162,12 @@ int LOG_task(uint32_t max_entries);
 #else
 #define LOG_DEBUG(fmt, ...) ((void)0)
 #endif
+
+// Restore the enum values
+#undef LOG_LEVEL_ERROR
+#undef LOG_LEVEL_WARN
+#undef LOG_LEVEL_INFO
+#undef LOG_LEVEL_DEBUG
 
 /**
  * @brief Convenience macros for common patterns
