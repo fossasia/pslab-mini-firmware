@@ -1,11 +1,9 @@
 
-#include <stdio.h>
-
+#include "protocol.h"
 #include "system/led.h"
 #include "system/system.h"
 #include "util/error.h"
 #include "util/logging.h"
-#include "protocol.h"
 
 int main(void)
 {
@@ -23,12 +21,14 @@ int main(void)
         // Process protocol tasks
         protocol_task();
 
-        // Add other application tasks here
-        // For example: sensor readings, LED updates, etc.
+        LOG_task(0xF);
 
-        // Small delay to prevent 100% CPU usage
-        // In a real implementation, this would be handled by an RTOS
-        // or proper sleep/wait functions
+        static uint32_t last_toggle = 0;
+        uint32_t const blink_period = 1000; // 1 second
+        if (SYSTEM_get_tick() - last_toggle >= blink_period) {
+            LED_toggle(LED_YELLOW);
+            last_toggle = SYSTEM_get_tick();
+        }
     }
 
     __builtin_unreachable();
