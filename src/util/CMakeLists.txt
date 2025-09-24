@@ -13,14 +13,8 @@ target_include_directories(pslab-util
     PUBLIC
         # Include paths for pslab-util start with "util/..."
         ${CMAKE_CURRENT_SOURCE_DIR}/..
-        # CException needs to be able to include "CExceptionConfig.h"
-        ${CMAKE_CURRENT_SOURCE_DIR}/CExceptionConfig
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-target_compile_definitions(pslab-util PUBLIC
-    CEXCEPTION_USE_CONFIG_FILE
 )
 
 target_link_libraries(pslab-util PUBLIC

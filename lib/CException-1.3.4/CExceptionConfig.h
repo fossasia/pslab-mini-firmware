@@ -11,11 +11,21 @@
 #ifndef CEXCEPTION_CONFIG_H
 #define CEXCEPTION_CONFIG_H
 
-#include "util/exception.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @brief External declaration of exception halt function
+ *
+ * This function must be implemented by the application to handle
+ * uncaught exceptions. It should not return.
+ *
+ * @param id The exception ID that was not caught
+ */
+extern void EXCEPTION_halt(uint32_t id) __attribute__((noreturn));
 
 /**
  * @brief CException configuration macro for uncaught exception handling

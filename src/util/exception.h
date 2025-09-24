@@ -29,7 +29,7 @@ extern "C" {
  *
  * @note Overriding functions must not return.
  */
-__attribute__((weak, noreturn)) void EXCEPTION_halt(uint32_t exception_id);
+__attribute__((noreturn)) void EXCEPTION_halt(uint32_t exception_id);
 
 #ifdef __cplusplus
 }
