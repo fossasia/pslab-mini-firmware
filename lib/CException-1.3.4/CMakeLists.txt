@@ -10,3 +10,7 @@ target_include_directories(cexception
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+target_compile_definitions(cexception PRIVATE
+    CEXCEPTION_USE_CONFIG_FILE
+)

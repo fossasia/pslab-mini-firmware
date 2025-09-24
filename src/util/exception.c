@@ -18,7 +18,7 @@ __attribute__((weak, noreturn)) void EXCEPTION_halt(uint32_t exception_id)
         "FATAL: Uncaught exception 0x%08X - system will reset",
         (unsigned int)exception_id
     );
-    LOG_task(0xFF); // Ensure log message is output
+    LOG_task(UINT32_MAX); // Ensure log message is output
 
     // Default implementation does nothing and hangs indefinitely
     while (1) {
