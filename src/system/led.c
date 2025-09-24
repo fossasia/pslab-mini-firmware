@@ -20,7 +20,12 @@ static LED_LL_ID const g_LED_MAPPING[LED_COUNT] = {
 static char const *const g_LED_INVALID_WARN_MSG =
     "Attempted to access invalid LED ID: %d";
 
-void LED_init(void) { LED_LL_init(); }
+void LED_init(void)
+{
+    // Silence unused variable warning when log level is <= WARN
+    (void)g_LED_INVALID_WARN_MSG;
+    LED_LL_init();
+}
 
 void LED_on(LED_ID led_id)
 {
