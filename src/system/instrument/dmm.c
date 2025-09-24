@@ -219,6 +219,7 @@ static void dmm_start_conversion(DMM_Handle *handle)
         LOG_ERROR("DMM: Failed to start conversion, error %d", error);
         TIM_LL_stop(TIM_NUM_0);
         ADC_LL_deinit();
+        TIM_LL_deinit(TIM_NUM_0);
         g_dmm_handle = nullptr;
         free(handle);
         THROW(error);
@@ -291,8 +292,9 @@ void DMM_deinit(DMM_Handle *handle)
     ADC_LL_stop();
     TIM_LL_stop(TIM_NUM_0);
 
-    // Deinitialize ADC
+    // Deinitialize peripherals
     ADC_LL_deinit();
+    TIM_LL_deinit(TIM_NUM_0);
 
     // Clear global handle
     g_dmm_handle = nullptr;
