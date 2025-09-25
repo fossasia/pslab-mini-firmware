@@ -15,8 +15,6 @@
 
 #include "lib/CException/CException.h"
 
-#include "util/exception.h"
-
 /*
  * CException macro wrappers with clang-tidy suppressions
  *
