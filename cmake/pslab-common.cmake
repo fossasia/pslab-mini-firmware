@@ -81,6 +81,8 @@ function(setup_code_quality_targets)
                 COMMAND ${CLANG_TIDY}
                 --quiet
                 -p=${CMAKE_BINARY_DIR}
+                --extra-arg=-I${CMAKE_SOURCE_DIR}
+                --extra-arg=-I${CMAKE_SOURCE_DIR}/src
                 --extra-arg=--target=arm-none-eabi
                 --extra-arg=-isystem${ARM_INCLUDE_DIR}
                 --extra-arg=-isystem${CMAKE_SOURCE_DIR}/lib/STM32H5_CMSIS_HAL-1.5.0/Drivers/CMSIS/Device/ST/STM32H5xx/Include
