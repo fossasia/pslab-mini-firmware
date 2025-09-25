@@ -382,30 +382,73 @@ void test_LOG_all_log_levels(void)
 
 void test_LOG_convenience_macros(void)
 {
-    // Test the convenience macros defined in the header
+    // Test the convenience macros defined in the header and verify compile-time filtering
+    // This test verifies that macros are properly filtered at compile time
+    // based on LOG_COMPILE_TIME_LEVEL setting
+
+    // Reset buffer to ensure clean state
+    circular_buffer_reset(&g_log_handle->buffer);
+
+    // Test all convenience macros - only those at or above compile-time level should write
     LOG_ERROR("Error macro test");
     LOG_WARN("Warning macro test");
     LOG_INFO("Info macro test");
     LOG_DEBUG("Debug macro test");
 
-    // Verify the macros work correctly
+    // Verify macros work according to the compile-time level setting
     LOG_Entry entry;
+    int expected_entries = 0;
 
+    // Check LOG_ERROR (always enabled when LOG_COMPILE_TIME_LEVEL >= 0)
+#if LOG_COMPILE_TIME_LEVEL >= 0
+    expected_entries++;
     TEST_ASSERT_TRUE(LOG_read_entry(&entry));
     TEST_ASSERT_EQUAL(LOG_LEVEL_ERROR, entry.level);
     TEST_ASSERT_EQUAL_STRING("Error macro test", entry.message);
+#endif
 
+    // Check LOG_WARN (enabled when LOG_COMPILE_TIME_LEVEL >= 1)
+#if LOG_COMPILE_TIME_LEVEL >= 1
+    expected_entries++;
     TEST_ASSERT_TRUE(LOG_read_entry(&entry));
     TEST_ASSERT_EQUAL(LOG_LEVEL_WARN, entry.level);
     TEST_ASSERT_EQUAL_STRING("Warning macro test", entry.message);
+#endif
 
+    // Check LOG_INFO (enabled when LOG_COMPILE_TIME_LEVEL >= 2)
+#if LOG_COMPILE_TIME_LEVEL >= 2
+    expected_entries++;
     TEST_ASSERT_TRUE(LOG_read_entry(&entry));
     TEST_ASSERT_EQUAL(LOG_LEVEL_INFO, entry.level);
     TEST_ASSERT_EQUAL_STRING("Info macro test", entry.message);
+#endif
 
+    // Check LOG_DEBUG (enabled when LOG_COMPILE_TIME_LEVEL >= 3)
+#if LOG_COMPILE_TIME_LEVEL >= 3
+    expected_entries++;
     TEST_ASSERT_TRUE(LOG_read_entry(&entry));
     TEST_ASSERT_EQUAL(LOG_LEVEL_DEBUG, entry.level);
     TEST_ASSERT_EQUAL_STRING("Debug macro test", entry.message);
+#endif
+
+    // No more entries should be available
+    TEST_ASSERT_FALSE(LOG_read_entry(&entry));
+
+    // Buffer should be empty now
+    TEST_ASSERT_EQUAL(0, LOG_available());
+
+    // Verify we got at least one entry (ERROR should always be enabled)
+    TEST_ASSERT_GREATER_THAN(0, expected_entries);
+
+    // Verify that the logging system still works for enabled levels
+    // Use direct LOG_write call to confirm buffer functionality
+    int bytes_written = LOG_write(LOG_LEVEL_ERROR, "Direct write test");
+    TEST_ASSERT_GREATER_THAN(0, bytes_written);
+
+    // Should be able to read this direct write
+    TEST_ASSERT_TRUE(LOG_read_entry(&entry));
+    TEST_ASSERT_EQUAL(LOG_LEVEL_ERROR, entry.level);
+    TEST_ASSERT_EQUAL_STRING("Direct write test", entry.message);
 }
 
 // Test edge case of empty message
