@@ -87,6 +87,7 @@ int main(void) // NOLINT
             LOG_INFO("System running, USB active");
             FIXED_Q1616 voltage = FIXED_ZERO;
             bool new_reading = DMM_read_voltage(dmmh, &voltage);
+            (void)new_reading;
             LOG_INFO(
                 "DMM Channel 0 Voltage: %d.%04d V (new_reading=%s)",
                 FIXED_get_integer_part(voltage),
