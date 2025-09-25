@@ -57,6 +57,7 @@ void tearDown(void)
         ADC_LL_stop_Ignore();
         TIM_LL_stop_Ignore();
         ADC_LL_deinit_Ignore();
+        TIM_LL_deinit_Ignore();
 
         DMM_deinit(g_test_handle);
         g_test_handle = NULL;
@@ -304,6 +305,7 @@ void test_DMM_deinit_valid_handle(void)
     ADC_LL_stop_Expect();
     TIM_LL_stop_Expect(TIM_NUM_0);
     ADC_LL_deinit_Expect();
+    TIM_LL_deinit_Expect(TIM_NUM_0);
 
     // Act
     DMM_deinit(g_test_handle);
@@ -484,6 +486,7 @@ void test_DMM_read_voltage_timer_start_failure(void)
     ADC_LL_start_ExpectAndThrow(ERROR_HARDWARE_FAULT); // ADC start fails
     TIM_LL_stop_Expect(TIM_NUM_0); // Cleanup after start failure
     ADC_LL_deinit_Expect(); // Cleanup after start failure
+    TIM_LL_deinit_Expect(TIM_NUM_0); // Cleanup after start failure
 
     // Act & Assert
     TRY {
@@ -676,6 +679,7 @@ void test_DMM_config_validation_edge_cases(void)
         ADC_LL_stop_Expect();
         TIM_LL_stop_Expect(TIM_NUM_0);
         ADC_LL_deinit_Expect();
+        TIM_LL_deinit_Expect(TIM_NUM_0);
         DMM_deinit(g_test_handle);
         g_test_handle = NULL;
     }
@@ -717,6 +721,7 @@ void test_DMM_channel_mapping(void)
         ADC_LL_stop_Expect();
         TIM_LL_stop_Expect(TIM_NUM_0);
         ADC_LL_deinit_Expect();
+        TIM_LL_deinit_Expect(TIM_NUM_0);
         DMM_deinit(g_test_handle);
         g_test_handle = NULL;
     }
