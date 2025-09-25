@@ -2,6 +2,8 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/create_test.cmake")
 
 # Unity test framework
 add_library(unity ${CMAKE_CURRENT_SOURCE_DIR}/unity/src/unity.c)
+# Add the test exception handler directly to unity to propagate to all tests
+target_sources(unity PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/test_headers/exception_test.c)
 target_include_directories(unity PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/unity/src/)
 
 # CMock mocking framework
