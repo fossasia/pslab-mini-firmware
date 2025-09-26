@@ -4,7 +4,8 @@ add_executable(pslab-mini-firmware)
 target_sources(pslab-mini-firmware
     PRIVATE
         main.c
-        protocol.c
+        protocol/common.c
+        protocol/dmm.c
 )
 
 target_link_libraries(pslab-mini-firmware
