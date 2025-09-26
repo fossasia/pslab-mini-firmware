@@ -3,7 +3,8 @@ add_library(pslab-application STATIC)
 
 target_sources(pslab-application
     PRIVATE
-        protocol.c
+        protocol/common.c
+        protocol/dmm.c
 )
 
 target_link_libraries(pslab-application
