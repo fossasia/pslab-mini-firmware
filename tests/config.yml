@@ -8,6 +8,10 @@
     - :ignore_arg
     - :callback
     - :cexception
+    - :expect_any_args
+    - :return_thru_ptr
+  :includes:
+    - tests/test_headers/opaque.h
   :strippables:
     - '.*_reset\s*\(+.*?\)+;'
   :treat_as:

@@ -1,0 +1,25 @@
+# Application layer - test build configuration
+add_library(pslab-application STATIC)
+
+target_sources(pslab-application
+    PRIVATE
+        protocol.c
+)
+
+target_link_libraries(pslab-application
+    PRIVATE
+        scpi-parser
+)
+
+target_include_directories(pslab-application
+    INTERFACE
+        # Include paths for pslab-application start with "application/..."
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(pslab-application
+    PRIVATE
+        pslab-util
+)
