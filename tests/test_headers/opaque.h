@@ -1,13 +1,13 @@
 /**
- * @file dmm.h
+ * @file opaque.h
  * @brief Test header for DMM module with concrete type definitions for CMock
  *
  * This test header provides concrete type definitions for opaque handles
  * to enable CMock to generate proper mocks.
  */
 
-#ifndef TEST_DMM_H
-#define TEST_DMM_H
+#ifndef TEST_OPAQUE_H
+#define TEST_OPAQUE_H
 
 #include <stdint.h>
 
@@ -45,4 +45,4 @@ struct USB_Handle {
 }
 #endif
 
-#endif // TEST_DMM_H
+#endif // TEST_OPAQUE_H
