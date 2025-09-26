@@ -9,7 +9,7 @@ target_include_directories(unity PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/unity/src/)
 # CMock mocking framework
 add_library(cmock ${CMAKE_CURRENT_SOURCE_DIR}/cmock/src/cmock.c)
 target_include_directories(cmock PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cmock/src/)
-target_link_libraries(cmock unity cexception)
+target_link_libraries(cmock unity cexception pslab-util)
 
 # Generate mocks for UART dependencies
 cmock_generate_mock(mock_uart_ll ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/uart_ll.h)
@@ -18,6 +18,11 @@ cmock_generate_mock(mock_platform ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/pl
 # Generate mocks for DMM dependencies
 cmock_generate_mock(mock_adc_ll ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/adc_ll.h)
 cmock_generate_mock(mock_tim_ll ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/tim_ll.h)
+
+# Generate mocks for protocol dependencies
+cmock_generate_mock(mock_usb ${CMAKE_CURRENT_SOURCE_DIR}/../src/system/bus/usb.h)
+cmock_generate_mock(mock_dmm ${CMAKE_CURRENT_SOURCE_DIR}/../src/system/instrument/dmm.h)
+cmock_generate_mock(mock_system ${CMAKE_CURRENT_SOURCE_DIR}/../src/system/system.h)
 
 # Add UART test
 cmock_add_test(test_uart test_uart.c mock_uart_ll mock_platform)
@@ -54,3 +59,7 @@ target_link_libraries(test_fixed_point pslab-util)
 # Add DMM test
 cmock_add_test(test_dmm test_dmm.c mock_adc_ll mock_tim_ll)
 target_link_libraries(test_dmm pslab-util pslab-instrument)
+
+# Add protocol test
+cmock_add_test(test_protocol test_protocol.c mock_usb mock_dmm mock_system)
+target_link_libraries(test_protocol pslab-util pslab-application)

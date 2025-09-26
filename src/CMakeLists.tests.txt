@@ -1,6 +1,7 @@
 # Source directory configuration for test builds
 
 # Add subdirectories that contain testable code
+add_subdirectory(application)
 add_subdirectory(system)
 add_subdirectory(util)
 
