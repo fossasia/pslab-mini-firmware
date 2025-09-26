@@ -368,16 +368,13 @@ void protocol_deinit(void)
         return;
     }
 
-    // Stop and deinitialize DMM
-    DMM_deinit(g_dmm_handle);
-    g_dmm_handle = nullptr;
-
     // Deinitialize USB
     if (g_usb_handle) {
         USB_deinit(g_usb_handle);
         g_usb_handle = nullptr;
     }
 
+    protocol_reset((scpi_t *)0);
     g_protocol_initialized = false;
 }
 
