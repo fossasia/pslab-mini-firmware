@@ -98,17 +98,16 @@ static void system_clock_config(void)
      * in the RCC_OscInitTypeDef structure.
      */
     osc_init.OscillatorType = RCC_OSCILLATORTYPE_HSE | RCC_OSCILLATORTYPE_HSI48;
-    osc_init.HSEState = RCC_HSE_BYPASS;
+    osc_init.HSEState = RCC_HSE_ON;
     osc_init.HSI48State = RCC_HSI48_ON;
     osc_init.PLL.PLLState = RCC_PLL_ON;
     osc_init.PLL.PLLSource = RCC_PLL1_SOURCE_HSE;
-    osc_init.PLL.PLLM = 4; // 8 MHz / 4 = 2 MHz input
-    osc_init.PLL.PLLN =
-        SYSTEM_CLOCK_FREQ / SI_PREFIX_MEGA; // 2 MHz * 250 = 500 MHz VCO
+    osc_init.PLL.PLLM = 5; // 25 MHz / 5 = 5 MHz input
+    osc_init.PLL.PLLN = 100; // 5 MHz * 100 = 500 MHz VCO
     osc_init.PLL.PLLP = 2; // 500 MHz / 2 = 250 MHz system clock
     osc_init.PLL.PLLQ = 2; // 500 MHz / 2 = 250 MHz peripheral clock
     osc_init.PLL.PLLR = 2; // 500 MHz / 2 = 250 MHz peripheral clock
-    osc_init.PLL.PLLRGE = RCC_PLL1_VCIRANGE_1;
+    osc_init.PLL.PLLRGE = RCC_PLL1_VCIRANGE_2;
     osc_init.PLL.PLLVCOSEL = RCC_PLL1_VCORANGE_WIDE;
     osc_init.PLL.PLLFRACN = 0;
 
@@ -144,13 +143,13 @@ static void system_clock_config(void)
     // This is required because HAL_RCCEx_PeriphCLKConfig calls
     // RCCEx_PLL2_Config internally
     periph_clk_init.PLL2.PLL2Source = RCC_PLL2_SOURCE_HSE;
-    periph_clk_init.PLL2.PLL2M = 2; // 8 MHz / 2 = 4 MHz
+    periph_clk_init.PLL2.PLL2M = 5; // 25 MHz / 5 = 5 MHz
     // NOLINTNEXTLINE: readability-magic-numbers
-    periph_clk_init.PLL2.PLL2N = 75; // 4 MHz * 75 = 300 MHz VCO
+    periph_clk_init.PLL2.PLL2N = 60; // 5 MHz * 60 = 300 MHz VCO
     periph_clk_init.PLL2.PLL2P = 2; // 300 MHz / 2 = 150 MHz
     periph_clk_init.PLL2.PLL2Q = 2; // 300 MHz / 2 = 150 MHz
     periph_clk_init.PLL2.PLL2R = 4; // 300 MHz / 4 = 75 MHz (for ADC)
-    periph_clk_init.PLL2.PLL2RGE = RCC_PLL2_VCIRANGE_1; // 2-4 MHz input range
+    periph_clk_init.PLL2.PLL2RGE = RCC_PLL2_VCIRANGE_2;
     periph_clk_init.PLL2.PLL2VCOSEL =
         RCC_PLL2_VCORANGE_MEDIUM; // 150-420 MHz VCO
     periph_clk_init.PLL2.PLL2FRACN = 0;
