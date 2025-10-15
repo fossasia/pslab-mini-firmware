@@ -147,9 +147,7 @@ static void SystemClock_Config(void)
     ;
   }
 
-  /* Enable the HSE clock in bypass mode. */
-  LL_RCC_HSE_EnableBypass();
-  LL_RCC_HSE_SetExternalClockType(LL_RCC_HSE_ANALOG_TYPE);
+  /* Enable the HSE clock with crystal oscillator. */
   LL_RCC_HSE_Enable();
   /* Wait till HSE is ready. */
   while(LL_RCC_HSE_IsReady() != 1)
@@ -167,10 +165,10 @@ static void SystemClock_Config(void)
 
   /* Configure and enable the PLL. */
   LL_RCC_PLL1_SetSource(LL_RCC_PLL1SOURCE_HSE);
-  LL_RCC_PLL1_SetVCOInputRange(LL_RCC_PLLINPUTRANGE_2_4);
+  LL_RCC_PLL1_SetVCOInputRange(LL_RCC_PLLINPUTRANGE_4_8);
   LL_RCC_PLL1_SetVCOOutputRange(LL_RCC_PLLVCORANGE_WIDE);
-  LL_RCC_PLL1_SetM(4);
-  LL_RCC_PLL1_SetN(250);
+  LL_RCC_PLL1_SetM(5);
+  LL_RCC_PLL1_SetN(100);
   LL_RCC_PLL1_SetP(2);
   LL_RCC_PLL1_SetQ(25);
   LL_RCC_PLL1_SetR(2);
