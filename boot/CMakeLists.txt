@@ -37,6 +37,6 @@ target_compile_options(pslab-mini-bootloader
          $<$<CONFIG:Debug>:-Og> # -O0 doesn't fit in 48K
 )
 
-stm32_add_linker_script(pslab-mini-bootloader PRIVATE STM32H563ZITX_FLASH.ld)
+stm32_add_linker_script(pslab-mini-bootloader PRIVATE STM32H563RITX_FLASH.ld)
 stm32_print_size_of_target(pslab-mini-bootloader)
 stm32_generate_srec_file(pslab-mini-bootloader)

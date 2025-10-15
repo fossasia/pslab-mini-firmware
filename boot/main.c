@@ -253,13 +253,13 @@ void HAL_MspInit(void)
 #endif
 
   /* Configure GPIO pin for the LED. */
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_0;
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_12;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-  LL_GPIO_ResetOutputPin(GPIOB, LL_GPIO_PIN_0);
+  LL_GPIO_ResetOutputPin(GPIOB, LL_GPIO_PIN_12);
 
   /* Configure GPIO pin for (optional) backdoor entry input. */
   GPIO_InitStruct.Pin = LL_GPIO_PIN_13;
@@ -309,7 +309,7 @@ void HAL_MspDeInit(void)
   LL_RCC_DeInit();
 
   /* Reset GPIO pin for the LED to turn it off. */
-  LL_GPIO_ResetOutputPin(GPIOB, LL_GPIO_PIN_0);
+  LL_GPIO_ResetOutputPin(GPIOB, LL_GPIO_PIN_12);
 
   /* Deinit used GPIOs. */
   LL_GPIO_DeInit(GPIOH);
