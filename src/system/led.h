@@ -8,7 +8,7 @@
 #ifndef SYSTEM_LED_H
 #define SYSTEM_LED_H
 
-typedef enum { LED_GREEN, LED_YELLOW, LED_RED, LED_COUNT } LED_ID;
+typedef enum { LED_GREEN, LED_COUNT } LED_ID;
 
 /**
  * @brief Initialize the LED system
@@ -23,8 +23,7 @@ void LED_init(void);
  *
  * Activates the specified LED, turning it on.
  *
- * @param led_id The ID of the LED to turn on (LED_GREEN, LED_YELLOW, or
- *               LED_RED)
+ * @param led_id The ID of the LED to turn on (LED_GREEN).
  */
 void LED_on(LED_ID led_id);
 
@@ -33,8 +32,7 @@ void LED_on(LED_ID led_id);
  *
  * Deactivates the specified LED, turning it off.
  *
- * @param led_id The ID of the LED to turn off (LED_GREEN, LED_YELLOW, or
- *               LED_RED)
+ * @param led_id The ID of the LED to turn off (LED_GREEN).
  */
 void LED_off(LED_ID led_id);
 
@@ -43,8 +41,7 @@ void LED_off(LED_ID led_id);
  *
  * Switches the LED from its current state (on to off, or off to on).
  *
- * @param led_id The ID of the LED to toggle (LED_GREEN, LED_YELLOW, or
- *               LED_RED)
+ * @param led_id The ID of the LED to toggle (LED_GREEN).
  */
 void LED_toggle(LED_ID led_id);
 

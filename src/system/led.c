@@ -13,8 +13,6 @@
 
 static LED_LL_ID const g_LED_MAPPING[LED_COUNT] = {
     [LED_GREEN] = LED_LL_GREEN,
-    [LED_YELLOW] = LED_LL_YELLOW,
-    [LED_RED] = LED_LL_RED,
 };
 
 static char const *const g_LED_INVALID_WARN_MSG =

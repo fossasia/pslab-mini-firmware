@@ -17,9 +17,7 @@
  * @brief LED identifiers for the Nucleo-H563ZI board
  */
 typedef enum {
-    LED_LL_GREEN = 0, /**< Green LED on PB0 */
-    LED_LL_YELLOW, /**< Yellow LED on PF4 */
-    LED_LL_RED, /**< Red LED on PG4 */
+    LED_LL_GREEN = 0, /**< Green LED on PB12 */
     LED_LL_COUNT /**< Total number of LEDs */
 } LED_LL_ID;
 
@@ -36,8 +34,7 @@ void LED_LL_init(void);
  *
  * @pre LED_LL_init() must be called before using this function.
  *
- * @param led_id The ID of the LED to turn on (LED_LL_GREEN, LED_LL_YELLOW, or
- *               LED_LL_RED).
+ * @param led_id The ID of the LED to turn on (LED_LL_GREEN).
  */
 void LED_LL_on(LED_LL_ID led_id);
 
@@ -46,8 +43,7 @@ void LED_LL_on(LED_LL_ID led_id);
  *
  * @pre LED_LL_init() must be called before using this function.
  *
- * @param led_id The ID of the LED to turn off (LED_LL_GREEN, LED_LL_YELLOW, or
- *               LED_LL_RED).
+ * @param led_id The ID of the LED to turn off (LED_LL_GREEN).
  */
 void LED_LL_off(LED_LL_ID led_id);
 
@@ -56,7 +52,7 @@ void LED_LL_off(LED_LL_ID led_id);
  *
  * @pre LED_LL_init() must be called before using this function.
  *
- * @param led_id The LED to toggle (LED_LL_GREEN, LED_LL_YELLOW, or LED_LL_RED)
+ * @param led_id The LED to toggle (LED_LL_GREEN).
  */
 void LED_LL_toggle(LED_LL_ID led_id);
 

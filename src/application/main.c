@@ -24,9 +24,9 @@ int main(void)
         LOG_task(0xF);
 
         static uint32_t last_toggle = 0;
-        uint32_t const blink_period = 1000; // 1 second
+        uint32_t const blink_period = 2000; // 2 second
         if (SYSTEM_get_tick() - last_toggle >= blink_period) {
-            LED_toggle(LED_YELLOW);
+            LED_toggle(LED_GREEN);
             last_toggle = SYSTEM_get_tick();
         }
     }
