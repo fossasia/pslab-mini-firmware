@@ -922,13 +922,12 @@ void ADC_LL_start(void)
     }
 
     __HAL_ADC_CLEAR_FLAG(&g_hadc1, ADC_FLAG_EOC | ADC_FLAG_EOS | ADC_FLAG_OVR);
+    __HAL_ADC_CLEAR_FLAG(&g_hadc2, ADC_FLAG_EOC | ADC_FLAG_EOS | ADC_FLAG_OVR);
+    g_hadc1.State = HAL_ADC_STATE_READY;
+    g_hadc2.State = HAL_ADC_STATE_READY;
 
     if (g_adc_instance.mode == ADC_LL_MODE_SIMULTANEOUS ||
         g_adc_instance.mode == ADC_LL_MODE_INTERLEAVED) {
-        __HAL_ADC_CLEAR_FLAG(
-            &g_hadc2, ADC_FLAG_EOC | ADC_FLAG_EOS | ADC_FLAG_OVR
-        );
-
         // For dual mode DMA with 32-bit transfers, buffer_size should be in
         // 32-bit words Each 32-bit word contains 2x 16-bit ADC samples (ADC1 +
         // ADC2)
@@ -966,6 +965,9 @@ void ADC_LL_stop(void)
     if (!g_adc_instance.initialized) {
         return;
     }
+
+    g_hadc1.State = HAL_ADC_STATE_RESET;
+    g_hadc2.State = HAL_ADC_STATE_RESET;
 
     if (g_adc_instance.mode == ADC_LL_MODE_SIMULTANEOUS ||
         g_adc_instance.mode == ADC_LL_MODE_INTERLEAVED) {
