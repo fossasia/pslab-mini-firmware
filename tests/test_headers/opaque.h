@@ -13,6 +13,7 @@
 
 #include "system/bus/usb.h"
 #include "system/instrument/dmm.h"
+#include "system/instrument/dso.h"
 
 
 #ifdef __cplusplus
@@ -27,6 +28,14 @@ struct DMM_Handle {
     uint16_t adc_value;
     bool volatile conversion_complete;
     bool initialized;
+};
+
+/**
+ * @brief DSO handle structure (concrete definition for testing)
+ */
+struct DSO_Handle {
+    DSO_Config config;
+    bool running;
 };
 
 /**

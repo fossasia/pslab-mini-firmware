@@ -174,4 +174,15 @@ uint32_t ADC_LL_get_sample_rate(void);
  */
 uint32_t ADC_LL_get_reference_voltage(void);
 
+/**
+ * @brief Get the maximum sample rate for a given ADC mode.
+ *
+ * This function returns the theoretical maximum sample rate for the specified
+ * ADC mode based on the hardware capabilities.
+ *
+ * @param mode ADC operation mode.
+ * @return Maximum sample rate in Hz.
+ */
+uint32_t ADC_LL_get_max_sample_rate(ADC_LL_Mode mode);
+
 #endif // ADC_LL_H

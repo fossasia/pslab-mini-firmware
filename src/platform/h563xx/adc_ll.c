@@ -1137,6 +1137,21 @@ uint32_t ADC_LL_get_reference_voltage(void)
     return 0;
 }
 
+uint32_t ADC_LL_get_max_sample_rate(ADC_LL_Mode mode)
+{
+    uint32_t const max_single_channel = 5000000; // 5 MHz
+    uint32_t const max_dual_channel = 10000000; // 10 MHz
+    switch (mode) {
+    case ADC_LL_MODE_SINGLE:
+    case ADC_LL_MODE_SIMULTANEOUS:
+        return max_single_channel;
+    case ADC_LL_MODE_INTERLEAVED:
+        return max_dual_channel;
+    default:
+        return 0;
+    }
+}
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
     (void)hadc;

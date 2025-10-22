@@ -8,4 +8,5 @@ target_include_directories(pslab-system
 target_sources(pslab-system
     PRIVATE
         dmm.c
+        dso.c
 )

@@ -3,6 +3,7 @@
 # Create a library for testable bus components
 add_library(pslab-instrument STATIC
     dmm.c
+    dso.c
 )
 
 target_link_libraries(pslab-instrument PRIVATE
