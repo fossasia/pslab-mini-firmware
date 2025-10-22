@@ -1,6 +1,6 @@
 /**
  * @file common.c
- * @brief SCPI protocol common infrastructure
+ * @brief SCPI common infrastructure
  *
  * This module implements the common SCPI protocol infrastructure including
  * USB communication, SCPI context management, and IEEE 488.2 commands.
@@ -34,6 +34,30 @@ extern scpi_result_t scpi_cmd_fetch_voltage_dc(scpi_t *context);
 extern scpi_result_t scpi_cmd_read_voltage_dc(scpi_t *context);
 extern scpi_result_t scpi_cmd_measure_voltage_dc(scpi_t *context);
 extern void dmm_reset_state(void);
+
+// Forward declarations of DSO functions needed by common
+extern scpi_result_t scpi_cmd_configure_oscilloscope_channel(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_oscilloscope_channel_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_oscilloscope_timebase(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_oscilloscope_timebase_q(scpi_t *context
+);
+extern scpi_result_t scpi_cmd_configure_oscilloscope_acquire_points(
+    scpi_t *context
+);
+extern scpi_result_t scpi_cmd_configure_oscilloscope_acquire_points_q(
+    scpi_t *context
+);
+extern scpi_result_t scpi_cmd_configure_oscilloscope_acquire_srate_q(
+    scpi_t *context
+);
+extern scpi_result_t scpi_cmd_initiate_oscilloscope(scpi_t *context);
+extern scpi_result_t scpi_cmd_fetch_oscilloscope_data_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_read_oscilloscope_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_measure_oscilloscope_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_abort_oscilloscope(scpi_t *context);
+extern scpi_result_t scpi_cmd_status_oscilloscope_acquisition_q(scpi_t *context
+);
+extern void dso_reset_state(void);
 
 // Static storage for buffers
 static uint8_t g_usb_rx_buffer_data[USB_RX_BUFFER_SIZE];
@@ -82,6 +106,9 @@ static scpi_result_t protocol_reset(scpi_t *context)
     // Reset DMM state (implemented in dmm.c)
     dmm_reset_state();
 
+    // Reset DSO state (implemented in dso.c)
+    dso_reset_state();
+
     return SCPI_RES_OK;
 }
 
@@ -116,12 +143,35 @@ static scpi_command_t const g_SCPI_COMMANDS[] = {
     { "SYSTem:ERRor:COUNt?", SCPI_SystemErrorCountQ },
     { "SYSTem:VERSion?", SCPI_SystemVersionQ },
 
-    // Instrument-specific commands (implemented in dmm.c)
+    // DMM commands (Digital Multimeter)
     { "CONFigure[:VOLTage][:DC]", scpi_cmd_configure_voltage_dc },
     { "INITiate[:VOLTage][:DC]", scpi_cmd_initiate_voltage_dc },
     { "FETCh[:VOLTage][:DC]?", scpi_cmd_fetch_voltage_dc },
     { "READ[:VOLTage][:DC]?", scpi_cmd_read_voltage_dc },
     { "MEASure[:VOLTage][:DC]?", scpi_cmd_measure_voltage_dc },
+
+    // DSO commands (Digital Storage Oscilloscope)
+    { "CONFigure:OSCilloscope:CHANnel",
+      scpi_cmd_configure_oscilloscope_channel },
+    { "CONFigure:OSCilloscope:CHANnel?",
+      scpi_cmd_configure_oscilloscope_channel_q },
+    { "CONFigure:OSCilloscope:TIMEbase",
+      scpi_cmd_configure_oscilloscope_timebase },
+    { "CONFigure:OSCilloscope:TIMEbase?",
+      scpi_cmd_configure_oscilloscope_timebase_q },
+    { "CONFigure:OSCilloscope:ACQuire[:POINts]",
+      scpi_cmd_configure_oscilloscope_acquire_points },
+    { "CONFigure:OSCilloscope:ACQuire[:POINts]?",
+      scpi_cmd_configure_oscilloscope_acquire_points_q },
+    { "CONFigure:OSCilloscope:ACQuire:SRATe?",
+      scpi_cmd_configure_oscilloscope_acquire_srate_q },
+    { "INITiate:OSCilloscope", scpi_cmd_initiate_oscilloscope },
+    { "FETCh:OSCilloscope[:DATa]?", scpi_cmd_fetch_oscilloscope_data_q },
+    { "READ:OSCilloscope?", scpi_cmd_read_oscilloscope_q },
+    { "MEASure:OSCilloscope?", scpi_cmd_measure_oscilloscope_q },
+    { "ABORt:OSCilloscope", scpi_cmd_abort_oscilloscope },
+    { "STATus:OSCilloscope:ACQuisition?",
+      scpi_cmd_status_oscilloscope_acquisition_q },
 
     SCPI_CMD_LIST_END
 };

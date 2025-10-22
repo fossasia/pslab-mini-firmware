@@ -22,6 +22,7 @@
 #include "unity.h"
 #include "mock_usb.h"
 #include "mock_dmm.h"
+#include "mock_dso.h"
 #include "mock_system.h"
 #include "scpi_test_helpers.h"
 

@@ -23,6 +23,7 @@ cmock_generate_mock(mock_tim_ll ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/tim_
 # Generate mocks for protocol dependencies
 cmock_generate_mock(mock_usb ${CMAKE_CURRENT_SOURCE_DIR}/../src/system/bus/usb.h)
 cmock_generate_mock(mock_dmm ${CMAKE_CURRENT_SOURCE_DIR}/../src/system/instrument/dmm.h)
+cmock_generate_mock(mock_dso ${CMAKE_CURRENT_SOURCE_DIR}/../src/system/instrument/dso.h)
 cmock_generate_mock(mock_system ${CMAKE_CURRENT_SOURCE_DIR}/../src/system/system.h)
 
 # SCPI test helpers
@@ -67,8 +68,11 @@ cmock_add_test(test_dmm test_dmm.c mock_adc_ll mock_tim_ll)
 target_link_libraries(test_dmm pslab-util pslab-instrument)
 
 # Add protocol tests
-cmock_add_test(test_protocol_common test_protocol_common.c mock_usb mock_dmm mock_system)
+cmock_add_test(test_protocol_common test_protocol_common.c mock_usb mock_dmm mock_dso mock_system)
 target_link_libraries(test_protocol_common pslab-util pslab-application scpi_test_helpers)
 
-cmock_add_test(test_protocol_dmm test_protocol_dmm.c mock_usb mock_dmm mock_system)
+cmock_add_test(test_protocol_dmm test_protocol_dmm.c mock_usb mock_dmm mock_dso mock_system)
 target_link_libraries(test_protocol_dmm pslab-util pslab-application scpi_test_helpers)
+
+cmock_add_test(test_protocol_dso test_protocol_dso.c mock_usb mock_dmm mock_dso mock_system)
+target_link_libraries(test_protocol_dso pslab-util pslab-application scpi_test_helpers)
