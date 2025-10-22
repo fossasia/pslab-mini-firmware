@@ -93,7 +93,7 @@ int LOG_write(LOG_Level level, char const *format, ...)
     int content_len =
         vsnprintf(entry.message, sizeof(entry.message), format, args);
     // clang-tidy spits out a false positive here
-    // NOLINTNEXTLINE(clang-analyzer-valist.Uninitialized)
+    // NOLINTNEXTLINE(clang-analyzer-valist.Uninitialized,clang-analyzer-security.VAList)
     va_end(args);
 
     if (content_len < 0) {

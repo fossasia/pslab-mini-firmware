@@ -239,7 +239,7 @@ static inline FIXED_Q1616 FIXED_div(FIXED_Q1616 a, FIXED_Q1616 b)
  */
 static inline FIXED_Q1616 FIXED_from_fraction(int32_t a, int32_t b)
 {
-    return FIXED_div((FIXED_Q1616)(a), (FIXED_Q1616)(b));
+    return FIXED_div((FIXED_Q1616)a, (FIXED_Q1616)b);
 }
 
 /**
