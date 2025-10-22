@@ -190,7 +190,7 @@ static void dmm_init_timer(DMM_Handle *handle)
     LOG_FUNCTION_ENTRY();
 
     Error error = ERROR_NONE;
-    TRY { TIM_LL_init(TIM_NUM_0, ADC_LL_get_sample_rate()); }
+    TRY { TIM_LL_init(TIM_NUM_6, ADC_LL_get_sample_rate()); }
     CATCH(error)
     {
         LOG_ERROR("DMM: Timer init failed, error %d", error);
@@ -211,15 +211,15 @@ static void dmm_start_conversion(DMM_Handle *handle)
     Error error = ERROR_NONE;
     TRY
     {
-        TIM_LL_start(TIM_NUM_0); // Start timer for ADC triggering
+        TIM_LL_start(TIM_NUM_6); // Start timer for ADC triggering
         ADC_LL_start();
     }
     CATCH(error)
     {
         LOG_ERROR("DMM: Failed to start conversion, error %d", error);
-        TIM_LL_stop(TIM_NUM_0);
+        TIM_LL_stop(TIM_NUM_6);
         ADC_LL_deinit();
-        TIM_LL_deinit(TIM_NUM_0);
+        TIM_LL_deinit(TIM_NUM_6);
         g_dmm_handle = nullptr;
         free(handle);
         THROW(error);
@@ -290,11 +290,11 @@ void DMM_deinit(DMM_Handle *handle)
 
     // Stop ADC and timer
     ADC_LL_stop();
-    TIM_LL_stop(TIM_NUM_0);
+    TIM_LL_stop(TIM_NUM_6);
 
     // Deinitialize peripherals
     ADC_LL_deinit();
-    TIM_LL_deinit(TIM_NUM_0);
+    TIM_LL_deinit(TIM_NUM_6);
 
     // Clear global handle
     g_dmm_handle = nullptr;
