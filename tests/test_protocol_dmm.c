@@ -3,7 +3,7 @@
  * @brief Unit tests for DMM-specific SCPI protocol functionality
  *
  * This file contains unit tests for the DMM protocol functionality covering:
- * - DMM SCPI command processing (CONF:VOLT:DC, INIT:VOLT:DC, FETC:VOLT:DC, etc.)
+ * - DMM SCPI command processing (DMM:CONF:VOLT:DC, DMM:INIT:VOLT:DC, DMM:FETC:VOLT:DC, etc.)
  * - DMM error handling and recovery
  * - DMM state management and caching
  * - DMM timeout handling
@@ -194,7 +194,7 @@ void test_scpi_configure_voltage_dc_success(void)
     DMM_init_IgnoreArg_config();
     DMM_deinit_Expect(NULL); DMM_deinit_IgnoreArg_handle();
 
-    scpi_inject_usb_command("CONF:VOLT:DC\n");
+    scpi_inject_usb_command("DMM:CONF:VOLT:DC\n");
 
     // Act
     protocol_task();
@@ -214,14 +214,14 @@ void test_scpi_configure_voltage_dc_with_channel(void)
     DMM_init_IgnoreArg_config();
     DMM_deinit_Expect(NULL); DMM_deinit_IgnoreArg_handle();
 
-    scpi_inject_usb_command("CONF:VOLT:DC 5\n"); // Channel 5
+    scpi_inject_usb_command("DMM:CONF:VOLT:DC 5\n"); // Channel 5
 
     // Act
     protocol_task();
 
     // Assert
     const char *response = scpi_get_captured_response();
-    TEST_ASSERT_EQUAL(0, strlen(response)); // CONF command generates no response
+    TEST_ASSERT_EQUAL(0, strlen(response)); // DMM:CONF command generates no response
 }
 
 void test_scpi_configure_voltage_dc_invalid_channel(void)
@@ -233,7 +233,7 @@ void test_scpi_configure_voltage_dc_invalid_channel(void)
     DMM_init_ExpectAndThrow(NULL, ERROR_INVALID_ARGUMENT);
     DMM_init_IgnoreArg_config();
 
-    scpi_inject_usb_command("CONF:VOLT:DC 999\n"); // Invalid channel
+    scpi_inject_usb_command("DMM:CONF:VOLT:DC 999\n"); // Invalid channel
 
     // Act
     protocol_task();
@@ -257,14 +257,14 @@ void test_scpi_initiate_voltage_dc_success(void)
     DMM_deinit_Expect(NULL); DMM_deinit_IgnoreArg_handle(); // Cleanup any existing handle
     DMM_init_ExpectAndReturn(NULL, g_mock_dmm_handle); DMM_init_IgnoreArg_config();
 
-    scpi_inject_usb_command("INIT:VOLT:DC\n");
+    scpi_inject_usb_command("DMM:INIT:VOLT:DC\n");
 
     // Act
     protocol_task();
 
     // Assert
     const char *response = scpi_get_captured_response();
-    TEST_ASSERT_EQUAL(0, strlen(response)); // INIT command generates no response
+    TEST_ASSERT_EQUAL(0, strlen(response)); // DMM:INIT command generates no response
 }
 
 void test_scpi_initiate_voltage_dc_dmm_failure(void)
@@ -278,7 +278,7 @@ void test_scpi_initiate_voltage_dc_dmm_failure(void)
     DMM_init_ExpectAndThrow(NULL, ERROR_HARDWARE_FAULT);
     DMM_init_IgnoreArg_config();
 
-    scpi_inject_usb_command("INIT:VOLT:DC\n");
+    scpi_inject_usb_command("DMM:INIT:VOLT:DC\n");
 
     // Act
     protocol_task();
@@ -307,7 +307,7 @@ void test_scpi_fetch_voltage_dc_with_cached_value(void)
     DMM_init_ExpectAndReturn(NULL, g_mock_dmm_handle); DMM_init_IgnoreArg_config();
     DMM_deinit_Expect(NULL); DMM_deinit_IgnoreArg_handle();
 
-    scpi_inject_usb_command("CONF:VOLT:DC\n");
+    scpi_inject_usb_command("DMM:CONF:VOLT:DC\n");
     protocol_task();
 
     scpi_clear_captured_response();
@@ -319,7 +319,7 @@ void test_scpi_fetch_voltage_dc_with_cached_value(void)
     DMM_deinit_Expect(NULL); DMM_deinit_IgnoreArg_handle();
     DMM_init_ExpectAndReturn(NULL, g_mock_dmm_handle); DMM_init_IgnoreArg_config();
 
-    scpi_inject_usb_command("INIT:VOLT:DC\n");
+    scpi_inject_usb_command("DMM:INIT:VOLT:DC\n");
     protocol_task();
 
     scpi_clear_captured_response();
@@ -337,7 +337,7 @@ void test_scpi_fetch_voltage_dc_with_cached_value(void)
     DMM_read_voltage_ReturnThruPtr_voltage_out(&voltage_out);
     DMM_deinit_Expect(NULL); DMM_deinit_IgnoreArg_handle();
 
-    scpi_inject_usb_command("FETC:VOLT:DC?\n");
+    scpi_inject_usb_command("DMM:FETC:VOLT:DC?\n");
 
     // Act
     protocol_task();
@@ -352,10 +352,10 @@ void test_scpi_fetch_voltage_dc_with_cached_value(void)
 
 void test_scpi_fetch_voltage_dc_no_init(void)
 {
-    // Arrange - Try to fetch without INIT
+    // Arrange - Try to fetch without DMM:INIT
     setup_protocol_for_dmm_test();
 
-    scpi_inject_usb_command("FETC:VOLT:DC?\n");
+    scpi_inject_usb_command("DMM:FETC:VOLT:DC?\n");
 
     // Act
     protocol_task();
@@ -391,7 +391,7 @@ void test_scpi_read_voltage_dc_complete_flow(void)
     DMM_read_voltage_ReturnThruPtr_voltage_out(&voltage_out);
     DMM_deinit_Expect(NULL); DMM_deinit_IgnoreArg_handle();
 
-    scpi_inject_usb_command("READ:VOLT:DC?\n");
+    scpi_inject_usb_command("DMM:READ:VOLT:DC?\n");
 
     // Act
     protocol_task();
@@ -420,7 +420,7 @@ void test_scpi_measure_voltage_dc_complete_flow(void)
     DMM_read_voltage_ReturnThruPtr_voltage_out(&voltage_out);
     DMM_deinit_Expect(NULL); DMM_deinit_IgnoreArg_handle();
 
-    scpi_inject_usb_command("MEAS:VOLT:DC?\n");
+    scpi_inject_usb_command("DMM:MEAS:VOLT:DC?\n");
 
     // Act
     protocol_task();
@@ -448,7 +448,7 @@ void test_dmm_read_timeout_handling(void)
     // DMM_read_voltage should return false (not ready) for all calls during timeout
     DMM_read_voltage_IgnoreAndReturn(false);
 
-    scpi_inject_usb_command("READ:VOLT:DC?\n");
+    scpi_inject_usb_command("DMM:READ:VOLT:DC?\n");
 
     // Act
     protocol_task();
@@ -478,7 +478,7 @@ void test_dmm_configure_with_different_channels(void)
     DMM_init_IgnoreArg_config();
     DMM_deinit_Expect(NULL); DMM_deinit_IgnoreArg_handle();
 
-    scpi_inject_usb_command("CONF:VOLT:DC 0\n");
+    scpi_inject_usb_command("DMM:CONF:VOLT:DC 0\n");
     protocol_task();
 
     scpi_clear_captured_response();
@@ -493,7 +493,7 @@ void test_dmm_configure_with_different_channels(void)
     DMM_init_IgnoreArg_config();
     DMM_deinit_Expect(NULL); DMM_deinit_IgnoreArg_handle();
 
-    scpi_inject_usb_command("CONF:VOLT:DC 7\n");
+    scpi_inject_usb_command("DMM:CONF:VOLT:DC 7\n");
 
     // Act
     protocol_task();
@@ -513,7 +513,7 @@ void test_dmm_multiple_measurements_same_channel(void)
     DMM_init_IgnoreArg_config();
     DMM_deinit_Expect(NULL); DMM_deinit_IgnoreArg_handle();
 
-    scpi_inject_usb_command("CONF:VOLT:DC 2\n");
+    scpi_inject_usb_command("DMM:CONF:VOLT:DC 2\n");
     protocol_task();
 
     scpi_clear_captured_response();
@@ -533,7 +533,7 @@ void test_dmm_multiple_measurements_same_channel(void)
     DMM_read_voltage_ReturnThruPtr_voltage_out(&voltage_out1);
     DMM_deinit_Expect(NULL); DMM_deinit_IgnoreArg_handle();
 
-    scpi_inject_usb_command("READ:VOLT:DC?\n");
+    scpi_inject_usb_command("DMM:READ:VOLT:DC?\n");
     protocol_task();
 
     TEST_ASSERT_TRUE(strstr(scpi_get_captured_response(), "1229") != NULL);
@@ -555,7 +555,7 @@ void test_dmm_multiple_measurements_same_channel(void)
     DMM_read_voltage_ReturnThruPtr_voltage_out(&voltage_out2);
     DMM_deinit_Expect(NULL); DMM_deinit_IgnoreArg_handle();
 
-    scpi_inject_usb_command("READ:VOLT:DC?\n");
+    scpi_inject_usb_command("DMM:READ:VOLT:DC?\n");
 
     // Act
     protocol_task();

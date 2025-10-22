@@ -49,7 +49,7 @@ void dmm_reset_state(void)
 }
 
 /**
- * @brief CONFigure:VOLTage:DC - Configure DC voltage measurement parameters
+ * @brief DMM:CONFigure:VOLTage:DC - Configure DC voltage measurement parameters
  */
 scpi_result_t scpi_cmd_configure_voltage_dc(scpi_t *context)
 {
@@ -83,7 +83,7 @@ scpi_result_t scpi_cmd_configure_voltage_dc(scpi_t *context)
 }
 
 /**
- * @brief INITiate:VOLTage:DC - Initialize DMM and start voltage measurement
+ * @brief DMM:INITiate:VOLTage:DC - Initialize DMM and start voltage measurement
  */
 scpi_result_t scpi_cmd_initiate_voltage_dc(scpi_t *context)
 {
@@ -152,7 +152,7 @@ static scpi_result_t fetch_new_voltage_dc(scpi_t *context)
 }
 
 /**
- * @brief FETCh:VOLTage:DC? - Fetch the voltage measurement result
+ * @brief DMM:FETCh:VOLTage:DC? - Fetch the voltage measurement result
  */
 scpi_result_t scpi_cmd_fetch_voltage_dc(scpi_t *context)
 {
@@ -177,7 +177,7 @@ scpi_result_t scpi_cmd_fetch_voltage_dc(scpi_t *context)
 }
 
 /**
- * @brief READ:VOLTage:DC? - Initiate and fetch voltage measurement
+ * @brief DMM:READ:VOLTage:DC? - Initiate and fetch voltage measurement
  */
 scpi_result_t scpi_cmd_read_voltage_dc(scpi_t *context)
 {
@@ -194,7 +194,7 @@ scpi_result_t scpi_cmd_read_voltage_dc(scpi_t *context)
 }
 
 /**
- * @brief MEASure:VOLTage:DC? - Configure, initiate, and fetch DC voltage
+ * @brief DMM:MEASure:VOLTage:DC? - Configure, initiate, and fetch DC voltage
  * measurement
  */
 scpi_result_t scpi_cmd_measure_voltage_dc(scpi_t *context)

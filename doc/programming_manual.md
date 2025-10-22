@@ -188,15 +188,15 @@ SYST:VERS?
 
 These commands provide access to the PSLab Mini's measurement capabilities.
 
-### CONFigure[:VOLTage][:DC]
-**Syntax**: `CONF` or `CONF:VOLT` or `CONFIGURE:VOLTAGE:DC`
+### DMM:CONFigure:VOLTage:DC
+**Syntax**: `DMM:CONF` or `DMM:CONF:VOLT` or `DMM:CONFIGURE:VOLTAGE:DC`
 **Description**: Configure DC voltage measurement parameters
 **Parameters**: `[<channel>]` - Optional channel number (default: 0)
 **Response**: None
 **Example**:
 ```
-CONF:VOLT:DC
-CONF:VOLT:DC 0
+DMM:CONF:VOLT:DC
+DMM:CONF:VOLT:DC 0
 ```
 
 **Notes**:
@@ -204,90 +204,311 @@ CONF:VOLT:DC 0
 - Channel parameter is currently optional and defaults to channel 0
 - Invalid channel numbers will generate an "Illegal parameter value" error
 
-### INITiate[:VOLTage][:DC]
-**Syntax**: `INIT` or `INIT:VOLT` or `INITIATE:VOLTAGE:DC`
+### DMM:INITiate:VOLTage:DC
+**Syntax**: `DMM:INIT` or `DMM:INIT:VOLT` or `DMM:INITIATE:VOLTAGE:DC`
 **Description**: Initialize DMM and prepare for voltage measurement
 **Parameters**: None
 **Response**: None
-**Example**: `INIT:VOLT:DC`
+**Example**: `DMM:INIT:VOLT:DC`
 
 **Notes**:
-- Must be called before FETCH command
-- Uses configuration set by previous CONFIGURE command (or defaults)
+- Must be called before DMM:FETCH command
+- Uses configuration set by previous DMM:CONFIGURE command (or defaults)
 - Clears any previously cached measurement results
 
-### FETCh[:VOLTage][:DC]?
-**Syntax**: `FETC?` or `FETC:VOLT:DC?` or `FETCH:VOLTAGE:DC?`
+### DMM:FETCh:VOLTage:DC?
+**Syntax**: `DMM:FETC?` or `DMM:FETC:VOLT:DC?` or `DMM:FETCH:VOLTAGE:DC?`
 **Description**: Fetch the most recent voltage measurement result
 **Parameters**: None
 **Response**: Voltage value in millivolts
 **Example**:
 ```
-FETC:VOLT:DC?
+DMM:FETC:VOLT:DC?
 1500
 ```
 
 **Notes**:
 - Returns cached result if available, or performs new measurement if DMM is initialized
-- Generates "Execution error" if called before INITIATE
+- Generates "Execution error" if called before DMM:INITIATE
 - Result is in millivolts (mV)
 
-### READ[:VOLTage][:DC]?
-**Syntax**: `READ?` or `READ:VOLT:DC?`
+### DMM:READ:VOLTage:DC?
+**Syntax**: `DMM:READ?` or `DMM:READ:VOLT:DC?`
 **Description**: Initiate and immediately fetch a voltage measurement
 **Parameters**: None
 **Response**: Voltage value in millivolts
 **Example**:
 ```
-READ:VOLT:DC?
+DMM:READ:VOLT:DC?
 1500
 ```
 
 **Notes**:
-- Combines INITIATE and FETCH operations
+- Combines DMM:INITIATE and DMM:FETCH operations
 - Uses current configuration settings
 - Result is in millivolts (mV)
 
-### MEASure[:VOLTage][:DC]?
-**Syntax**: `MEAS?` or `MEAS:VOLT:DC?` or `MEASURE:VOLTAGE:DC?`
+### DMM:MEASure:VOLTage:DC?
+**Syntax**: `DMM:MEAS?` or `DMM:MEAS:VOLT:DC?` or `DMM:MEASURE:VOLTAGE:DC?`
 **Description**: Configure, initiate, and fetch a complete DC voltage measurement
 **Parameters**: `[<channel>]` - Optional channel number
 **Response**: Voltage value in millivolts
 **Example**:
 ```
-MEAS:VOLT:DC?
+DMM:MEAS:VOLT:DC?
 1500
-MEAS:VOLT:DC? 0
+DMM:MEAS:VOLT:DC? 0
 ```
 
 **Notes**:
-- Combines CONFIGURE, INITIATE, and FETCH operations
+
+- Combines DMM:CONFIGURE, DMM:INITIATE, and DMM:FETCH operations
 - Most convenient command for single measurements
 - Result is in millivolts (mV)
 
+## OSCilloscope Commands
+
+These commands provide access to the PSLab Mini's digital storage oscilloscope capabilities.
+
+### OSCilloscope:CONFigure:CHANnel
+**Syntax**: `OSC:CONF:CHAN` or `OSCilloscope:CONFigure:CHANnel {CH1|CH2|CH1CH2}`
+**Description**: Configure oscilloscope channel selection
+**Parameters**: `{CH1|CH2|CH1CH2}` - Channel configuration
+**Response**: None
+**Example**:
+```
+OSC:CONF:CHAN CH1
+OSC:CONF:CHAN CH1CH2
+```
+
+**Notes**:
+
+- CH1: Single channel mode, channel 1
+- CH2: Single channel mode, channel 2
+- CH1CH2: Dual channel mode
+- Cannot be changed during active acquisition
+
+### OSCilloscope:CONFigure:CHANnel?
+**Syntax**: `OSC:CONF:CHAN?` or `OSCilloscope:CONFigure:CHANnel?`
+**Description**: Query current channel configuration
+**Parameters**: None
+**Response**: Current channel setting (CH1, CH2, or CH1CH2)
+**Example**:
+```
+OSC:CONF:CHAN?
+CH1
+```
+
+### OSCilloscope:CONFigure:TIMEbase
+**Syntax**: `OSC:CONF:TIME` or `OSCilloscope:CONFigure:TIMEbase <timebase_us>`
+**Description**: Set oscilloscope timebase in microseconds per division
+**Parameters**: `<timebase_us>` - Timebase value in µs/div
+**Response**: None
+**Example**:
+```
+OSC:CONF:TIME 100
+OSC:CONF:TIME 500
+```
+
+**Notes**:
+
+- Sets horizontal time scale
+- Sample rate is automatically calculated based on buffer size
+- Must be greater than 0
+
+### OSCilloscope:CONFigure:TIMEbase?
+**Syntax**: `OSC:CONF:TIME?` or `OSCilloscope:CONFigure:TIMEbase?`
+**Description**: Query current timebase setting
+**Parameters**: None
+**Response**: Current timebase in µs/div
+**Example**:
+```
+OSC:CONF:TIME?
+100
+```
+
+### OSCilloscope:CONFigure:ACQuire:POINts
+**Syntax**: `OSC:CONF:ACQ:POIN` or `OSCilloscope:CONFigure:ACQuire:POINts <n>`
+**Description**: Set acquisition buffer size in samples
+**Parameters**: `<n>` - Number of samples to acquire
+**Response**: None
+**Example**:
+```
+OSC:CONF:ACQ:POIN 512
+OSC:CONF:ACQ:POIN 1024
+```
+
+**Notes**:
+
+- Determines memory allocation for acquisition
+- Sample rate is automatically recalculated
+- Must be greater than 0
+
+### OSCilloscope:CONFigure:ACQuire:POINts?
+**Syntax**: `OSC:CONF:ACQ:POIN?` or `OSCilloscope:CONFigure:ACQuire:POINts?`
+**Description**: Query current buffer size
+**Parameters**: None
+**Response**: Current buffer size in samples
+**Example**:
+```
+OSC:CONF:ACQ:POIN?
+512
+```
+
+### OSCilloscope:CONFigure:ACQuire:SRATe?
+**Syntax**: `OSC:CONF:ACQ:SRAT?` or `OSCilloscope:CONFigure:ACQuire:SRATe?`
+**Description**: Query calculated sample rate
+**Parameters**: None
+**Response**: Sample rate in samples per second
+**Example**:
+```
+OSC:CONF:ACQ:SRAT?
+10000
+```
+
+**Notes**:
+
+- Read-only parameter calculated from timebase and buffer size
+- Sample rate = buffer_size × 1,000,000 / (timebase_us × 10)
+
+### OSCilloscope:INITiate
+**Syntax**: `OSC:INIT` or `OSCilloscope:INITiate`
+**Description**: Start oscilloscope data acquisition
+**Parameters**: None
+**Response**: None
+**Example**: `OSC:INIT`
+
+**Notes**:
+
+- Must be called before OSC:FETCH command
+- Uses current configuration settings
+- Will use default configuration if not previously configured
+
+### OSCilloscope:FETCh:DATa?
+**Syntax**: `OSC:FETC?` or `OSC:FETC:DAT?` or `OSCilloscope:FETCh:DATa?`
+**Description**: Fetch acquired oscilloscope data
+**Parameters**: None
+**Response**: Comma-separated list of sample values
+**Example**:
+```
+OSC:FETC:DAT?
+1234,1235,1236,1237,...
+```
+
+**Notes**:
+
+- Returns raw ADC values
+- Must be called after OSC:INIT
+- Waits for acquisition completion if still in progress
+
+### OSCilloscope:READ?
+**Syntax**: `OSC:READ?` or `OSCilloscope:READ?`
+**Description**: Initiate and immediately fetch oscilloscope data
+**Parameters**: None
+**Response**: Comma-separated list of sample values
+**Example**:
+```
+OSC:READ?
+1234,1235,1236,1237,...
+```
+
+**Notes**:
+
+- Combines OSC:INIT and OSC:FETCH operations
+- Uses current configuration settings
+- Aborts any ongoing acquisition first
+
+### OSCilloscope:MEASure?
+**Syntax**: `OSC:MEAS?` or `OSCilloscope:MEASure?`
+**Description**: Configure, initiate, and fetch complete oscilloscope measurement
+**Parameters**: None
+**Response**: Comma-separated list of sample values
+**Example**:
+```
+OSC:MEAS?
+1234,1235,1236,1237,...
+```
+
+**Notes**:
+
+- Most convenient command for single acquisitions
+- Uses default or previously set configuration
+- Equivalent to OSC:CONF + OSC:READ
+
+### OSCilloscope:ABORt
+**Syntax**: `OSC:ABOR` or `OSCilloscope:ABORt`
+**Description**: Abort ongoing oscilloscope acquisition
+**Parameters**: None
+**Response**: None
+**Example**: `OSC:ABOR`
+
+**Notes**:
+
+- Stops any acquisition in progress
+- Safe to call even if no acquisition is running
+
+### OSCilloscope:STATus:ACQuisition?
+**Syntax**: `OSC:STAT:ACQ?` or `OSCilloscope:STATus:ACQuisition?`
+**Description**: Query acquisition status
+**Parameters**: None
+**Response**: Status code (0=not started, 1=in progress, 2=complete)
+**Example**:
+```
+OSC:STAT:ACQ?
+2
+```
+
+**Notes**:
+
+- 0: No acquisition started
+- 1: Acquisition in progress
+- 2: Acquisition complete
+
 ## Measurement Workflow
 
-### Basic Measurement Sequence
+### Basic DMM Measurement Sequence
 ```
 *RST                    # Reset instrument
-CONF:VOLT:DC           # Configure for DC voltage (optional)
-INIT:VOLT:DC           # Initialize measurement
-FETC:VOLT:DC?          # Fetch result
+DMM:CONF:VOLT:DC       # Configure for DC voltage (optional)
+DMM:INIT:VOLT:DC       # Initialize measurement
+DMM:FETC:VOLT:DC?      # Fetch result
 ```
 
-### Quick Measurement
+### Quick DMM Measurement
 ```
-MEAS:VOLT:DC?          # Single command measurement
+DMM:MEAS:VOLT:DC?      # Single command measurement
 ```
 
-### Multiple Measurements
+### Multiple DMM Measurements
 ```
-CONF:VOLT:DC           # Configure once
-INIT:VOLT:DC           # Initialize
-FETC:VOLT:DC?          # Fetch first result
-FETC:VOLT:DC?          # Fetch cached result again
-INIT:VOLT:DC           # Re-initialize for new measurement
-FETC:VOLT:DC?          # Fetch new result
+DMM:CONF:VOLT:DC       # Configure once
+DMM:INIT:VOLT:DC       # Initialize
+DMM:FETC:VOLT:DC?      # Fetch first result
+DMM:FETC:VOLT:DC?      # Fetch cached result again
+DMM:INIT:VOLT:DC       # Re-initialize for new measurement
+DMM:FETC:VOLT:DC?      # Fetch new result
+```
+
+### Basic OSCilloscope Measurement Sequence
+```
+*RST                    # Reset instrument
+OSC:CONF:CHAN CH1      # Configure channel (optional)
+OSC:CONF:TIME 100      # Set timebase to 100 µs/div
+OSC:CONF:ACQ:POIN 512  # Set buffer size (optional)
+OSC:INIT               # Start acquisition
+OSC:FETC:DAT?          # Fetch data
+```
+
+### Quick OSCilloscope Measurement
+```
+OSC:MEAS?              # Single command measurement
+```
+
+### OSCilloscope Dual Channel Measurement
+```
+OSC:CONF:CHAN CH1CH2   # Configure for dual channel
+OSC:CONF:TIME 50       # Set timebase
+OSC:READ?              # Initiate and fetch
 ```
 
 ## Error Handling
@@ -306,7 +527,7 @@ The instrument maintains an error queue with up to 16 errors. Errors are reporte
 
 ### Error Query Example
 ```
-MEAS:VOLT:DC? 999      # Invalid channel
+DMM:MEAS:VOLT:DC? 999  # Invalid channel
 SYST:ERR?              # Query error
 -224,"Illegal parameter value"
 SYST:ERR?              # Query next error
@@ -328,15 +549,23 @@ instr.write('*RST')
 print(instr.query('*IDN?'))
 
 # Single measurement
-voltage = instr.query('MEAS:VOLT:DC?')
+voltage = instr.query('DMM:MEAS:VOLT:DC?')
 print(f"Voltage: {voltage.strip()} mV")
 
 # Multiple measurements
-instr.write('CONF:VOLT:DC')
+instr.write('DMM:CONF:VOLT:DC')
 for i in range(5):
-    instr.write('INIT:VOLT:DC')
-    voltage = instr.query('FETC:VOLT:DC?')
+    instr.write('DMM:INIT:VOLT:DC')
+    voltage = instr.query('DMM:FETC:VOLT:DC?')
     print(f"Reading {i+1}: {voltage.strip()} mV")
+
+# Oscilloscope measurement
+instr.write('OSC:CONF:CHAN CH1')
+instr.write('OSC:CONF:TIME 100')  # 100 µs/div
+instr.write('OSC:CONF:ACQ:POIN 512')  # 512 samples
+data = instr.query('OSC:READ?')
+samples = [int(x) for x in data.strip().split(',')]
+print(f"Captured {len(samples)} samples")
 
 instr.close()
 ```
@@ -361,7 +590,7 @@ def write(command):
 write('*RST')
 time.sleep(0.1)
 print("ID:", query('*IDN?'))
-print("Voltage:", query('MEAS:VOLT:DC?'), "mV")
+print("Voltage:", query('DMM:MEAS:VOLT:DC?'), "mV")
 
 ser.close()
 ```
@@ -370,11 +599,11 @@ ser.close()
 
 ### Common Issues
 
-1. **"Execution error" on FETCH**
-   - Ensure INITIATE was called first
+1. **"Execution error" on DMM:FETCH**
+   - Ensure DMM:INITIATE was called first
    - Check that instrument is properly initialized
 
-2. **"Illegal parameter value" on CONFIGURE**
+2. **"Illegal parameter value" on DMM:CONFIGURE**
    - Verify channel number is valid for your hardware
 
 3. **Timeout during measurement**

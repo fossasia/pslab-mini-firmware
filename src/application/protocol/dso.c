@@ -190,9 +190,9 @@ static scpi_result_t apply_dso_config(scpi_t *context, DSO_Config *new_config)
 }
 
 /**
- * @brief CONFigure:OSCilloscope:CHANnel - Set DSO channel
+ * @brief OSCilloscope:CONFigure:CHANnel - Set DSO channel
  *
- * Syntax: CONFigure:OSCilloscope:CHANnel {CH1|CH2|CH1CH2}
+ * Syntax: OSCilloscope:CONFigure:CHANnel {CH1|CH2|CH1CH2}
  */
 scpi_result_t scpi_cmd_configure_oscilloscope_channel(scpi_t *context)
 {
@@ -259,7 +259,7 @@ scpi_result_t scpi_cmd_configure_oscilloscope_channel(scpi_t *context)
 }
 
 /**
- * @brief CONFigure:OSCilloscope:CHANnel? - Query current DSO channel
+ * @brief OSCilloscope:CONFigure:CHANnel? - Query current DSO channel
  * configuration
  *
  * Returns the currently configured channel as a string:
@@ -288,9 +288,9 @@ scpi_result_t scpi_cmd_configure_oscilloscope_channel_q(scpi_t *context)
 }
 
 /**
- * @brief CONFigure:OSCilloscope:TIMEbase - Set DSO timebase (µs / div)
+ * @brief OSCilloscope:CONFigure:TIMEbase - Set DSO timebase (µs / div)
  *
- * Syntax: CONFigure:OSCilloscope:TIMEbase <timebase_us>
+ * Syntax: OSCilloscope:CONFigure:TIMEbase <timebase_us>
  *
  * Sets the timebase and updates sample rate based on the current buffer size.
  * The sample rate is calculated as: buffer_size * 1,000,000 / timebase_us
@@ -344,7 +344,7 @@ scpi_result_t scpi_cmd_configure_oscilloscope_timebase(scpi_t *context)
 }
 
 /**
- * @brief CONFigure:OSCilloscope:TIMEbase? - Query current DSO timebase
+ * @brief OSCilloscope:CONFigure:TIMEbase? - Query current DSO timebase
  *
  * Returns the currently configured timebase in microseconds per division.
  */
@@ -355,9 +355,9 @@ scpi_result_t scpi_cmd_configure_oscilloscope_timebase_q(scpi_t *context)
 }
 
 /**
- * @brief CONFigure:OSCilloscope:ACQuire:POINts - Set DSO buffer size
+ * @brief OSCilloscope:CONFigure:ACQuire:POINts - Set DSO buffer size
  *
- * Syntax: CONFigure:OSCilloscope:ACQuire:POINts <n>
+ * Syntax: OSCilloscope:CONFigure:ACQuire:POINts <n>
  *
  * Sets the buffer size and updates sample rate based on the current timebase.
  * The sample rate is calculated as: buffer_size * 1,000,000 / timebase_us
@@ -403,7 +403,7 @@ scpi_result_t scpi_cmd_configure_oscilloscope_acquire_points(scpi_t *context)
 }
 
 /**
- * @brief CONFigure:OSCilloscope:ACQuire:POINts? - Query current DSO buffer size
+ * @brief OSCilloscope:CONFigure:ACQuire:POINts? - Query current DSO buffer size
  *
  * Returns the currently configured acquisition buffer size in points/samples.
  */
@@ -414,7 +414,7 @@ scpi_result_t scpi_cmd_configure_oscilloscope_acquire_points_q(scpi_t *context)
 }
 
 /**
- * @brief CONFigure:OSCilloscope:ACQuire:SRATe? - Query current DSO sample rate
+ * @brief OSCilloscope:CONFigure:ACQuire:SRATe? - Query current DSO sample rate
  *
  * Returns the currently configured sample rate in samples per second.
  * The sample rate is calculated based on the timebase and buffer size.
@@ -429,7 +429,7 @@ scpi_result_t scpi_cmd_configure_oscilloscope_acquire_srate_q(scpi_t *context)
 }
 
 /**
- * @brief INITiate:OSCilloscope - Start DSO data acquisition
+ * @brief OSCilloscope:INITiate - Start DSO data acquisition
  */
 scpi_result_t scpi_cmd_initiate_oscilloscope(scpi_t *context)
 {
@@ -475,7 +475,7 @@ scpi_result_t scpi_cmd_initiate_oscilloscope(scpi_t *context)
 }
 
 /**
- * @brief ABORt:OSCilloscope - Abort ongoing oscilloscope acquisition
+ * @brief OSCilloscope:ABORt - Abort ongoing oscilloscope acquisition
  */
 scpi_result_t scpi_cmd_abort_oscilloscope(scpi_t *context)
 {
@@ -493,7 +493,7 @@ scpi_result_t scpi_cmd_abort_oscilloscope(scpi_t *context)
 }
 
 /**
- * @brief FETCh:OSCilloscope:DATa? - Fetch the oscilloscope data
+ * @brief OSCilloscope:FETCh:DATa? - Fetch the oscilloscope data
  */
 scpi_result_t scpi_cmd_fetch_oscilloscope_data_q(scpi_t *context)
 {
@@ -538,7 +538,7 @@ scpi_result_t scpi_cmd_fetch_oscilloscope_data_q(scpi_t *context)
 }
 
 /**
- * @brief READ:OSCilloscope? - Initiate and fetch oscilloscope data
+ * @brief OSCilloscope:READ? - Initiate and fetch oscilloscope data
  */
 scpi_result_t scpi_cmd_read_oscilloscope_q(scpi_t *context)
 {
@@ -564,7 +564,7 @@ scpi_result_t scpi_cmd_read_oscilloscope_q(scpi_t *context)
 }
 
 /**
- * @brief MEASure:OSCilloscope? - Configure, initiate, and fetch oscilloscope
+ * @brief OSCilloscope:MEASure? - Configure, initiate, and fetch oscilloscope
  * data
  *
  * This is a convenience command that combines configuration and measurement.
@@ -585,7 +585,7 @@ scpi_result_t scpi_cmd_measure_oscilloscope_q(scpi_t *context)
 }
 
 /**
- * @brief STATus:OSCilloscope:ACQuisition? - Query acquisition status
+ * @brief OSCilloscope:STATus:ACQuisition? - Query acquisition status
  *
  * Returns:
  * 0 - No acquisition started

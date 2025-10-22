@@ -3,7 +3,7 @@
  * @brief Unit tests for DSO-specific SCPI protocol functionality
  *
  * This file contains unit tests for the DSO protocol functionality covering:
- * - DSO SCPI command processing (CONF:OSC:*, INIT:OSC, FETC:OSC:*, etc.)
+ * - DSO SCPI command processing (OSC:CONF:*, OSC:INIT, OSC:FETC:*, etc.)
  * - DSO configuration validation (channel, timebase, buffer size)
  * - DSO error handling and recovery
  * - DSO state management and acquisition control
@@ -166,7 +166,7 @@ void test_scpi_configure_oscilloscope_channel_ch1(void)
 
     // Assert
     char const *response = scpi_get_captured_response();
-    TEST_ASSERT_EQUAL(0, strlen(response)); // CONF command generates no response
+    TEST_ASSERT_EQUAL(0, strlen(response)); // OSC:CONF command generates no response
 }
 
 void test_scpi_configure_oscilloscope_channel_ch2(void)
@@ -179,12 +179,12 @@ void test_scpi_configure_oscilloscope_channel_ch2(void)
     DSO_get_max_sample_rate_ExpectAndReturn(DSO_MODE_SINGLE_CHANNEL, 2000000);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:CHAN CH2\n");
+    scpi_inject_usb_command("OSC:CONF:CHAN CH2\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert
     char const *response = scpi_get_captured_response();
-    TEST_ASSERT_EQUAL(0, strlen(response)); // CONF command generates no response
+    TEST_ASSERT_EQUAL(0, strlen(response)); // OSC:CONF command generates no response
 }
 
 void test_scpi_configure_oscilloscope_channel_dual(void)
@@ -197,12 +197,12 @@ void test_scpi_configure_oscilloscope_channel_dual(void)
     DSO_get_max_sample_rate_ExpectAndReturn(DSO_MODE_DUAL_CHANNEL, 2000000);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:CHAN CH1CH2\n");
+    scpi_inject_usb_command("OSC:CONF:CHAN CH1CH2\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert
     char const *response = scpi_get_captured_response();
-    TEST_ASSERT_EQUAL(0, strlen(response)); // CONF command generates no response
+    TEST_ASSERT_EQUAL(0, strlen(response)); // OSC:CONF command generates no response
 }
 
 void test_scpi_configure_oscilloscope_channel_invalid(void)
@@ -211,7 +211,7 @@ void test_scpi_configure_oscilloscope_channel_invalid(void)
     setup_protocol_for_dso_test();
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:CHAN INVALID\n");
+    scpi_inject_usb_command("OSC:CONF:CHAN INVALID\n");
     scpi_inject_usb_command("SYST:ERR?\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
@@ -241,8 +241,8 @@ void test_scpi_configure_oscilloscope_channel_query(void)
     DSO_get_config_ExpectAndReturn(g_mock_dso_handle, mock_config);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:CHAN CH1\n");
-    scpi_inject_usb_command("CONF:OSC:CHAN?\n");
+    scpi_inject_usb_command("OSC:CONF:CHAN CH1\n");
+    scpi_inject_usb_command("OSC:CONF:CHAN?\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert
@@ -261,12 +261,12 @@ void test_scpi_configure_oscilloscope_timebase(void)
     DSO_get_max_sample_rate_ExpectAndReturn(DSO_MODE_SINGLE_CHANNEL, 2000000);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:TIME 500\n"); // 500 µs/div
+    scpi_inject_usb_command("OSC:CONF:TIME 500\n"); // 500 µs/div
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert
     char const *response = scpi_get_captured_response();
-    TEST_ASSERT_EQUAL(0, strlen(response)); // CONF command generates no response
+    TEST_ASSERT_EQUAL(0, strlen(response)); // OSC:CONF command generates no response
 }
 
 void test_scpi_configure_oscilloscope_timebase_query(void)
@@ -280,8 +280,8 @@ void test_scpi_configure_oscilloscope_timebase_query(void)
     DSO_get_max_sample_rate_ExpectAndReturn(DSO_MODE_SINGLE_CHANNEL, 2000000);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:TIME 200\n");
-    scpi_inject_usb_command("CONF:OSC:TIME?\n");
+    scpi_inject_usb_command("OSC:CONF:TIME 200\n");
+    scpi_inject_usb_command("OSC:CONF:TIME?\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert
@@ -300,12 +300,12 @@ void test_scpi_configure_oscilloscope_acquire_points(void)
     DSO_get_max_sample_rate_ExpectAndReturn(DSO_MODE_SINGLE_CHANNEL, 2000000);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:ACQ:POIN 1024\n");
+    scpi_inject_usb_command("OSC:CONF:ACQ:POIN 1024\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert
     char const *response = scpi_get_captured_response();
-    TEST_ASSERT_EQUAL(0, strlen(response)); // CONF command generates no response
+    TEST_ASSERT_EQUAL(0, strlen(response)); // OSC:CONF command generates no response
 }
 
 void test_scpi_configure_oscilloscope_acquire_points_query(void)
@@ -319,8 +319,8 @@ void test_scpi_configure_oscilloscope_acquire_points_query(void)
     DSO_get_max_sample_rate_ExpectAndReturn(DSO_MODE_SINGLE_CHANNEL, 3000000);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:ACQ:POIN 2048\n");
-    scpi_inject_usb_command("CONF:OSC:ACQ:POIN?\n");
+    scpi_inject_usb_command("OSC:CONF:ACQ:POIN 2048\n");
+    scpi_inject_usb_command("OSC:CONF:ACQ:POIN?\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert
@@ -351,8 +351,8 @@ void test_scpi_configure_oscilloscope_acquire_srate_query(void)
     DSO_get_config_ExpectAndReturn(g_mock_dso_handle, mock_config);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:CHAN CH1\n");
-    scpi_inject_usb_command("CONF:OSC:ACQ:SRAT?\n");
+    scpi_inject_usb_command("OSC:CONF:CHAN CH1\n");
+    scpi_inject_usb_command("OSC:CONF:ACQ:SRAT?\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert
@@ -377,8 +377,8 @@ void test_scpi_initiate_oscilloscope_success(void)
     DSO_start_Expect(g_mock_dso_handle);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:CHAN CH1\n");
-    scpi_inject_usb_command("INIT:OSC\n");
+    scpi_inject_usb_command("OSC:CONF:CHAN CH1\n");
+    scpi_inject_usb_command("OSC:INIT\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert
@@ -396,7 +396,7 @@ void test_scpi_initiate_oscilloscope_not_configured(void)
     DSO_start_Expect(g_mock_dso_handle);
 
     // Act
-    scpi_inject_usb_command("INIT:OSC\n");
+    scpi_inject_usb_command("OSC:INIT\n");
     scpi_inject_usb_command("SYST:ERR?\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
@@ -425,9 +425,9 @@ void test_scpi_fetch_oscilloscope_data_success(void)
     SYSTEM_get_tick_StubWithCallback(mock_system_get_tick_immediate_completion);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:CHAN CH1\n");
-    scpi_inject_usb_command("INIT:OSC\n");
-    scpi_inject_usb_command("FETCH:OSC:DATA?\n");
+    scpi_inject_usb_command("OSC:CONF:CHAN CH1\n");
+    scpi_inject_usb_command("OSC:INIT\n");
+    scpi_inject_usb_command("OSC:FETCH:DATA?\n");
 
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
@@ -444,7 +444,7 @@ void test_scpi_fetch_oscilloscope_data_not_initiated(void)
     setup_protocol_for_dso_test();
 
     // Act
-    scpi_inject_usb_command("FETC:OSC:DATA?\n");
+    scpi_inject_usb_command("OSC:FETC:DATA?\n");
     scpi_inject_usb_command("SYST:ERR?\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
@@ -476,8 +476,8 @@ void test_scpi_read_oscilloscope_complete_flow(void)
     SYSTEM_get_tick_StubWithCallback(mock_system_get_tick_impl);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:CHAN CH2\n");
-    scpi_inject_usb_command("READ:OSC?\n");
+    scpi_inject_usb_command("OSC:CONF:CHAN CH2\n");
+    scpi_inject_usb_command("OSC:READ?\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert
@@ -509,7 +509,7 @@ void test_scpi_measure_oscilloscope_complete_flow(void)
     SYSTEM_get_tick_StubWithCallback(mock_system_get_tick_impl);
 
     // Act
-    scpi_inject_usb_command("MEAS:OSC? CH1CH2\n");
+    scpi_inject_usb_command("OSC:MEAS? CH1CH2\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert
@@ -533,9 +533,9 @@ void test_scpi_abort_oscilloscope(void)
     DSO_deinit_Expect(g_mock_dso_handle);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:CHAN CH1\n");
-    scpi_inject_usb_command("INIT:OSC\n");
-    scpi_inject_usb_command("ABOR:OSC\n");
+    scpi_inject_usb_command("OSC:CONF:CHAN CH1\n");
+    scpi_inject_usb_command("OSC:INIT\n");
+    scpi_inject_usb_command("OSC:ABOR\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert
@@ -549,7 +549,7 @@ void test_scpi_status_oscilloscope_acquisition_query_not_started(void)
     setup_protocol_for_dso_test();
 
     // Test initial state - no acquisition started
-    scpi_inject_usb_command("STAT:OSC:ACQ?\n");
+    scpi_inject_usb_command("OSC:STAT:ACQ?\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert
@@ -571,9 +571,9 @@ void test_scpi_status_oscilloscope_acquisition_query_running_complete(void)
     DSO_is_acquisition_in_progress_ExpectAndReturn(g_mock_dso_handle, true);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:CHAN CH1\n");
-    scpi_inject_usb_command("INIT:OSC\n");
-    scpi_inject_usb_command("STAT:OSC:ACQ?\n");
+    scpi_inject_usb_command("OSC:CONF:CHAN CH1\n");
+    scpi_inject_usb_command("OSC:INIT\n");
+    scpi_inject_usb_command("OSC:STAT:ACQ?\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert - should be "1" for acquisition in progress
@@ -586,7 +586,7 @@ void test_scpi_status_oscilloscope_acquisition_query_running_complete(void)
     DSO_is_acquisition_in_progress_ExpectAndReturn(g_mock_dso_handle, false);
 
     // Act
-    scpi_inject_usb_command("STAT:OSC:ACQ?\n");
+    scpi_inject_usb_command("OSC:STAT:ACQ?\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
     // Assert - should be "2" for acquisition complete
@@ -610,7 +610,7 @@ void test_dso_configuration_invalid_sample_rate(void)
     DSO_get_max_sample_rate_ExpectAndReturn(DSO_MODE_SINGLE_CHANNEL, 1000000);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:TIME 1\n"); // Very fast timebase causing invalid sample rate
+    scpi_inject_usb_command("OSC:CONF:TIME 1\n"); // Very fast timebase causing invalid sample rate
     scpi_inject_usb_command("SYST:ERR?\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
@@ -632,8 +632,8 @@ void test_dso_start_failure(void)
     DSO_start_ExpectAndThrow(g_mock_dso_handle, ERROR_HARDWARE_FAULT);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:CHAN CH1\n");
-    scpi_inject_usb_command("INIT:OSC\n");
+    scpi_inject_usb_command("OSC:CONF:CHAN CH1\n");
+    scpi_inject_usb_command("OSC:INIT\n");
     scpi_inject_usb_command("SYST:ERR?\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
@@ -654,9 +654,9 @@ void test_dso_configuration_during_acquisition(void)
     DSO_is_acquisition_in_progress_ExpectAndReturn(g_mock_dso_handle, true);
 
     // Act
-    scpi_inject_usb_command("CONF:OSC:CHAN CH1\n");
-    scpi_inject_usb_command("INIT:OSC\n");
-    scpi_inject_usb_command("CONF:OSC:TIME 300\n");
+    scpi_inject_usb_command("OSC:CONF:CHAN CH1\n");
+    scpi_inject_usb_command("OSC:INIT\n");
+    scpi_inject_usb_command("OSC:CONF:TIME 300\n");
     scpi_inject_usb_command("SYST:ERR?\n");
     scpi_run_protocol_with_usb_mocks(g_mock_usb_handle);
 
