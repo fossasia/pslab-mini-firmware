@@ -66,6 +66,9 @@ target_link_libraries(test_fixed_point pslab-util)
 cmock_add_test(test_dmm test_dmm.c mock_adc_ll mock_tim_ll)
 target_link_libraries(test_dmm pslab-util pslab-instrument)
 
-# Add protocol test
-cmock_add_test(test_protocol test_protocol.c mock_usb mock_dmm mock_system)
-target_link_libraries(test_protocol pslab-util pslab-application)
+# Add protocol tests
+cmock_add_test(test_protocol_common test_protocol_common.c mock_usb mock_dmm mock_system)
+target_link_libraries(test_protocol_common pslab-util pslab-application scpi_test_helpers)
+
+cmock_add_test(test_protocol_dmm test_protocol_dmm.c mock_usb mock_dmm mock_system)
+target_link_libraries(test_protocol_dmm pslab-util pslab-application scpi_test_helpers)
