@@ -95,7 +95,6 @@ void adc_init_success_stub(ADC_LL_Config const *config, int cmock_num_calls)
     (void)cmock_num_calls;
     // Verify config is reasonable
     TEST_ASSERT_NOT_NULL(config);
-    TEST_ASSERT_EQUAL(1, config->channel_count);
     TEST_ASSERT_EQUAL(ADC_LL_MODE_SINGLE, config->mode);
     TEST_ASSERT_EQUAL(ADC_TRIGGER_TIMER6, config->trigger_source);
     TEST_ASSERT_NOT_NULL(config->output_buffer);

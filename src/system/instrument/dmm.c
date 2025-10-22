@@ -140,7 +140,6 @@ static ADC_LL_Config dmm_create_adc_config(DMM_Handle *handle)
 {
     ADC_LL_Config adc_config = {
         .channels = { dmm_channel_to_adc_ll(handle->config.channel) },
-        .channel_count = 1,
         .mode = ADC_LL_MODE_SINGLE,
         .trigger_source = ADC_TRIGGER_TIMER6,
         .output_buffer = &handle->adc_value,

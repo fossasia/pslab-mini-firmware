@@ -56,8 +56,6 @@ typedef enum {
  */
 typedef struct {
     ADC_LL_Channel channels[MAX_SIMULTANEOUS_CHANNELS]; // ADC channels to use
-    uint8_t channel_count; // Number of channels (1 for single/interleaved,
-                           // 2 for simultaneous)
     ADC_LL_Mode mode; // ADC operation mode
     ADC_LL_TriggerSource trigger_source; // Timer trigger source
     uint16_t *output_buffer; // Output buffer for DMA transfer
