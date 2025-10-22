@@ -156,9 +156,6 @@ static void dmm_init_adc(DMM_Handle *handle)
 {
     LOG_FUNCTION_ENTRY();
 
-    // Set up ADC callback
-    ADC_LL_set_complete_callback(dmm_adc_complete_callback);
-
     LOG_DEBUG("DMM: Configuring ADC");
     // Initialize ADC with the configured channel
     ADC_LL_Config adc_config = dmm_create_adc_config(handle);
@@ -178,6 +175,10 @@ static void dmm_init_adc(DMM_Handle *handle)
         free(handle);
         THROW(error);
     }
+
+    // Set up ADC callback
+    ADC_LL_set_complete_callback(dmm_adc_complete_callback);
+
     LOG_FUNCTION_EXIT();
 }
 
