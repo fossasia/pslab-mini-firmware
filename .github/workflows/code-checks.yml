@@ -4,9 +4,11 @@ on:
   pull_request:
     branches:
       - main
+      - prototype_1
   push:
     branches:
       - main
+      - prototype_1
 
 jobs:
   code-checks:
