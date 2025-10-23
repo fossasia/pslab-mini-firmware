@@ -95,7 +95,6 @@ void adc_init_success_stub(ADC_LL_Config const *config, int cmock_num_calls)
     (void)cmock_num_calls;
     // Verify config is reasonable
     TEST_ASSERT_NOT_NULL(config);
-    TEST_ASSERT_EQUAL(1, config->channel_count);
     TEST_ASSERT_EQUAL(ADC_LL_MODE_SINGLE, config->mode);
     TEST_ASSERT_EQUAL(ADC_TRIGGER_TIMER6, config->trigger_source);
     TEST_ASSERT_NOT_NULL(config->output_buffer);
@@ -116,8 +115,8 @@ void test_DMM_init_success_default_config(void)
     ADC_LL_init_Stub(adc_init_success_stub);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000); // 1 kHz sample rate for timer init
     ADC_LL_get_sample_rate_ExpectAndReturn(1000); // 1 kHz sample rate for logging
-    TIM_LL_init_Expect(TIM_NUM_0, 1000);
-    TIM_LL_start_Expect(TIM_NUM_0); // Expect timer start for initial conversion
+    TIM_LL_init_Expect(TIM_NUM_6, 1000);
+    TIM_LL_start_Expect(TIM_NUM_6); // Expect timer start for initial conversion
     ADC_LL_start_Expect(); // Expect ADC start for initial conversion
 
     // Act
@@ -141,8 +140,8 @@ void test_DMM_init_success_custom_config(void)
     ADC_LL_init_Ignore();
     ADC_LL_get_sample_rate_ExpectAndReturn(2000); // 2 kHz sample rate for timer init
     ADC_LL_get_sample_rate_ExpectAndReturn(2000); // 2 kHz sample rate for logging
-    TIM_LL_init_Expect(TIM_NUM_0, 2000);
-    TIM_LL_start_Expect(TIM_NUM_0); // Expect timer start for initial conversion
+    TIM_LL_init_Expect(TIM_NUM_6, 2000);
+    TIM_LL_start_Expect(TIM_NUM_6); // Expect timer start for initial conversion
     ADC_LL_start_Expect(); // Expect ADC start for initial conversion
 
     // Act
@@ -219,8 +218,8 @@ void test_DMM_init_already_initialized(void)
     ADC_LL_init_Ignore();
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
-    TIM_LL_init_Expect(TIM_NUM_0, 1000);
-    TIM_LL_start_Expect(TIM_NUM_0);
+    TIM_LL_init_Expect(TIM_NUM_6, 1000);
+    TIM_LL_start_Expect(TIM_NUM_6);
     ADC_LL_start_Expect();
 
     g_test_handle = DMM_init(&config);
@@ -270,7 +269,7 @@ void test_DMM_init_timer_failure(void)
     ADC_LL_set_complete_callback_Expect(dmm_adc_complete_callback);
     ADC_LL_init_Ignore(); // ADC init succeeds
     ADC_LL_get_sample_rate_ExpectAndReturn(1000); // For timer init
-    TIM_LL_init_ExpectAndThrow(TIM_NUM_0, 1000, ERROR_HARDWARE_FAULT);
+    TIM_LL_init_ExpectAndThrow(TIM_NUM_6, 1000, ERROR_HARDWARE_FAULT);
     ADC_LL_deinit_Expect(); // Cleanup after timer failure
 
     // Act & Assert
@@ -294,8 +293,8 @@ void test_DMM_deinit_valid_handle(void)
     ADC_LL_init_Ignore();
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
-    TIM_LL_init_Expect(TIM_NUM_0, 1000);
-    TIM_LL_start_Expect(TIM_NUM_0);
+    TIM_LL_init_Expect(TIM_NUM_6, 1000);
+    TIM_LL_start_Expect(TIM_NUM_6);
     ADC_LL_start_Expect();
 
     g_test_handle = DMM_init(&config);
@@ -303,9 +302,9 @@ void test_DMM_deinit_valid_handle(void)
 
     // Set expectations for deinit
     ADC_LL_stop_Expect();
-    TIM_LL_stop_Expect(TIM_NUM_0);
+    TIM_LL_stop_Expect(TIM_NUM_6);
     ADC_LL_deinit_Expect();
-    TIM_LL_deinit_Expect(TIM_NUM_0);
+    TIM_LL_deinit_Expect(TIM_NUM_6);
 
     // Act
     DMM_deinit(g_test_handle);
@@ -337,8 +336,8 @@ void test_DMM_read_voltage_success_conversion_ready(void)
     ADC_LL_init_Ignore();
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
-    TIM_LL_init_Expect(TIM_NUM_0, 1000);
-    TIM_LL_start_Expect(TIM_NUM_0);
+    TIM_LL_init_Expect(TIM_NUM_6, 1000);
+    TIM_LL_start_Expect(TIM_NUM_6);
     ADC_LL_start_Expect();
 
     g_test_handle = DMM_init(&config);
@@ -371,8 +370,8 @@ void test_DMM_read_voltage_no_conversion_ready(void)
     ADC_LL_init_Ignore();
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
-    TIM_LL_init_Expect(TIM_NUM_0, 1000);
-    TIM_LL_start_Expect(TIM_NUM_0);
+    TIM_LL_init_Expect(TIM_NUM_6, 1000);
+    TIM_LL_start_Expect(TIM_NUM_6);
     ADC_LL_start_Expect();
 
     g_test_handle = DMM_init(&config);
@@ -417,8 +416,8 @@ void test_DMM_read_voltage_null_output(void)
     ADC_LL_init_Ignore();
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
-    TIM_LL_init_Expect(TIM_NUM_0, 1000);
-    TIM_LL_start_Expect(TIM_NUM_0);
+    TIM_LL_init_Expect(TIM_NUM_6, 1000);
+    TIM_LL_start_Expect(TIM_NUM_6);
     ADC_LL_start_Expect();
 
     g_test_handle = DMM_init(&config);
@@ -447,8 +446,8 @@ void test_DMM_read_voltage_adc_start_failure(void)
     ADC_LL_init_Ignore();
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
-    TIM_LL_init_Expect(TIM_NUM_0, 1000);
-    TIM_LL_start_Expect(TIM_NUM_0);
+    TIM_LL_init_Expect(TIM_NUM_6, 1000);
+    TIM_LL_start_Expect(TIM_NUM_6);
     ADC_LL_start_Expect(); // Initial start succeeds
 
     g_test_handle = DMM_init(&config);
@@ -481,12 +480,12 @@ void test_DMM_read_voltage_timer_start_failure(void)
     ADC_LL_init_Ignore(); // ADC init succeeds
     ADC_LL_get_sample_rate_ExpectAndReturn(1000); // For timer init
     ADC_LL_get_sample_rate_ExpectAndReturn(1000); // For logging
-    TIM_LL_init_Expect(TIM_NUM_0, 1000); // Timer init succeeds
-    TIM_LL_start_Expect(TIM_NUM_0); // Timer start succeeds
+    TIM_LL_init_Expect(TIM_NUM_6, 1000); // Timer init succeeds
+    TIM_LL_start_Expect(TIM_NUM_6); // Timer start succeeds
     ADC_LL_start_ExpectAndThrow(ERROR_HARDWARE_FAULT); // ADC start fails
-    TIM_LL_stop_Expect(TIM_NUM_0); // Cleanup after start failure
+    TIM_LL_stop_Expect(TIM_NUM_6); // Cleanup after start failure
     ADC_LL_deinit_Expect(); // Cleanup after start failure
-    TIM_LL_deinit_Expect(TIM_NUM_0); // Cleanup after start failure
+    TIM_LL_deinit_Expect(TIM_NUM_6); // Cleanup after start failure
 
     // Act & Assert
     TRY {
@@ -513,8 +512,8 @@ void test_DMM_voltage_calculation_zero_adc(void)
     ADC_LL_init_Stub(adc_init_success_stub);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
-    TIM_LL_init_Expect(TIM_NUM_0, 1000);
-    TIM_LL_start_Expect(TIM_NUM_0);
+    TIM_LL_init_Expect(TIM_NUM_6, 1000);
+    TIM_LL_start_Expect(TIM_NUM_6);
     ADC_LL_start_Expect();
 
     g_test_handle = DMM_init(&config);
@@ -548,8 +547,8 @@ void test_DMM_voltage_calculation_half_scale_adc(void)
     ADC_LL_init_Stub(adc_init_success_stub);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
-    TIM_LL_init_Expect(TIM_NUM_0, 1000);
-    TIM_LL_start_Expect(TIM_NUM_0);
+    TIM_LL_init_Expect(TIM_NUM_6, 1000);
+    TIM_LL_start_Expect(TIM_NUM_6);
     ADC_LL_start_Expect();
 
     g_test_handle = DMM_init(&config);
@@ -590,8 +589,8 @@ void test_DMM_voltage_calculation_full_scale_adc(void)
     ADC_LL_init_Stub(adc_init_success_stub);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
-    TIM_LL_init_Expect(TIM_NUM_0, 1000);
-    TIM_LL_start_Expect(TIM_NUM_0);
+    TIM_LL_init_Expect(TIM_NUM_6, 1000);
+    TIM_LL_start_Expect(TIM_NUM_6);
     ADC_LL_start_Expect();
 
     g_test_handle = DMM_init(&config);
@@ -629,8 +628,8 @@ void test_DMM_voltage_calculation_with_oversampling(void)
     ADC_LL_init_Stub(adc_init_success_stub);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
     ADC_LL_get_sample_rate_ExpectAndReturn(1000);
-    TIM_LL_init_Expect(TIM_NUM_0, 1000);
-    TIM_LL_start_Expect(TIM_NUM_0);
+    TIM_LL_init_Expect(TIM_NUM_6, 1000);
+    TIM_LL_start_Expect(TIM_NUM_6);
     ADC_LL_start_Expect();
 
     g_test_handle = DMM_init(&config);
@@ -669,17 +668,17 @@ void test_DMM_config_validation_edge_cases(void)
         ADC_LL_init_Ignore();
         ADC_LL_get_sample_rate_ExpectAndReturn(1000);
         ADC_LL_get_sample_rate_ExpectAndReturn(1000);
-        TIM_LL_init_Expect(TIM_NUM_0, 1000);
-        TIM_LL_start_Expect(TIM_NUM_0);
+        TIM_LL_init_Expect(TIM_NUM_6, 1000);
+        TIM_LL_start_Expect(TIM_NUM_6);
         ADC_LL_start_Expect();
 
         g_test_handle = DMM_init(&config);
         TEST_ASSERT_NOT_NULL(g_test_handle);
 
         ADC_LL_stop_Expect();
-        TIM_LL_stop_Expect(TIM_NUM_0);
+        TIM_LL_stop_Expect(TIM_NUM_6);
         ADC_LL_deinit_Expect();
-        TIM_LL_deinit_Expect(TIM_NUM_0);
+        TIM_LL_deinit_Expect(TIM_NUM_6);
         DMM_deinit(g_test_handle);
         g_test_handle = NULL;
     }
@@ -711,17 +710,17 @@ void test_DMM_channel_mapping(void)
         ADC_LL_init_Ignore();
         ADC_LL_get_sample_rate_ExpectAndReturn(1000);
         ADC_LL_get_sample_rate_ExpectAndReturn(1000);
-        TIM_LL_init_Expect(TIM_NUM_0, 1000);
-        TIM_LL_start_Expect(TIM_NUM_0);
+        TIM_LL_init_Expect(TIM_NUM_6, 1000);
+        TIM_LL_start_Expect(TIM_NUM_6);
         ADC_LL_start_Expect();
 
         g_test_handle = DMM_init(&config);
         TEST_ASSERT_NOT_NULL(g_test_handle);
 
         ADC_LL_stop_Expect();
-        TIM_LL_stop_Expect(TIM_NUM_0);
+        TIM_LL_stop_Expect(TIM_NUM_6);
         ADC_LL_deinit_Expect();
-        TIM_LL_deinit_Expect(TIM_NUM_0);
+        TIM_LL_deinit_Expect(TIM_NUM_6);
         DMM_deinit(g_test_handle);
         g_test_handle = NULL;
     }

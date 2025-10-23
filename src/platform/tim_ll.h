@@ -19,7 +19,7 @@
 /*
  * @brief TIM instance enumeration
  */
-typedef enum { TIM_NUM_0 = 0, TIM_NUM_1 = 1, TIM_NUM_COUNT = 2 } TIM_Num;
+typedef enum { TIM_NUM_6 = 0, TIM_NUM_7 = 1, TIM_NUM_COUNT = 2 } TIM_Num;
 
 /**
  * @brief Initialize the Timer Module

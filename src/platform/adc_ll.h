@@ -56,8 +56,6 @@ typedef enum {
  */
 typedef struct {
     ADC_LL_Channel channels[MAX_SIMULTANEOUS_CHANNELS]; // ADC channels to use
-    uint8_t channel_count; // Number of channels (1 for single/interleaved,
-                           // 2 for simultaneous)
     ADC_LL_Mode mode; // ADC operation mode
     ADC_LL_TriggerSource trigger_source; // Timer trigger source
     uint16_t *output_buffer; // Output buffer for DMA transfer
@@ -175,5 +173,16 @@ uint32_t ADC_LL_get_sample_rate(void);
  * @return Reference voltage in millivolts, or 0 if ADC is not initialized.
  */
 uint32_t ADC_LL_get_reference_voltage(void);
+
+/**
+ * @brief Get the maximum sample rate for a given ADC mode.
+ *
+ * This function returns the theoretical maximum sample rate for the specified
+ * ADC mode based on the hardware capabilities.
+ *
+ * @param mode ADC operation mode.
+ * @return Maximum sample rate in Hz.
+ */
+uint32_t ADC_LL_get_max_sample_rate(ADC_LL_Mode mode);
 
 #endif // ADC_LL_H

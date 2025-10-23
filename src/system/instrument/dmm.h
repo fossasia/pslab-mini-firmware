@@ -65,7 +65,7 @@ typedef struct {
  */
 #define DMM_CONFIG_DEFAULT                                                     \
     {                                                                          \
-        .channel = DMM_CHANNEL_0, .oversampling_ratio = 16                     \
+        .channel = DMM_CHANNEL_0, .oversampling_ratio = 16,                    \
     }
 
 /**

@@ -5,6 +5,7 @@ target_sources(pslab-application
     PRIVATE
         protocol/common.c
         protocol/dmm.c
+        protocol/dso.c
 )
 
 target_link_libraries(pslab-application

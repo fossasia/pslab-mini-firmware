@@ -6,11 +6,7 @@ target_sources(pslab-mini-firmware
         main.c
         protocol/common.c
         protocol/dmm.c
-)
-
-target_link_libraries(pslab-mini-firmware
-    PRIVATE
-        scpi-parser
+        protocol/dso.c
 )
 
 target_include_directories(pslab-mini-firmware
@@ -22,6 +18,7 @@ target_link_libraries(pslab-mini-firmware
     PRIVATE
         pslab-util
         pslab-system
+        scpi-parser
 )
 
 # Add platform-specific linker script

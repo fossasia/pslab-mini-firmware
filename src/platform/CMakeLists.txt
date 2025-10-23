@@ -17,8 +17,10 @@ endif()
 
 target_include_directories(pslab-platform
     INTERFACE
-        # Include paths for pslab-platform start with "platform/..."
-        ${CMAKE_CURRENT_SOURCE_DIR}/..
+        # Only expose platform headers, not the entire src directory
+        ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE
+        # Include parent directory for internal use only
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
         ${CMAKE_CURRENT_SOURCE_DIR}
 )

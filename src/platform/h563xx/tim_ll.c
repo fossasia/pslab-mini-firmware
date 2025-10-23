@@ -36,11 +36,11 @@ static TIM_HandleTypeDef g_htim7 = { nullptr };
 
 /*Array of Timer Instances*/
 static TimerInstance g_timer_instances[TIM_NUM_COUNT] = {
-    [TIM_NUM_0] = {
+    [TIM_NUM_6] = {
         .htim = &g_htim6,
         .initialized = false,
     },
-    [TIM_NUM_1] = {
+    [TIM_NUM_7] = {
         .htim = &g_htim7,
         .initialized = false,
     },
@@ -168,10 +168,10 @@ void TIM_LL_init(TIM_Num tim, uint32_t freq)
 
     instance->frequency = freq;
 
-    if (tim == TIM_NUM_0) {
+    if (tim == TIM_NUM_6) {
         instance->htim->Instance = TIM6;
         instance->htim->Channel = TIM_CHANNEL_1;
-    } else if (tim == TIM_NUM_1) {
+    } else if (tim == TIM_NUM_7) {
         instance->htim->Instance = TIM7;
         instance->htim->Channel = TIM_CHANNEL_1;
     }

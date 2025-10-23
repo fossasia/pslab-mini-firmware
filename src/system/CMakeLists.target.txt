@@ -17,9 +17,11 @@ target_sources(pslab-system
 
 target_include_directories(pslab-system
     INTERFACE
-        # Include paths for pslab-system start with "system/..."
-        ${CMAKE_CURRENT_SOURCE_DIR}/..
+        # Only expose the system directory itself - no navigation to siblings possible
+        ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE
+        # Internal access to parent for platform/ and util/ - this is internal only
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

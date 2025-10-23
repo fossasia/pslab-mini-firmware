@@ -5,6 +5,7 @@ add_library(unity ${CMAKE_CURRENT_SOURCE_DIR}/unity/src/unity.c)
 # Add the test exception handler directly to unity to propagate to all tests
 target_sources(unity PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/test_headers/exception_test.c)
 target_include_directories(unity PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/unity/src/)
+target_include_directories(unity PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/test_helpers/)
 
 # CMock mocking framework
 add_library(cmock ${CMAKE_CURRENT_SOURCE_DIR}/cmock/src/cmock.c)
@@ -22,7 +23,13 @@ cmock_generate_mock(mock_tim_ll ${CMAKE_CURRENT_SOURCE_DIR}/../src/platform/tim_
 # Generate mocks for protocol dependencies
 cmock_generate_mock(mock_usb ${CMAKE_CURRENT_SOURCE_DIR}/../src/system/bus/usb.h)
 cmock_generate_mock(mock_dmm ${CMAKE_CURRENT_SOURCE_DIR}/../src/system/instrument/dmm.h)
+cmock_generate_mock(mock_dso ${CMAKE_CURRENT_SOURCE_DIR}/../src/system/instrument/dso.h)
 cmock_generate_mock(mock_system ${CMAKE_CURRENT_SOURCE_DIR}/../src/system/system.h)
+
+# SCPI test helpers
+add_library(scpi_test_helpers ${CMAKE_CURRENT_SOURCE_DIR}/test_helpers/scpi_test_helpers.c)
+target_include_directories(scpi_test_helpers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/test_helpers/)
+target_link_libraries(scpi_test_helpers unity mock_usb)
 
 # Add UART test
 cmock_add_test(test_uart test_uart.c mock_uart_ll mock_platform)
@@ -60,6 +67,12 @@ target_link_libraries(test_fixed_point pslab-util)
 cmock_add_test(test_dmm test_dmm.c mock_adc_ll mock_tim_ll)
 target_link_libraries(test_dmm pslab-util pslab-instrument)
 
-# Add protocol test
-cmock_add_test(test_protocol test_protocol.c mock_usb mock_dmm mock_system)
-target_link_libraries(test_protocol pslab-util pslab-application)
+# Add protocol tests
+cmock_add_test(test_protocol_common test_protocol_common.c mock_usb mock_dmm mock_dso mock_system)
+target_link_libraries(test_protocol_common pslab-util pslab-application scpi_test_helpers)
+
+cmock_add_test(test_protocol_dmm test_protocol_dmm.c mock_usb mock_dmm mock_dso mock_system)
+target_link_libraries(test_protocol_dmm pslab-util pslab-application scpi_test_helpers)
+
+cmock_add_test(test_protocol_dso test_protocol_dso.c mock_usb mock_dmm mock_dso mock_system)
+target_link_libraries(test_protocol_dso pslab-util pslab-application scpi_test_helpers)

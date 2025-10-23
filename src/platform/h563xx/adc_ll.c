@@ -35,7 +35,6 @@ typedef struct {
     uint32_t buffer_size; // Size of the ADC data buffer (per channel)
     ADC_LL_CompleteCallback complete_callback; // Callback for ADC completion
     ADC_LL_Channel channels[MAX_SIMULTANEOUS_CHANNELS]; // ADC channels
-    uint8_t channel_count; // Number of channels being used
     ADC_LL_Mode mode; // Current ADC mode
     uint32_t oversampling_ratio; // Oversampling ratio
     uint32_t vref_mv; // Reference voltage in millivolts
@@ -63,7 +62,6 @@ static ADCInstance g_adc_instance = {
     .adc_handles = { &g_hadc1, &g_hadc2 },
     .dma_handle = &g_hdma_adc,
     .channels = { ADC_LL_CHANNEL_0, ADC_LL_CHANNEL_1 },
-    .channel_count = 1,
     .mode = ADC_LL_MODE_SINGLE,
     .oversampling_ratio = 1,
     .vref_mv = 0,
@@ -271,6 +269,30 @@ static void configure_adc_gpio(ADC_LL_PinConfig const *pin_config)
 }
 
 /**
+ * @brief DMA transfer complete callback for multimode ADC.
+ *
+ * This callback is called when the DMA transfer completes in multimode.
+ * Note: HAL_ADC_ConvCpltCallback is NOT called in multimode - only this DMA
+ * callback.
+ */
+static void ADC_DMA_ConvCpltCallback(DMA_HandleTypeDef *hdma)
+{
+    (void)hdma;
+    // For multimode, we treat this as ADC1 completion
+    // since the DMA is linked to ADC1 (master)
+    HAL_ADC_ConvCpltCallback(&g_hadc1);
+}
+
+/**
+ * @brief DMA transfer error callback for multimode ADC.
+ */
+static void ADC_DMA_ErrorCallback(DMA_HandleTypeDef *hdma)
+{
+    (void)hdma;
+    HAL_ADC_ErrorCallback(&g_hadc1);
+}
+
+/**
  * @brief Configures DMA handle with common settings for dual mode.
  *
  * @param hdma Pointer to DMA handle.
@@ -299,9 +321,16 @@ static void configure_dual_mode_dma(
     hdma->Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
     hdma->Init.Mode = DMA_NORMAL;
 
+    // Set DMA completion callback for multimode BEFORE HAL_DMA_Init
+    // In multimode, HAL_ADC_ConvCpltCallback is NOT called - only DMA callback
+    // is called
+    hdma->XferCpltCallback = ADC_DMA_ConvCpltCallback;
+    hdma->XferErrorCallback = ADC_DMA_ErrorCallback;
+
     if (HAL_DMA_Init(hdma) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     }
+    __HAL_LINKDMA(&g_hadc1, DMA_Handle, g_hdma_adc1_dual);
 }
 
 /**
@@ -336,41 +365,7 @@ static void configure_single_mode_dma(
     if (HAL_DMA_Init(hdma) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     }
-}
-
-/**
- * @brief Enables DMA and ADC interrupts for dual mode.
- *
- * @param hadc Pointer to ADC handle structure.
- */
-static void enable_dual_mode_interrupts(ADC_HandleTypeDef *hadc)
-{
-    // Enable DMA interrupt
-    HAL_NVIC_SetPriority(GPDMA1_Channel7_IRQn, ADC_IRQ_PRIORITY, 1);
-    HAL_NVIC_EnableIRQ(GPDMA1_Channel7_IRQn);
-
-    // Enable ADC interrupts
-    if (hadc->Instance == ADC1) {
-        HAL_NVIC_SetPriority(ADC1_IRQn, ADC_IRQ_PRIORITY, 0);
-        HAL_NVIC_EnableIRQ(ADC1_IRQn);
-    } else if (hadc->Instance == ADC2) {
-        HAL_NVIC_SetPriority(ADC2_IRQn, ADC_IRQ_PRIORITY, 0);
-        HAL_NVIC_EnableIRQ(ADC2_IRQn);
-    }
-}
-
-/**
- * @brief Enables DMA and ADC interrupts for single mode.
- */
-static void enable_single_mode_interrupts(void)
-{
-    // Enable DMA interrupt
-    HAL_NVIC_SetPriority(GPDMA1_Channel6_IRQn, ADC_IRQ_PRIORITY, 1);
-    HAL_NVIC_EnableIRQ(GPDMA1_Channel6_IRQn);
-
-    // Enable ADC1 interrupt
-    HAL_NVIC_SetPriority(ADC1_IRQn, ADC_IRQ_PRIORITY, 0);
-    HAL_NVIC_EnableIRQ(ADC1_IRQn);
+    __HAL_LINKDMA(&g_hadc1, DMA_Handle, g_hdma_adc);
 }
 
 /**
@@ -386,7 +381,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
     LOG_FUNCTION_ENTRY();
     ADC_LL_PinConfig pin_config;
 
-    // Enable ADC clocks
+    // Enable ADC clock
     __HAL_RCC_ADC_CLK_ENABLE();
 
     // Get pin configuration based on ADC instance
@@ -401,35 +396,34 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
     // Configure GPIO pin for ADC input
     configure_adc_gpio(&pin_config);
 
-    if (g_adc_instance.channel_count > 1) {
+    // Enable DMA clock
+    __HAL_RCC_GPDMA1_CLK_ENABLE();
+
+    if (g_adc_instance.mode == ADC_LL_MODE_SIMULTANEOUS ||
+        g_adc_instance.mode == ADC_LL_MODE_INTERLEAVED) {
         // Dual mode configuration
         if (hadc->Instance == ADC1) {
-            // Enable DMA1 clock
-            __HAL_RCC_GPDMA1_CLK_ENABLE();
-
             // Configure DMA for dual mode (both simultaneous and interleaved
             // use same settings)
             configure_dual_mode_dma(
                 &g_hdma_adc1_dual, GPDMA1_Channel7, GPDMA1_REQUEST_ADC1
             );
-            __HAL_LINKDMA(&g_hadc1, DMA_Handle, g_hdma_adc1_dual);
+
+            // Enable DMA interrupt
+            HAL_NVIC_SetPriority(GPDMA1_Channel7_IRQn, ADC_IRQ_PRIORITY, 1);
+            HAL_NVIC_EnableIRQ(GPDMA1_Channel7_IRQn);
         }
-
-        // Enable interrupts for dual mode
-        enable_dual_mode_interrupts(hadc);
+        // Note: ADC2 in multimode is slave and doesn't need DMA or separate
+        // interrupts
     } else {
-        // Single mode configuration
-        // Enable DMA1 clock
-        __HAL_RCC_GPDMA1_CLK_ENABLE();
-
         // Configure DMA for single mode
         configure_single_mode_dma(
             &g_hdma_adc, GPDMA1_Channel6, GPDMA1_REQUEST_ADC1
         );
-        __HAL_LINKDMA(&g_hadc1, DMA_Handle, g_hdma_adc);
 
-        // Enable interrupts for single mode
-        enable_single_mode_interrupts();
+        // Enable DMA interrupts
+        HAL_NVIC_SetPriority(GPDMA1_Channel6_IRQn, ADC_IRQ_PRIORITY, 1);
+        HAL_NVIC_EnableIRQ(GPDMA1_Channel6_IRQn);
     }
     LOG_FUNCTION_EXIT();
 }
@@ -446,32 +440,6 @@ static void validate_adc_config_structure(ADC_LL_Config const *config)
     }
 
     if (config->output_buffer == nullptr) {
-        THROW(ERROR_INVALID_ARGUMENT);
-    }
-
-    if (config->channel_count == 0 ||
-        config->channel_count > MAX_SIMULTANEOUS_CHANNELS) {
-        THROW(ERROR_INVALID_ARGUMENT);
-    }
-}
-
-/**
- * @brief Validates ADC mode and channel count consistency.
- *
- * @param config ADC configuration to validate.
- */
-static void validate_adc_mode_consistency(ADC_LL_Config const *config)
-{
-    // Validate single-channel input in single- and interleaved modes
-    if ((config->mode == ADC_LL_MODE_SINGLE ||
-         config->mode == ADC_LL_MODE_INTERLEAVED) &&
-        config->channel_count != 1) {
-        THROW(ERROR_INVALID_ARGUMENT);
-    }
-
-    // Validate dual-channel input in simultaneous mode
-    if (config->mode == ADC_LL_MODE_SIMULTANEOUS &&
-        config->channel_count != 2) {
         THROW(ERROR_INVALID_ARGUMENT);
     }
 }
@@ -497,7 +465,6 @@ static void validate_oversampling_ratio(uint32_t ratio)
 static void validate_adc_config(ADC_LL_Config const *config)
 {
     validate_adc_config_structure(config);
-    validate_adc_mode_consistency(config);
     validate_oversampling_ratio(config->oversampling_ratio);
 
     if (g_adc_instance.initialized) {
@@ -513,11 +480,12 @@ static void validate_adc_config(ADC_LL_Config const *config)
 static void initialize_adc_instance(ADC_LL_Config const *config)
 {
     ADCInstance *instance = &g_adc_instance;
-    for (int i = 0; i < config->channel_count; i++) {
+    // Copy channels based on mode
+    uint8_t num_channels = (config->mode == ADC_LL_MODE_SIMULTANEOUS) ? 2 : 1;
+    for (int i = 0; i < num_channels; i++) {
         instance->channels[i] = config->channels[i];
     }
     instance->buffer_data = config->output_buffer;
-    instance->channel_count = config->channel_count;
     instance->mode = config->mode;
     instance->buffer_size = config->buffer_size;
     instance->oversampling_ratio = config->oversampling_ratio;
@@ -574,14 +542,8 @@ static void configure_adc_oversampling(
             ADC_TRIGGEREDMODE_SINGLE_TRIGGER;
         adc_handle->Init.Oversampling.OversamplingStopReset =
             ADC_REGOVERSAMPLING_CONTINUED_MODE;
-        LOG_DEBUG(
-            "Oversampling configured: ratio=%lu, HAL_ratio=0x%08lX",
-            oversampling_ratio,
-            adc_handle->Init.Oversampling.Ratio
-        );
     } else {
         adc_handle->Init.OversamplingMode = DISABLE;
-        LOG_DEBUG("Oversampling disabled");
     }
 }
 
@@ -603,7 +565,7 @@ static void set_common_adc_init_params(ADC_HandleTypeDef *adc_handle)
     adc_handle->Init.DiscontinuousConvMode = DISABLE;
     adc_handle->Init.SamplingMode = ADC_SAMPLING_MODE_NORMAL;
     adc_handle->Init.DMAContinuousRequests = DISABLE;
-    adc_handle->Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+    adc_handle->Init.Overrun = ADC_OVR_DATA_PRESERVED;
 }
 
 /**
@@ -810,45 +772,16 @@ static void read_vdda_voltage(ADCInstance *instance)
 static void calibrate_adc(ADC_LL_Config const *config)
 {
     LOG_FUNCTION_ENTRY();
-    HAL_StatusTypeDef status =
-        HAL_ADCEx_Calibration_Start(&g_hadc1, ADC_SINGLE_ENDED);
 
-    if (status != HAL_OK) {
-        LOG_ERROR("ADC1 calibration failed with status: %d", status);
-        LOG_ERROR(
-            "ADC1 State after failed calibration: 0x%08lX", g_hadc1.State
-        );
-        LOG_ERROR("ADC1 ErrorCode: 0x%08lX", g_hadc1.ErrorCode);
+    if (HAL_ADCEx_Calibration_Start(&g_hadc1, ADC_SINGLE_ENDED) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     }
 
-    LOG_DEBUG("ADC1 calibrated successfully");
-
-    if (config->channel_count > 1) {
-        LOG_DEBUG("Starting ADC2 calibration");
-
-        // Debug ADC2 state before calibration
-        LOG_DEBUG("ADC2 Instance: 0x%08lX", (uint32_t)g_hadc2.Instance);
-        LOG_DEBUG("ADC2 State: 0x%08lX", g_hadc2.State);
-
-        // Check if ADC2 instance is valid
-        if (g_hadc2.Instance == nullptr) {
-            LOG_ERROR("ADC2 Instance is NULL!");
+    if (config->mode == ADC_LL_MODE_SIMULTANEOUS ||
+        config->mode == ADC_LL_MODE_INTERLEAVED) {
+        if (HAL_ADCEx_Calibration_Start(&g_hadc2, ADC_SINGLE_ENDED) != HAL_OK) {
             THROW(ERROR_HARDWARE_FAULT);
         }
-
-        status = HAL_ADCEx_Calibration_Start(&g_hadc2, ADC_SINGLE_ENDED);
-        LOG_DEBUG("ADC2 calibration returned with status: %d", status);
-        if (status != HAL_OK) {
-            LOG_ERROR("ADC2 calibration failed with status: %d", status);
-            LOG_ERROR(
-                "ADC2 State after failed calibration: 0x%08lX", g_hadc2.State
-            );
-            LOG_ERROR("ADC2 ErrorCode: 0x%08lX", g_hadc2.ErrorCode);
-            THROW(ERROR_HARDWARE_FAULT);
-        }
-
-        LOG_DEBUG("ADC2 calibrated successfully");
     }
 
     LOG_FUNCTION_EXIT();
@@ -868,47 +801,34 @@ void ADC_LL_init(ADC_LL_Config const *config)
     LOG_FUNCTION_ENTRY();
 
     validate_adc_config(config);
-    LOG_DEBUG("ADC config validated");
-
     initialize_adc_instance(config);
-    LOG_DEBUG("ADC instance initialized");
 
     ADCInstance *instance = &g_adc_instance;
-    LOG_DEBUG("ADC instance pointer obtained");
 
     // Set ADC instances first (required for calibration)
     g_hadc1.Instance = ADC1;
     g_hadc2.Instance = ADC2;
 
-    // Configure ADC1 parameters (but don't initialize yet)
+    // Configure ADC1 parameters
     configure_adc1_init(config);
-    LOG_DEBUG("ADC1 configured");
 
-    // Configure ADC2 parameters for dual modes (but don't initialize yet)
+    // Configure ADC2 parameters for dual modes
     if (config->mode == ADC_LL_MODE_SIMULTANEOUS ||
         config->mode == ADC_LL_MODE_INTERLEAVED) {
         configure_adc2_init(config);
-        LOG_DEBUG("ADC2 configured");
     }
 
     // Initialize ADC1
-    HAL_StatusTypeDef init_status = HAL_ADC_Init(&g_hadc1);
-    if (init_status != HAL_OK) {
-        LOG_ERROR("Failed to initialize ADC1 with status: %d", init_status);
-        uint32_t error_code = HAL_ADC_GetError(&g_hadc1);
-        LOG_ERROR("ADC1 error code: 0x%08lX", error_code);
+    if (HAL_ADC_Init(&g_hadc1) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     }
-    LOG_DEBUG("ADC1 initialized successfully");
 
     // Initialize ADC2 for dual modes
     if (config->mode == ADC_LL_MODE_SIMULTANEOUS ||
         config->mode == ADC_LL_MODE_INTERLEAVED) {
         if (HAL_ADC_Init(&g_hadc2) != HAL_OK) {
-            LOG_ERROR("Failed to initialize ADC2");
             THROW(ERROR_HARDWARE_FAULT);
         }
-        LOG_DEBUG("ADC2 initialized successfully");
     }
 
     // Perform ADC calibration after initialization
@@ -916,13 +836,11 @@ void ADC_LL_init(ADC_LL_Config const *config)
 
     // Read VDDA voltage
     read_vdda_voltage(instance);
-    LOG_DEBUG("VDDA read: %lu mV", instance->vref_mv);
 
     // Configure channels
     configure_adc_channel(
         instance->adc_handles[0], &g_config, config->channels[0]
     );
-    LOG_DEBUG("ADC1 channel configured");
 
     // Configure ADC2 channel and dual mode for dual modes
     if (config->mode == ADC_LL_MODE_SIMULTANEOUS ||
@@ -930,10 +848,8 @@ void ADC_LL_init(ADC_LL_Config const *config)
         configure_adc_channel(
             instance->adc_handles[1], &g_config2, config->channels[1]
         );
-        LOG_DEBUG("ADC2 channel configured");
 
         configure_dual_mode(config);
-        LOG_DEBUG("Dual mode configured");
     }
 }
 
@@ -961,7 +877,8 @@ void ADC_LL_deinit(void)
 
     // Disable interrupts
     HAL_NVIC_DisableIRQ(ADC1_IRQn);
-    if (instance->channel_count > 1) {
+    if (instance->mode == ADC_LL_MODE_SIMULTANEOUS ||
+        instance->mode == ADC_LL_MODE_INTERLEAVED) {
         HAL_NVIC_DisableIRQ(ADC2_IRQn);
         HAL_NVIC_DisableIRQ(GPDMA1_Channel7_IRQn);
     } else {
@@ -972,7 +889,8 @@ void ADC_LL_deinit(void)
     if (HAL_ADC_DeInit(instance->adc_handles[0]) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
     }
-    if (instance->channel_count > 1) {
+    if (instance->mode == ADC_LL_MODE_SIMULTANEOUS ||
+        instance->mode == ADC_LL_MODE_INTERLEAVED) {
         if (HAL_ADC_DeInit(instance->adc_handles[1]) != HAL_OK) {
             THROW(ERROR_HARDWARE_FAULT);
         }
@@ -985,7 +903,6 @@ void ADC_LL_deinit(void)
     }
     instance->buffer_size = 0;
     instance->complete_callback = nullptr;
-    instance->channel_count = 1;
     instance->mode = ADC_LL_MODE_SINGLE;
     instance->oversampling_ratio = 1;
     instance->vref_mv = 0;
@@ -1005,28 +922,23 @@ void ADC_LL_start(void)
     }
 
     __HAL_ADC_CLEAR_FLAG(&g_hadc1, ADC_FLAG_EOC | ADC_FLAG_EOS | ADC_FLAG_OVR);
-    if (g_adc_instance.channel_count > 1) {
-        __HAL_ADC_CLEAR_FLAG(
-            &g_hadc2, ADC_FLAG_EOC | ADC_FLAG_EOS | ADC_FLAG_OVR
-        );
-    }
+    __HAL_ADC_CLEAR_FLAG(&g_hadc2, ADC_FLAG_EOC | ADC_FLAG_EOS | ADC_FLAG_OVR);
+    g_hadc1.State = HAL_ADC_STATE_READY;
+    g_hadc2.State = HAL_ADC_STATE_READY;
 
     if (g_adc_instance.mode == ADC_LL_MODE_SIMULTANEOUS ||
         g_adc_instance.mode == ADC_LL_MODE_INTERLEAVED) {
+        // For dual mode DMA with 32-bit transfers, buffer_size should be in
+        // 32-bit words Each 32-bit word contains 2x 16-bit ADC samples (ADC1 +
+        // ADC2)
+        uint32_t dma_transfer_count = g_adc_instance.buffer_size / 2;
+
         // Start multimode DMA conversion (both simultaneous and interleaved use
         // multimode)
-        uint32_t dma_buffer_size = g_adc_instance.buffer_size;
-        if (g_adc_instance.mode == ADC_LL_MODE_SIMULTANEOUS ||
-            g_adc_instance.mode == ADC_LL_MODE_INTERLEAVED) {
-            dma_buffer_size *= 2; // Double buffer size for dual-channel modes
-        }
-
         if (HAL_ADCEx_MultiModeStart_DMA(
                 &g_hadc1,
-                (uint32_t *)g_adc_instance
-                    .buffer_data, // Cast to uint32_t for multimode
-                dma_buffer_size /
-                    2 // Divide by 2 because we're transferring 32-bit words
+                (uint32_t *)g_adc_instance.buffer_data,
+                dma_transfer_count
             ) != HAL_OK) {
             THROW(ERROR_HARDWARE_FAULT);
         }
@@ -1053,6 +965,9 @@ void ADC_LL_stop(void)
     if (!g_adc_instance.initialized) {
         return;
     }
+
+    g_hadc1.State = HAL_ADC_STATE_RESET;
+    g_hadc2.State = HAL_ADC_STATE_RESET;
 
     if (g_adc_instance.mode == ADC_LL_MODE_SIMULTANEOUS ||
         g_adc_instance.mode == ADC_LL_MODE_INTERLEAVED) {
@@ -1224,6 +1139,21 @@ uint32_t ADC_LL_get_reference_voltage(void)
     return 0;
 }
 
+uint32_t ADC_LL_get_max_sample_rate(ADC_LL_Mode mode)
+{
+    uint32_t const max_single_channel = 5000000; // 5 MHz
+    uint32_t const max_dual_channel = 10000000; // 10 MHz
+    switch (mode) {
+    case ADC_LL_MODE_SINGLE:
+    case ADC_LL_MODE_SIMULTANEOUS:
+        return max_single_channel;
+    case ADC_LL_MODE_INTERLEAVED:
+        return max_dual_channel;
+    default:
+        return 0;
+    }
+}
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
     (void)hadc;
@@ -1247,10 +1177,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
         );
     }
 }
-
-void ADC1_IRQHandler(void) { HAL_ADC_IRQHandler(&g_hadc1); }
-
-void ADC2_IRQHandler(void) { HAL_ADC_IRQHandler(&g_hadc2); }
 
 void GPDMA1_Channel6_IRQHandler(void)
 {
