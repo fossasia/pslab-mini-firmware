@@ -174,7 +174,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
 
         /* Configure DMA for TX */
         g_hdma_usart_esp_tx.Instance = GPDMA1_Channel2;
-        g_hdma_usart_esp_tx.Init.Request = GPDMA1_REQUEST_USART2_TX;
+        g_hdma_usart_esp_tx.Init.Request = GPDMA1_REQUEST_USART6_TX;
         g_hdma_usart_esp_tx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
         g_hdma_usart_esp_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
         g_hdma_usart_esp_tx.Init.SrcInc = DMA_SINC_INCREMENTED;
@@ -193,7 +193,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
 
         /* Configure DMA for RX */
         g_hdma_usart_esp_rx.Instance = GPDMA1_Channel3;
-        g_hdma_usart_esp_rx.Init.Request = GPDMA1_REQUEST_USART2_RX;
+        g_hdma_usart_esp_rx.Init.Request = GPDMA1_REQUEST_USART6_RX;
         g_hdma_usart_esp_rx.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
         g_hdma_usart_esp_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
         g_hdma_usart_esp_rx.Init.SrcInc = DMA_SINC_FIXED;
@@ -211,8 +211,8 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
         __HAL_LINKDMA(huart, hdmarx, g_hdma_usart_esp_rx);
 
         /* UART interrupt init */
-        HAL_NVIC_SetPriority(USART2_IRQn, UART_IRQ_PRIO, 0);
-        HAL_NVIC_EnableIRQ(USART2_IRQn);
+        HAL_NVIC_SetPriority(USART6_IRQn, UART_IRQ_PRIO, 0);
+        HAL_NVIC_EnableIRQ(USART6_IRQn);
 
         /* DMA interrupt init */
         HAL_NVIC_SetPriority(GPDMA1_Channel2_IRQn, UART_IRQ_PRIO, 1);
