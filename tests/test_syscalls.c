@@ -62,8 +62,8 @@ void test_write_r_stdout_success(void)
     size_t data_len = strlen(test_data);
 
     // Set up expectations for write operation only
-    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_0, false);
-    UART_LL_start_dma_tx_Expect(UART_BUS_0, (uint8_t*)test_data, data_len);
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_HEADER, false);
+    UART_LL_start_dma_tx_Expect(UART_BUS_HEADER, (uint8_t*)test_data, data_len);
 
     // Act
     _ssize_t result = _write_r(&test_reent, STDOUT_FILENO, test_data, data_len);
@@ -81,8 +81,8 @@ void test_write_r_stderr_success(void)
     size_t data_len = strlen(test_data);
 
     // Set up expectations for write operation only
-    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_0, false);
-    UART_LL_start_dma_tx_Expect(UART_BUS_0, (uint8_t*)test_data, data_len);
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_HEADER, false);
+    UART_LL_start_dma_tx_Expect(UART_BUS_HEADER, (uint8_t*)test_data, data_len);
 
     // Act
     _ssize_t result = _write_r(&test_reent, STDERR_FILENO, test_data, data_len);
@@ -180,7 +180,7 @@ void test_write_r_tx_buffer_full(void)
     UART_LL_set_tx_complete_callback_Ignore();
 
     // Simulate TX not busy initially, so transmission can start
-    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_0, false);
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_HEADER, false);
 
     // First, fill the TX buffer with data (255 bytes to leave 1 slot free)
     // The buffer size is 256, and full condition is when (head + 1) % size == tail
@@ -189,7 +189,7 @@ void test_write_r_tx_buffer_full(void)
     memset(filler_data, 'X', sizeof(filler_data));
 
     // Expect start_dma_tx to be called for the initial filler data
-    UART_LL_start_dma_tx_Expect(UART_BUS_0, (uint8_t*)filler_data, 255);
+    UART_LL_start_dma_tx_Expect(UART_BUS_HEADER, (uint8_t*)filler_data, 255);
 
     // Write filler data to fill the buffer
     _ssize_t filler_result = _write_r(&test_reent, 1, filler_data, 255);
@@ -197,7 +197,7 @@ void test_write_r_tx_buffer_full(void)
 
     // Now try to write more data - this should fail or write less
     // TX should still be busy from the previous operation
-    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_0, true);
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_HEADER, true);
 
     // Act - try to write when buffer is full
     _ssize_t result = _write_r(&test_reent, 1, test_data, data_len);
@@ -221,15 +221,15 @@ void test_multiple_writes(void)
     UART_LL_set_tx_complete_callback_Ignore();
 
     // Set up expectations for first write
-    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_0, false);
-    UART_LL_start_dma_tx_Expect(UART_BUS_0, (uint8_t*)test_data1, 6);
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_HEADER, false);
+    UART_LL_start_dma_tx_Expect(UART_BUS_HEADER, (uint8_t*)test_data1, 6);
 
     // Act - first write
     _ssize_t result1 = _write_r(&test_reent, STDOUT_FILENO, test_data1, 6);
 
     // For the second write, TX is now busy from the first write
     // So the data will be queued but no new DMA transfer will start
-    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_0, true);
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_HEADER, true);
 
     // Act - second write (should queue data but not start new transmission)
     _ssize_t result2 = _write_r(&test_reent, STDOUT_FILENO, test_data2, 6);
