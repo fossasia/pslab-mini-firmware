@@ -1,6 +1,7 @@
 target_sources(pslab-platform
     PRIVATE
         adc_ll.c
+        esp_ll.c
         led_ll.c
         platform.c
         tim_ll.c
