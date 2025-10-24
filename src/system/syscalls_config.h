@@ -2,8 +2,9 @@
 #define SYSCALLS_CONFIG_H
 
 #ifndef SYSCALLS_UART_BUS
-// USART3 is connected to the ST-Link USB on Nucleo-H563ZI
-#define SYSCALLS_UART_BUS 2
+// 0 maps to USART6, which is UART_BUS_HEADER.
+// TODO(bessman): modularize this.
+#define SYSCALLS_UART_BUS 0
 #endif
 
 #ifndef SYSCALLS_UART_TX_BUFFER_SIZE

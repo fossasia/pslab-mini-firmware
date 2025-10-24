@@ -17,12 +17,7 @@
 /**
  * @brief UART bus instance enumeration
  */
-typedef enum {
-    UART_BUS_0 = 0,
-    UART_BUS_1 = 1,
-    UART_BUS_2 = 2,
-    UART_BUS_COUNT = 3
-} UART_Bus;
+typedef enum { UART_BUS_HEADER, UART_BUS_ESP, UART_BUS_COUNT } UART_Bus;
 
 /**
  * @brief Default (and currently only supported) UART baudrate
