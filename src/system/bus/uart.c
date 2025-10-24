@@ -41,6 +41,7 @@ struct UART_Handle {
     UART_Bus bus_id;
     CircularBuffer *rx_buffer;
     CircularBuffer *tx_buffer;
+    CircularBuffer *original_tx_buffer; /* Stored during passthrough */
     uint32_t volatile rx_dma_head;
     UART_RxCallback rx_callback;
     uint32_t rx_threshold;
@@ -50,9 +51,6 @@ struct UART_Handle {
 
 /* Global array to keep track of active UART handles */
 static UART_Handle *g_active_handles[UART_BUS_COUNT] = { nullptr };
-
-/* Store disabled TX buffers during passthrough */
-static CircularBuffer *g_disabled_tx_buffers[2] = { nullptr };
 
 /**
  * @brief Get the number of available UART bus instances.
@@ -264,6 +262,7 @@ UART_Handle *UART_init(
     handle->bus_id = bus_id;
     handle->rx_buffer = rx_buffer;
     handle->tx_buffer = tx_buffer;
+    handle->original_tx_buffer = nullptr;
     handle->rx_dma_head = 0;
     handle->rx_callback = nullptr;
     handle->rx_threshold = 0;
@@ -504,22 +503,26 @@ static void passthrough_callback(UART_Handle *handle, uint32_t bytes_available)
 
 void UART_enable_passthrough(UART_Handle *handle1, UART_Handle *handle2)
 {
-    // Only one passthrough pair is allowed at a time
-    if ((g_disabled_tx_buffers[0] != nullptr) ||
-        (g_disabled_tx_buffers[1] != nullptr)) {
-        THROW(ERROR_RESOURCE_BUSY);
-    }
-
     if (!handle1 || !handle1->initialized || !handle2 ||
         !handle2->initialized) {
         THROW(ERROR_DEVICE_NOT_READY);
     }
 
+    // Check that handles are different
+    if (handle1 == handle2) {
+        THROW(ERROR_INVALID_ARGUMENT);
+    }
+
+    // Check if either handle is already in passthrough mode
+    if (handle1->passthrough_target || handle2->passthrough_target) {
+        THROW(ERROR_RESOURCE_BUSY);
+    }
+
     // Set up shared buffers:
-    // - Normal tx_buffers are temporarily disabled
+    // - Store normal tx_buffers in each handle
     // - Redirect each handle's rx_buffer to the other handle's tx_buffer
-    g_disabled_tx_buffers[0] = handle1->tx_buffer;
-    g_disabled_tx_buffers[1] = handle2->tx_buffer;
+    handle1->original_tx_buffer = handle1->tx_buffer;
+    handle2->original_tx_buffer = handle2->tx_buffer;
     handle1->tx_buffer = handle2->rx_buffer;
     handle2->tx_buffer = handle1->rx_buffer;
 
@@ -539,17 +542,17 @@ void UART_disable_passthrough(UART_Handle *handle1, UART_Handle *handle2)
         THROW(ERROR_INVALID_ARGUMENT);
     }
 
+    /* Disable passthrough callbacks */
+    UART_set_rx_callback(handle1, nullptr, 0);
+    UART_set_rx_callback(handle2, nullptr, 0);
+
     /* Restore original TX buffers */
-    handle1->tx_buffer = g_disabled_tx_buffers[0];
-    handle2->tx_buffer = g_disabled_tx_buffers[1];
-    g_disabled_tx_buffers[0] = nullptr;
-    g_disabled_tx_buffers[1] = nullptr;
+    handle1->tx_buffer = handle1->original_tx_buffer;
+    handle2->tx_buffer = handle2->original_tx_buffer;
+    handle1->original_tx_buffer = nullptr;
+    handle2->original_tx_buffer = nullptr;
 
     /* Clear passthrough targets */
     handle1->passthrough_target = nullptr;
     handle2->passthrough_target = nullptr;
-
-    /* Disable RX callbacks */
-    UART_set_rx_callback(handle1, nullptr, 0);
-    UART_set_rx_callback(handle2, nullptr, 0);
 }

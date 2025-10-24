@@ -1050,3 +1050,42 @@ void test_UART_deinit_with_active_passthrough(void)
     UART_deinit(handle1);
     UART_deinit(handle2);
 }
+
+void test_UART_enable_passthrough_with_same_handle(void)
+{
+    // Arrange - Initialize one UART bus
+    CircularBuffer rx_buffer, tx_buffer;
+    uint8_t rx_data[256], tx_data[256];
+
+    circular_buffer_init(&rx_buffer, rx_data, sizeof(rx_data));
+    circular_buffer_init(&tx_buffer, tx_data, sizeof(tx_data));
+
+    // Set up expectations for init
+    UART_LL_init_Expect(UART_BUS_0, rx_data, sizeof(rx_data));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle = UART_init(0, &rx_buffer, &tx_buffer);
+    TEST_ASSERT_NOT_NULL(handle);
+
+    Error caught_error = ERROR_NONE;
+
+    // Act - Try to enable passthrough with the same handle for both buses
+    TRY {
+        UART_enable_passthrough(handle, handle);
+    } CATCH(caught_error) {
+        // Expected to catch an error
+    }
+
+    // Assert
+    TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, caught_error);
+
+    // Cleanup
+    UART_LL_deinit_Ignore();
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_deinit(handle);
+}
