@@ -29,6 +29,7 @@ struct UART_Handle {
     UART_Bus bus_id;
     CircularBuffer *rx_buffer;
     CircularBuffer *tx_buffer;
+    CircularBuffer *original_tx_buffer; /* Stored during passthrough */
     uint32_t volatile rx_dma_head;
     UART_RxCallback rx_callback;
     uint32_t rx_threshold;

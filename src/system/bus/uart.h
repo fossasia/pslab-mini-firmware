@@ -201,7 +201,6 @@ bool UART_tx_busy(UART_Handle *handle);
  * @warning Do not call UART operations on either handle while passthrough is
  *          active.
  *
- * @note Passthrough can only be enabled for one pair of UART buses at a time.
  * @note While passthrough is active, neither bus can be deinitialized.
  * @note RX callbacks, if any, will be disabled and must be manually re-enabled
  *       after disabling passthrough.
