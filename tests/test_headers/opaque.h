@@ -11,6 +11,8 @@
 
 #include <stdint.h>
 
+#include "platform/uart_ll.h"
+#include "system/bus/uart.h"
 #include "system/bus/usb.h"
 #include "system/instrument/dmm.h"
 #include "system/instrument/dso.h"
@@ -19,6 +21,20 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @brief UART handle structure (concrete definition for testing)
+ */
+struct UART_Handle {
+    UART_Bus bus_id;
+    CircularBuffer *rx_buffer;
+    CircularBuffer *tx_buffer;
+    uint32_t volatile rx_dma_head;
+    UART_RxCallback rx_callback;
+    uint32_t rx_threshold;
+    bool initialized;
+    UART_Handle *passthrough_target;
+};
 
 /**
  * @brief DMM handle structure (concrete definition for testing)
