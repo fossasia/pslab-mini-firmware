@@ -102,6 +102,8 @@ UART_Handle *UART_init(
 /**
  * @brief Deinitialize the UART peripheral.
  *
+ * @note Bus cannot be deinitialized while passthrough mode is active.
+ *
  * @param handle Pointer to UART handle structure
  */
 void UART_deinit(UART_Handle *handle);
@@ -189,6 +191,37 @@ uint32_t UART_tx_free_space(UART_Handle *handle);
  * @return true if transmission is ongoing, false otherwise.
  */
 bool UART_tx_busy(UART_Handle *handle);
+
+/**
+ * @brief Enable UART passthrough mode.
+ *
+ * This function enables passthrough mode for the specified UART buses,
+ * forwarding data received on one bus to the other bus.
+ *
+ * @warning Do not call UART operations on either handle while passthrough is
+ *          active.
+ *
+ * @note While passthrough is active, neither bus can be deinitialized.
+ * @note RX callbacks, if any, will be disabled and must be manually re-enabled
+ *       after disabling passthrough.
+ *
+ * @param handle1 First UART bus instance
+ * @param handle2 Second UART bus instance
+ */
+void UART_enable_passthrough(UART_Handle *handle1, UART_Handle *handle2);
+
+/**
+ * @brief Disable UART passthrough mode.
+ *
+ * This function disables passthrough mode for the specified UART buses,
+ * restoring normal operation.
+ *
+ * @note Previous RX callbacks, if any, must be manually re-enabled.
+ *
+ * @param handle1 First UART bus instance
+ * @param handle2 Second UART bus instance
+ */
+void UART_disable_passthrough(UART_Handle *handle1, UART_Handle *handle2);
 
 #ifdef __cplusplus
 }
