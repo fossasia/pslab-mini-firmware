@@ -29,3 +29,10 @@ void ESP_enter_bootloader(void)
     ESP_LL_set(ESP_BOOT, 0);
     ESP_reset();
 }
+
+void ESP_exit_bootloader(void)
+{
+    // Release ESP_BOOT and reset
+    ESP_LL_set(ESP_BOOT, 1);
+    ESP_reset();
+}
