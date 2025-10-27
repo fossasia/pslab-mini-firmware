@@ -23,23 +23,22 @@
 
 // Global variables for logging
 static UART_Handle *g_logging_uart_handle = nullptr;
-static uint8_t g_log_buf[0xFF];
+static uint8_t g_log_buf[1024];
 static uint8_t g_log_rx_buf[1];
-static CircularBuffer *g_log_cb = nullptr;
-static CircularBuffer *g_log_rx_cb = nullptr;
+static CircularBuffer g_log_cb;
+static CircularBuffer g_log_rx_cb;
 
 void SYSTEM_init(void)
 {
-    // Initialize logging first so that it is available during start up
-    (void)LOG_init();
-
+    // Initialize logging early to capture any log messages during startup
+    LOG_init();
     PLATFORM_init();
 
     // Set up log output
-    circular_buffer_init(g_log_cb, g_log_buf, sizeof(g_log_buf));
-    circular_buffer_init(g_log_rx_cb, g_log_rx_buf, sizeof(g_log_rx_buf));
-    uint8_t log_bus = 0;
-    g_logging_uart_handle = UART_init(log_bus, g_log_cb, g_log_rx_cb);
+    circular_buffer_init(&g_log_cb, g_log_buf, sizeof(g_log_buf));
+    circular_buffer_init(&g_log_rx_cb, g_log_rx_buf, sizeof(g_log_rx_buf));
+    uint8_t log_bus = 2;
+    g_logging_uart_handle = UART_init(log_bus, &g_log_rx_cb, &g_log_cb);
     extern void syscalls_init(UART_Handle * handle);
     syscalls_init(g_logging_uart_handle);
     // Buffered log messages can now be output with LOG_task
