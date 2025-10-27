@@ -8,7 +8,6 @@
 
 #include "util/error.h"
 
-#include "syscalls_config.h"
 #include "uart.h"
 
 // Need to use a bus that is not claimed by syscalls for testing
@@ -21,9 +20,6 @@ static uint8_t g_rx_data[256];
 static uint8_t g_tx_data[256];
 static UART_Handle *g_test_handle;
 static uint8_t g_test_bus = UART_BUS_TEST;
-
-// This flag is normally set by syscalls.c when claiming the UART bus
-bool g_SYSCALLS_uart_claim = false;
 
 void setUp(void)
 {
@@ -125,25 +121,6 @@ void test_UART_init_invalid_bus(void)
 
     // Assert
     TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, caught_error);
-    TEST_ASSERT_NULL(handle);
-}
-
-void test_UART_init_syscalls_bus(void)
-{
-    // Arrange
-    size_t bus = SYSCALLS_UART_BUS;
-    UART_Handle *handle = nullptr;
-    Error caught_error = ERROR_NONE;
-
-    // Act
-    TRY {
-        handle = UART_init(bus, &g_rx_buffer, &g_tx_buffer);
-    } CATCH(caught_error) {
-        // Expected to catch an error since only syscalls can claim this bus
-    }
-
-    // Assert - Should fail since only syscalls can claim this bus
-    TEST_ASSERT_EQUAL(ERROR_RESOURCE_UNAVAILABLE, caught_error);
     TEST_ASSERT_NULL(handle);
 }
 
@@ -464,4 +441,487 @@ void test_UART_flush_with_null_handle(void)
 
     // Assert
     TEST_ASSERT_FALSE(result);
+}
+
+// ============================================================================
+// UART Passthrough Tests
+// ============================================================================
+
+void test_UART_enable_passthrough_success(void)
+{
+    // Arrange - Initialize two UART buses with separate buffers
+    CircularBuffer rx_buffer1, tx_buffer1;
+    CircularBuffer rx_buffer2, tx_buffer2;
+    uint8_t rx_data1[256], tx_data1[256];
+    uint8_t rx_data2[256], tx_data2[256];
+
+    circular_buffer_init(&rx_buffer1, rx_data1, sizeof(rx_data1));
+    circular_buffer_init(&tx_buffer1, tx_data1, sizeof(tx_data1));
+    circular_buffer_init(&rx_buffer2, rx_data2, sizeof(rx_data2));
+    circular_buffer_init(&tx_buffer2, tx_data2, sizeof(tx_data2));
+
+    // Set up expectations for init of handle1
+    UART_LL_init_Expect(UART_BUS_HEADER, rx_data1, sizeof(rx_data1));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle1 = UART_init(0, &rx_buffer1, &tx_buffer1);
+    TEST_ASSERT_NOT_NULL(handle1);
+
+    // Set up expectations for init of handle2
+    UART_LL_init_Expect(UART_BUS_ESP, rx_data2, sizeof(rx_data2));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle2 = UART_init(1, &rx_buffer2, &tx_buffer2);
+    TEST_ASSERT_NOT_NULL(handle2);
+
+    // Mock DMA position calls during passthrough enable (called by UART_set_rx_callback)
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_HEADER, 0);
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_ESP, 0);
+
+    // Act - Enable passthrough
+    UART_enable_passthrough(handle1, handle2);
+
+    // Assert - Passthrough enabled, no errors thrown (test passes if no exception)
+
+    // Cleanup
+    UART_disable_passthrough(handle1, handle2);
+
+    UART_LL_deinit_Ignore();
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_deinit(handle1);
+    UART_deinit(handle2);
+}
+
+void test_UART_enable_passthrough_null_handles(void)
+{
+    // Arrange
+    Error caught_error = ERROR_NONE;
+
+    // Act - Try to enable passthrough with null handles
+    TRY {
+        UART_enable_passthrough(nullptr, nullptr);
+    } CATCH(caught_error) {
+        // Expected to catch an error
+    }
+
+    // Assert
+    TEST_ASSERT_EQUAL(ERROR_DEVICE_NOT_READY, caught_error);
+}
+
+void test_UART_enable_passthrough_one_null_handle(void)
+{
+    // Arrange
+    CircularBuffer rx_buffer1, tx_buffer1;
+    uint8_t rx_data1[256], tx_data1[256];
+
+    circular_buffer_init(&rx_buffer1, rx_data1, sizeof(rx_data1));
+    circular_buffer_init(&tx_buffer1, tx_data1, sizeof(tx_data1));
+
+    UART_LL_init_Expect(UART_BUS_HEADER, rx_data1, sizeof(rx_data1));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle1 = UART_init(0, &rx_buffer1, &tx_buffer1);
+    TEST_ASSERT_NOT_NULL(handle1);
+
+    Error caught_error = ERROR_NONE;
+
+    // Act - Try to enable passthrough with one null handle
+    TRY {
+        UART_enable_passthrough(handle1, nullptr);
+    } CATCH(caught_error) {
+        // Expected to catch an error
+    }
+
+    // Assert
+    TEST_ASSERT_EQUAL(ERROR_DEVICE_NOT_READY, caught_error);
+
+    // Cleanup
+    UART_LL_deinit_Ignore();
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_deinit(handle1);
+}
+
+void test_UART_passthrough_data_flow_bus0_to_bus1(void)
+{
+    // Arrange - Initialize two UART buses
+    CircularBuffer rx_buffer1, tx_buffer1;
+    CircularBuffer rx_buffer2, tx_buffer2;
+    uint8_t rx_data1[256], tx_data1[256];
+    uint8_t rx_data2[256], tx_data2[256];
+
+    circular_buffer_init(&rx_buffer1, rx_data1, sizeof(rx_data1));
+    circular_buffer_init(&tx_buffer1, tx_data1, sizeof(tx_data1));
+    circular_buffer_init(&rx_buffer2, rx_data2, sizeof(rx_data2));
+    circular_buffer_init(&tx_buffer2, tx_data2, sizeof(tx_data2));
+
+    // Set up expectations for init
+    UART_LL_init_Expect(UART_BUS_HEADER, rx_data1, sizeof(rx_data1));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle1 = UART_init(0, &rx_buffer1, &tx_buffer1);
+
+    UART_LL_init_Expect(UART_BUS_ESP, rx_data2, sizeof(rx_data2));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle2 = UART_init(1, &rx_buffer2, &tx_buffer2);
+
+    // Mock DMA position calls during passthrough enable
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_HEADER, 0);
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_ESP, 0);
+
+    // Enable passthrough
+    UART_enable_passthrough(handle1, handle2);
+
+    // Simulate data received on bus 0
+    uint8_t test_data[] = {0xAA, 0xBB, 0xCC, 0xDD};
+    uint32_t written = circular_buffer_write(handle1->rx_buffer, test_data, sizeof(test_data));
+    TEST_ASSERT_EQUAL(sizeof(test_data), written);
+
+    // Update buffer head to simulate DMA
+    handle1->rx_buffer->head = sizeof(test_data);
+
+    // Mock DMA position for callback triggering
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_HEADER, sizeof(test_data));
+
+    // Expect transmission to be started on bus 1 (not busy)
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_ESP, false);
+    UART_LL_start_dma_tx_Expect(UART_BUS_ESP, test_data, sizeof(test_data));
+
+    // Act - Check RX available which triggers callback
+    uint32_t available = UART_rx_available(handle1);
+
+    // Assert - Data should be available
+    TEST_ASSERT_EQUAL(sizeof(test_data), available);
+
+    // Verify data is in the correct buffer (bus1's TX buffer points to bus0's RX buffer in passthrough)
+    uint8_t read_buffer[10];
+    uint32_t bytes_read = circular_buffer_read(handle2->tx_buffer, read_buffer, sizeof(read_buffer));
+    TEST_ASSERT_EQUAL(sizeof(test_data), bytes_read);
+    TEST_ASSERT_EQUAL_MEMORY(test_data, read_buffer, sizeof(test_data));
+
+    // Cleanup
+    UART_disable_passthrough(handle1, handle2);
+
+    UART_LL_deinit_Ignore();
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_deinit(handle1);
+    UART_deinit(handle2);
+}
+
+void test_UART_passthrough_data_flow_bus1_to_bus0(void)
+{
+    // Arrange - Initialize two UART buses
+    CircularBuffer rx_buffer1, tx_buffer1;
+    CircularBuffer rx_buffer2, tx_buffer2;
+    uint8_t rx_data1[256], tx_data1[256];
+    uint8_t rx_data2[256], tx_data2[256];
+
+    circular_buffer_init(&rx_buffer1, rx_data1, sizeof(rx_data1));
+    circular_buffer_init(&tx_buffer1, tx_data1, sizeof(tx_data1));
+    circular_buffer_init(&rx_buffer2, rx_data2, sizeof(rx_data2));
+    circular_buffer_init(&tx_buffer2, tx_data2, sizeof(tx_data2));
+
+    // Set up expectations for init
+    UART_LL_init_Expect(UART_BUS_HEADER, rx_data1, sizeof(rx_data1));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle1 = UART_init(0, &rx_buffer1, &tx_buffer1);
+
+    UART_LL_init_Expect(UART_BUS_ESP, rx_data2, sizeof(rx_data2));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle2 = UART_init(1, &rx_buffer2, &tx_buffer2);
+
+    // Mock DMA position calls during passthrough enable
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_HEADER, 0);
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_ESP, 0);
+
+    // Enable passthrough
+    UART_enable_passthrough(handle1, handle2);
+
+    // Simulate data received on bus 1
+    uint8_t test_data[] = {0x11, 0x22, 0x33, 0x44, 0x55};
+    uint32_t written = circular_buffer_write(handle2->rx_buffer, test_data, sizeof(test_data));
+    TEST_ASSERT_EQUAL(sizeof(test_data), written);
+
+    // Update buffer head to simulate DMA
+    handle2->rx_buffer->head = sizeof(test_data);
+
+    // Mock DMA position for callback triggering
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_ESP, sizeof(test_data));
+
+    // Expect transmission to be started on bus 0 (not busy)
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_HEADER, false);
+    UART_LL_start_dma_tx_Expect(UART_BUS_HEADER, test_data, sizeof(test_data));
+
+    // Act - Check RX available which triggers callback
+    uint32_t available = UART_rx_available(handle2);
+
+    // Assert - Data should be available
+    TEST_ASSERT_EQUAL(sizeof(test_data), available);
+
+    // Verify data is in the correct buffer (bus0's TX buffer points to bus1's RX buffer in passthrough)
+    uint8_t read_buffer[10];
+    uint32_t bytes_read = circular_buffer_read(handle1->tx_buffer, read_buffer, sizeof(read_buffer));
+    TEST_ASSERT_EQUAL(sizeof(test_data), bytes_read);
+    TEST_ASSERT_EQUAL_MEMORY(test_data, read_buffer, sizeof(test_data));
+
+    // Cleanup
+    UART_disable_passthrough(handle1, handle2);
+
+    UART_LL_deinit_Ignore();
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_deinit(handle1);
+    UART_deinit(handle2);
+}
+
+void test_UART_passthrough_bidirectional_data_flow(void)
+{
+    // Arrange - Initialize two UART buses
+    CircularBuffer rx_buffer1, tx_buffer1;
+    CircularBuffer rx_buffer2, tx_buffer2;
+    uint8_t rx_data1[256], tx_data1[256];
+    uint8_t rx_data2[256], tx_data2[256];
+
+    circular_buffer_init(&rx_buffer1, rx_data1, sizeof(rx_data1));
+    circular_buffer_init(&tx_buffer1, tx_data1, sizeof(tx_data1));
+    circular_buffer_init(&rx_buffer2, rx_data2, sizeof(rx_data2));
+    circular_buffer_init(&tx_buffer2, tx_data2, sizeof(tx_data2));
+
+    // Set up expectations for init
+    UART_LL_init_Expect(UART_BUS_HEADER, rx_data1, sizeof(rx_data1));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle1 = UART_init(0, &rx_buffer1, &tx_buffer1);
+
+    UART_LL_init_Expect(UART_BUS_ESP, rx_data2, sizeof(rx_data2));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle2 = UART_init(1, &rx_buffer2, &tx_buffer2);
+
+    // Mock DMA position calls during passthrough enable
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_HEADER, 0);
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_ESP, 0);
+
+    // Enable passthrough
+    UART_enable_passthrough(handle1, handle2);
+
+    // Simulate data received on both buses
+    uint8_t test_data1[] = {0xAA, 0xBB, 0xCC};
+    uint8_t test_data2[] = {0x11, 0x22, 0x33, 0x44};
+
+    circular_buffer_write(handle1->rx_buffer, test_data1, sizeof(test_data1));
+    handle1->rx_buffer->head = sizeof(test_data1);
+
+    circular_buffer_write(handle2->rx_buffer, test_data2, sizeof(test_data2));
+    handle2->rx_buffer->head = sizeof(test_data2);
+
+    // Mock DMA positions and transmissions for bus 0 -> bus 1
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_HEADER, sizeof(test_data1));
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_ESP, false);
+    UART_LL_start_dma_tx_Expect(UART_BUS_ESP, test_data1, sizeof(test_data1));
+
+    // Act - Check RX on bus 0
+    uint32_t available1 = UART_rx_available(handle1);
+
+    // Mock DMA positions and transmissions for bus 1 -> bus 0
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_ESP, sizeof(test_data2));
+    UART_LL_tx_busy_ExpectAndReturn(UART_BUS_HEADER, false);
+    UART_LL_start_dma_tx_Expect(UART_BUS_HEADER, test_data2, sizeof(test_data2));
+
+    // Act - Check RX on bus 1
+    uint32_t available2 = UART_rx_available(handle2);
+
+    // Assert - Data should be available on both buses
+    TEST_ASSERT_EQUAL(sizeof(test_data1), available1);
+    TEST_ASSERT_EQUAL(sizeof(test_data2), available2);
+
+    // Cleanup
+    UART_disable_passthrough(handle1, handle2);
+
+    UART_LL_deinit_Ignore();
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_deinit(handle1);
+    UART_deinit(handle2);
+}
+
+void test_UART_disable_passthrough_success(void)
+{
+    // Arrange - Initialize two UART buses
+    CircularBuffer rx_buffer1, tx_buffer1;
+    CircularBuffer rx_buffer2, tx_buffer2;
+    uint8_t rx_data1[256], tx_data1[256];
+    uint8_t rx_data2[256], tx_data2[256];
+
+    circular_buffer_init(&rx_buffer1, rx_data1, sizeof(rx_data1));
+    circular_buffer_init(&tx_buffer1, tx_data1, sizeof(tx_data1));
+    circular_buffer_init(&rx_buffer2, rx_data2, sizeof(rx_data2));
+    circular_buffer_init(&tx_buffer2, tx_data2, sizeof(tx_data2));
+
+    // Set up expectations for init
+    UART_LL_init_Expect(UART_BUS_HEADER, rx_data1, sizeof(rx_data1));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle1 = UART_init(0, &rx_buffer1, &tx_buffer1);
+
+    UART_LL_init_Expect(UART_BUS_ESP, rx_data2, sizeof(rx_data2));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle2 = UART_init(1, &rx_buffer2, &tx_buffer2);
+
+    // Mock DMA position calls during passthrough enable
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_HEADER, 0);
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_ESP, 0);
+
+    // Enable passthrough first
+    UART_enable_passthrough(handle1, handle2);
+
+    // Act - Disable passthrough
+    UART_disable_passthrough(handle1, handle2);
+
+    // Assert - No errors thrown, passthrough disabled successfully (test passes if no exception)
+
+    // Cleanup
+    UART_LL_deinit_Ignore();
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_deinit(handle1);
+    UART_deinit(handle2);
+}
+
+void test_UART_deinit_with_active_passthrough(void)
+{
+    // Arrange - Initialize two UART buses
+    CircularBuffer rx_buffer1, tx_buffer1;
+    CircularBuffer rx_buffer2, tx_buffer2;
+    uint8_t rx_data1[256], tx_data1[256];
+    uint8_t rx_data2[256], tx_data2[256];
+
+    circular_buffer_init(&rx_buffer1, rx_data1, sizeof(rx_data1));
+    circular_buffer_init(&tx_buffer1, tx_data1, sizeof(tx_data1));
+    circular_buffer_init(&rx_buffer2, rx_data2, sizeof(rx_data2));
+    circular_buffer_init(&tx_buffer2, tx_data2, sizeof(tx_data2));
+
+    // Set up expectations for init
+    UART_LL_init_Expect(UART_BUS_HEADER, rx_data1, sizeof(rx_data1));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle1 = UART_init(0, &rx_buffer1, &tx_buffer1);
+
+    UART_LL_init_Expect(UART_BUS_ESP, rx_data2, sizeof(rx_data2));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle2 = UART_init(1, &rx_buffer2, &tx_buffer2);
+
+    // Mock DMA position calls during passthrough enable
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_HEADER, 0);
+    UART_LL_get_dma_position_ExpectAndReturn(UART_BUS_ESP, 0);
+
+    // Enable passthrough
+    UART_enable_passthrough(handle1, handle2);
+
+    Error caught_error = ERROR_NONE;
+
+    // Act - Try to deinit while passthrough is active
+    TRY {
+        UART_deinit(handle1);
+    } CATCH(caught_error) {
+        // Expected to catch an error
+    }
+
+    // Assert - Should fail because passthrough is active
+    TEST_ASSERT_EQUAL(ERROR_RESOURCE_BUSY, caught_error);
+
+    // Cleanup - Properly disable passthrough before deinit
+    UART_disable_passthrough(handle1, handle2);
+
+    UART_LL_deinit_Ignore();
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_deinit(handle1);
+    UART_deinit(handle2);
+}
+
+void test_UART_enable_passthrough_with_same_handle(void)
+{
+    // Arrange - Initialize one UART bus
+    CircularBuffer rx_buffer, tx_buffer;
+    uint8_t rx_data[256], tx_data[256];
+
+    circular_buffer_init(&rx_buffer, rx_data, sizeof(rx_data));
+    circular_buffer_init(&tx_buffer, tx_data, sizeof(tx_data));
+
+    // Set up expectations for init
+    UART_LL_init_Expect(UART_BUS_HEADER, rx_data, sizeof(rx_data));
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_Handle *handle = UART_init(0, &rx_buffer, &tx_buffer);
+    TEST_ASSERT_NOT_NULL(handle);
+
+    Error caught_error = ERROR_NONE;
+
+    // Act - Try to enable passthrough with the same handle for both buses
+    TRY {
+        UART_enable_passthrough(handle, handle);
+    } CATCH(caught_error) {
+        // Expected to catch an error
+    }
+
+    // Assert
+    TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, caught_error);
+
+    // Cleanup
+    UART_LL_deinit_Ignore();
+    UART_LL_set_idle_callback_Ignore();
+    UART_LL_set_rx_complete_callback_Ignore();
+    UART_LL_set_tx_complete_callback_Ignore();
+
+    UART_deinit(handle);
 }

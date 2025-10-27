@@ -200,8 +200,7 @@ void PLATFORM_init(void)
 
     system_clock_config();
 
-    LOG_init();
-    LOG_LL_INFO("Platform hardware initialized");
+    LOG_INFO("Platform hardware initialized");
 }
 
 /**

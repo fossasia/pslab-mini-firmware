@@ -14,23 +14,13 @@
  * - _isatty_r: Terminal check (stub - treats stdout/stderr as terminals,
  *   stdin as not a terminal)
  *
- * The UART bus used for I/O can be configured via the SYSCALLS_UART_BUS
- * preprocessor macro:
- * - Define SYSCALLS_UART_BUS to specify the UART bus number (0, 1, 2, etc.)
- * - Define SYSCALLS_UART_BUS as -1 or leave undefined to disable UART I/O
- *   (functions will be no-ops returning error codes)
- *
- * Buffer size for TX can be configured via:
- * - SYSCALLS_UART_TX_BUFFER_SIZE (default: 256)
+ * Usage:
+ * Call syscalls_init() with an initialized UART_Handle pointer to enable
+ * stdout/stderr output. Until syscalls_init() is called, _write_r will
+ * return EBADF.
  *
  * Note: RX functionality is not implemented as this is designed for
- * write-only logging and debugging output. A minimal 1-byte RX buffer
- * is allocated to satisfy the UART driver requirements, but reads will
- * always return ENOSYS.
- *
- * Example configuration:
- * #define SYSCALLS_UART_BUS 0
- * #define SYSCALLS_UART_TX_BUFFER_SIZE 512
+ * write-only logging and debugging output. Reads will always return ENOSYS.
  */
 
 #include <errno.h>
@@ -39,26 +29,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "util/error.h"
 #include "util/util.h"
 
-#include "syscalls_config.h"
-
-// Only include UART headers if UART I/O is enabled
-#if SYSCALLS_UART_BUS >= 0
+// Include UART headers for handle type
 #include "system/bus/uart.h"
 
-// Minimal RX buffer (required by UART driver)
-#define SYSCALLS_UART_RX_BUFFER_SIZE 1
-
-// Static buffers and handle for UART I/O
+// Static handle for UART I/O
 static UART_Handle *g_uart_handle = nullptr;
-static CircularBuffer g_rx_buffer, g_tx_buffer;
-static uint8_t g_rx_data[SYSCALLS_UART_RX_BUFFER_SIZE];
-static uint8_t g_tx_data[SYSCALLS_UART_TX_BUFFER_SIZE];
-static bool g_uart_initialized = false;
-
-// Set to tell UART driver that syscalls is claiming the UART bus
-bool g_SYSCALLS_uart_claim = false;
 
 static int check_args(struct _reent *r, void const *buf, size_t cnt)
 {
@@ -76,43 +54,37 @@ static int check_args(struct _reent *r, void const *buf, size_t cnt)
 }
 
 /**
- * @brief Initialize UART for syscalls (called automatically on first use)
+ * @brief Initialize syscalls with a UART handle
+ *
+ * @param handle Pointer to an initialized UART handle to use for stdout/stderr
+ * @throws ERROR_RESOURCE_BUSY if syscalls is already initialized
  */
-static void syscalls_uart_init(void)
+void syscalls_init(UART_Handle *handle)
 {
-    if (g_uart_initialized) {
-        return;
+    if (g_uart_handle != nullptr) {
+        THROW(ERROR_RESOURCE_BUSY);
     }
-
-    circular_buffer_init(&g_rx_buffer, g_rx_data, SYSCALLS_UART_RX_BUFFER_SIZE);
-    circular_buffer_init(&g_tx_buffer, g_tx_data, SYSCALLS_UART_TX_BUFFER_SIZE);
-
-    g_SYSCALLS_uart_claim = true; // Claim UART for syscalls
-    g_uart_handle = UART_init(SYSCALLS_UART_BUS, &g_rx_buffer, &g_tx_buffer);
-    g_SYSCALLS_uart_claim = false; // Prevent further claims
-    g_uart_initialized = true;
+    g_uart_handle = handle;
 }
 
 /**
- * @brief Deinitialize UART for syscalls
+ * @brief Deinitialize syscalls
  *
- * @note This function is needed by tests.
+ * Clears the UART handle, disabling stdout/stderr output.
+ *
+ * @param handle Pointer to the UART handle that was used to initialize syscalls
+ * @throws ERROR_INVALID_ARGUMENT if handle doesn't match the initialized handle
  */
-void syscalls_uart_deinit(void)
+void syscalls_deinit(UART_Handle *handle)
 {
-    if (g_uart_handle != nullptr) {
-        UART_deinit(g_uart_handle);
-        g_uart_handle = nullptr;
+    if (g_uart_handle != handle) {
+        THROW(ERROR_INVALID_ARGUMENT);
     }
-    g_uart_initialized = false;
+    g_uart_handle = nullptr;
 }
 
 bool syscalls_uart_flush(uint32_t timeout)
 {
-    if (!g_uart_initialized) {
-        syscalls_uart_init();
-    }
-
     if (g_uart_handle == nullptr) {
         return false;
     }
@@ -120,8 +92,6 @@ bool syscalls_uart_flush(uint32_t timeout)
     // Wait for the UART transmit buffer to be empty
     return UART_flush(g_uart_handle, timeout);
 }
-
-#endif /* SYSCALLS_UART_BUS >= 0 */
 
 /**
  * @brief Read data from file descriptor (stub - reads not supported)
@@ -163,12 +133,7 @@ _ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t cnt)
         return ret;
     }
 
-#if SYSCALLS_UART_BUS >= 0
     if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
-        if (!g_uart_initialized) {
-            syscalls_uart_init();
-        }
-
         if (g_uart_handle == nullptr) {
             r->_errno = EIO;
             return -1;
@@ -186,9 +151,6 @@ _ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t cnt)
 
         return (_ssize_t)bytes_written;
     }
-#else
-    (void)fd;
-#endif
 
     r->_errno = EBADF;
     return -1;
