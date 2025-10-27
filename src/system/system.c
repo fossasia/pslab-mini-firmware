@@ -25,8 +25,8 @@
 static UART_Handle *g_logging_uart_handle = nullptr;
 static uint8_t g_log_buf[0xFF];
 static uint8_t g_log_rx_buf[1];
-static CircularBuffer *g_log_cb;
-static CircularBuffer *g_log_rx_cb;
+static CircularBuffer *g_log_cb = nullptr;
+static CircularBuffer *g_log_rx_cb = nullptr;
 
 void SYSTEM_init(void)
 {
