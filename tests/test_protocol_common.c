@@ -167,8 +167,9 @@ static void advance_system_time(uint32_t ms)
 void test_protocol_init_success(void)
 {
     // Arrange
-    USB_init_ExpectAndReturn(0, NULL, g_mock_usb_handle);
+    USB_init_ExpectAndReturn(0, NULL, NULL, g_mock_usb_handle);
     USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer();
     USB_set_rx_callback_Expect(g_mock_usb_handle, NULL, 1);
     USB_set_rx_callback_IgnoreArg_callback(); // Don't care about callback function
 
@@ -183,8 +184,9 @@ void test_protocol_init_success(void)
 void test_protocol_init_usb_failure(void)
 {
     // Arrange
-    USB_init_ExpectAndReturn(0, NULL, NULL);
-    USB_init_IgnoreArg_rx_buffer(); // USB init fails
+    USB_init_ExpectAndReturn(0, NULL, NULL, NULL);
+    USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer(); // USB init fails
 
     // Act
     bool result = protocol_init();
@@ -197,8 +199,9 @@ void test_protocol_init_usb_failure(void)
 void test_protocol_init_multiple_calls(void)
 {
     // Arrange - first init succeeds
-    USB_init_ExpectAndReturn(0, NULL, g_mock_usb_handle);
+    USB_init_ExpectAndReturn(0, NULL, NULL, g_mock_usb_handle);
     USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer();
     USB_set_rx_callback_Expect(g_mock_usb_handle, NULL, 1);
     USB_set_rx_callback_IgnoreArg_callback();
 
@@ -217,7 +220,9 @@ void test_protocol_init_multiple_calls(void)
 void test_protocol_deinit_when_initialized(void)
 {
     // Arrange - initialize first
-    USB_init_ExpectAndReturn(0, NULL, g_mock_usb_handle); USB_init_IgnoreArg_rx_buffer();
+    USB_init_ExpectAndReturn(0, NULL, NULL, g_mock_usb_handle);
+    USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer();
     USB_set_rx_callback_Expect(g_mock_usb_handle, NULL, 1);
     USB_set_rx_callback_IgnoreArg_callback();
 
@@ -255,8 +260,9 @@ void test_protocol_task_when_not_initialized(void)
 void test_protocol_task_with_no_usb_data(void)
 {
     // Arrange
-    USB_init_ExpectAndReturn(0, NULL, g_mock_usb_handle);
+    USB_init_ExpectAndReturn(0, NULL, NULL, g_mock_usb_handle);
     USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer();
     USB_set_rx_callback_Expect(g_mock_usb_handle, NULL, 1);
     USB_set_rx_callback_IgnoreArg_callback();
 
@@ -280,7 +286,9 @@ void test_protocol_task_with_no_usb_data(void)
 void test_scpi_idn_query(void)
 {
     // Arrange
-    USB_init_ExpectAndReturn(0, NULL, g_mock_usb_handle); USB_init_IgnoreArg_rx_buffer();
+    USB_init_ExpectAndReturn(0, NULL, NULL, g_mock_usb_handle);
+    USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer();
     USB_set_rx_callback_Ignore();
     protocol_init();
 
@@ -308,7 +316,9 @@ void test_scpi_idn_query(void)
 void test_scpi_rst_command(void)
 {
     // Arrange
-    USB_init_ExpectAndReturn(0, NULL, g_mock_usb_handle); USB_init_IgnoreArg_rx_buffer();
+    USB_init_ExpectAndReturn(0, NULL, NULL, g_mock_usb_handle);
+    USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer();
     USB_set_rx_callback_Ignore();
     protocol_init();
 
@@ -332,7 +342,9 @@ void test_scpi_rst_command(void)
 void test_scpi_tst_query(void)
 {
     // Arrange
-    USB_init_ExpectAndReturn(0, NULL, g_mock_usb_handle); USB_init_IgnoreArg_rx_buffer();
+    USB_init_ExpectAndReturn(0, NULL, NULL, g_mock_usb_handle);
+    USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer();
     USB_set_rx_callback_Ignore();
     protocol_init();
 
@@ -356,7 +368,9 @@ void test_scpi_tst_query(void)
 void test_scpi_system_error_query(void)
 {
     // Arrange
-    USB_init_ExpectAndReturn(0, NULL, g_mock_usb_handle); USB_init_IgnoreArg_rx_buffer();
+    USB_init_ExpectAndReturn(0, NULL, NULL, g_mock_usb_handle);
+    USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer();
     USB_set_rx_callback_Ignore();
     protocol_init();
 
@@ -384,7 +398,9 @@ void test_scpi_system_error_query(void)
 void test_usb_data_fragmentation(void)
 {
     // Arrange
-    USB_init_ExpectAndReturn(0, NULL, g_mock_usb_handle); USB_init_IgnoreArg_rx_buffer();
+    USB_init_ExpectAndReturn(0, NULL, NULL, g_mock_usb_handle);
+    USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer();
     USB_set_rx_callback_Ignore();
     protocol_init();
 
@@ -421,7 +437,9 @@ void test_usb_data_fragmentation(void)
 void test_invalid_scpi_command(void)
 {
     // Arrange
-    USB_init_ExpectAndReturn(0, NULL, g_mock_usb_handle); USB_init_IgnoreArg_rx_buffer();
+    USB_init_ExpectAndReturn(0, NULL, NULL, g_mock_usb_handle);
+    USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer();
     USB_set_rx_callback_Ignore();
     protocol_init();
 
@@ -454,7 +472,9 @@ void test_invalid_scpi_command(void)
 void test_multiple_commands_in_sequence(void)
 {
     // Arrange
-    USB_init_ExpectAndReturn(0, NULL, g_mock_usb_handle); USB_init_IgnoreArg_rx_buffer();
+    USB_init_ExpectAndReturn(0, NULL, NULL, g_mock_usb_handle);
+    USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer();
     USB_set_rx_callback_Ignore();
     protocol_init();
 
@@ -485,7 +505,9 @@ void test_multiple_commands_in_sequence(void)
 void test_protocol_state_reset(void)
 {
     // Arrange - Initialize and set up some state
-    USB_init_ExpectAndReturn(0, NULL, g_mock_usb_handle); USB_init_IgnoreArg_rx_buffer();
+    USB_init_ExpectAndReturn(0, NULL, NULL, g_mock_usb_handle);
+    USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer();
     USB_set_rx_callback_Ignore();
     protocol_init();
 

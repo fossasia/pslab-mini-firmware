@@ -13,7 +13,7 @@
  * - Non-blocking read/write operations
  * - Configurable RX callback for protocol implementations
  * - Buffer status inquiry functions
- * - Circular buffer for reliable USB data reception
+ * - Circular buffers for reliable USB data reception and transmission
  *
  * @author Alexander Bessman
  * @date 2025-07-02
@@ -43,6 +43,7 @@ enum { USB_TX_FLUSH_TIMEOUT = 100 };
 struct USB_Handle {
     uint8_t interface_id;
     CircularBuffer *rx_buffer;
+    CircularBuffer *tx_buffer;
     USB_RxCallback rx_callback;
     uint32_t rx_threshold;
     uint32_t tx_timeout_counter;
@@ -77,8 +78,10 @@ static USB_Handle *get_handle_from_interface(uint8_t interface_id)
  * @brief Move data from TinyUSB CDC RX buffer to our circular buffer
  *
  * @param handle Pointer to USB handle structure
+ *
+ * @return Number of bytes transferred
  */
-static uint32_t transfer_from_usb_to_buffer(USB_Handle *handle)
+static uint32_t transfer_rx(USB_Handle *handle)
 {
     if (!handle || !handle->initialized) {
         return 0;
@@ -93,6 +96,36 @@ static uint32_t transfer_from_usb_to_buffer(USB_Handle *handle)
             circular_buffer_put(handle->rx_buffer, temp);
             transferred++;
             available--;
+        } else {
+            break;
+        }
+    }
+
+    return transferred;
+}
+
+/**
+ * @brief Move data from TX circular buffer to USB TX endpoint
+ *
+ * @param handle Pointer to USB handle structure
+ *
+ * @return Number of bytes transferred
+ */
+static uint32_t transfer_tx(USB_Handle *handle)
+{
+    if (!handle || !handle->initialized) {
+        return 0;
+    }
+
+    uint32_t to_send = circular_buffer_available(handle->tx_buffer);
+    uint32_t transferred = 0;
+
+    while (to_send > 0 && USB_LL_tx_available(handle->interface_id)) {
+        uint8_t temp = 0;
+        circular_buffer_get(handle->tx_buffer, &temp);
+        if (USB_LL_write(handle->interface_id, &temp, 1) == 1) {
+            transferred++;
+            to_send--;
         } else {
             break;
         }
@@ -148,8 +181,9 @@ static void line_state_callback(USB_Bus itf, bool dtr, bool rts)
 
     // When DTR is de-asserted (goes low), the host has disconnected
     if (!dtr) {
-        // Reset the circular buffer to clear any pending data
+        // Reset the circular buffers to clear any pending data
         circular_buffer_reset(handle->rx_buffer);
+        circular_buffer_reset(handle->tx_buffer);
 
         // Reset the TX timeout counter
         handle->tx_timeout_counter = 0;
@@ -164,11 +198,16 @@ static void line_state_callback(USB_Bus itf, bool dtr, bool rts)
  *
  * @param interface USB interface to initialize (0-based index)
  * @param rx_buffer Pointer to pre-allocated RX circular buffer
+ * @param tx_buffer Pointer to pre-allocated TX circular buffer
  * @return Pointer to USB handle on success, nullptr on failure
  */
-USB_Handle *USB_init(size_t interface, CircularBuffer *rx_buffer)
+USB_Handle *USB_init(
+    size_t interface,
+    CircularBuffer *rx_buffer,
+    CircularBuffer *tx_buffer
+)
 {
-    if (!rx_buffer || interface >= USB_INTERFACE_COUNT) {
+    if (!rx_buffer || !tx_buffer || interface >= USB_INTERFACE_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
     }
 
@@ -188,6 +227,7 @@ USB_Handle *USB_init(size_t interface, CircularBuffer *rx_buffer)
     /* Initialize handle */
     handle->interface_id = interface_id;
     handle->rx_buffer = rx_buffer;
+    handle->tx_buffer = tx_buffer;
     handle->rx_callback = nullptr;
     handle->rx_threshold = 0;
     handle->tx_timeout_counter = 0;
@@ -252,14 +292,18 @@ void USB_task(USB_Handle *handle)
 
     // Transfer any available data from the USB FIFO to our circular buffer
     if (USB_LL_rx_available(handle->interface_id) > 0) {
-        transfer_from_usb_to_buffer(handle);
+        transfer_rx(handle);
     }
 
     // Check for RX callbacks after processing USB tasks
     check_rx_callback(handle);
 
-    // Check if there's data in the TX buffer by comparing available space with
-    // total size
+    // Transfer data from our TX buffer to the USB hardware
+    if (!circular_buffer_is_empty(handle->tx_buffer)) {
+        transfer_tx(handle);
+    }
+
+    // Check if there's data in the hardware TX buffer and flush if timeout
     if (USB_LL_tx_available(handle->interface_id) <
         USB_LL_tx_bufsize(handle->interface_id)) {
         handle->tx_timeout_counter++;
@@ -268,8 +312,10 @@ void USB_task(USB_Handle *handle)
             handle->tx_timeout_counter = 0;
         }
     } else {
-        // No data in buffer, reset counter
-        handle->tx_timeout_counter = 0;
+        // No data in hardware buffer, reset counter if our buffer is also empty
+        if (circular_buffer_is_empty(handle->tx_buffer)) {
+            handle->tx_timeout_counter = 0;
+        }
     }
 }
 
@@ -302,7 +348,7 @@ uint32_t USB_rx_available(USB_Handle *handle)
 
     // Make sure we've transferred any available data to our buffer
     if (USB_LL_rx_available(handle->interface_id) > 0) {
-        transfer_from_usb_to_buffer(handle);
+        transfer_rx(handle);
     }
 
     return circular_buffer_available(handle->rx_buffer);
@@ -324,7 +370,7 @@ uint32_t USB_read(USB_Handle *handle, uint8_t *buf, uint32_t sz)
 
     // Make sure we've transferred any available data to our buffer
     if (USB_LL_rx_available(handle->interface_id) > 0) {
-        transfer_from_usb_to_buffer(handle);
+        transfer_rx(handle);
     }
 
     // Read from our circular buffer using the common function
@@ -345,10 +391,15 @@ uint32_t USB_write(USB_Handle *handle, uint8_t const *buf, uint32_t sz)
         return 0;
     }
 
-    // Reset the timeout counter when new data is written
-    handle->tx_timeout_counter = 0;
+    uint32_t const written = circular_buffer_write(handle->tx_buffer, buf, sz);
 
-    return USB_LL_write(handle->interface_id, buf, sz);
+    // Move as much data as possible to the USB hardware
+    if (circular_buffer_is_empty(handle->tx_buffer) &&
+        USB_LL_tx_available(handle->interface_id)) {
+        transfer_tx(handle);
+    }
+
+    return written;
 }
 
 /**
@@ -387,7 +438,14 @@ uint32_t USB_tx_free_space(USB_Handle *handle)
     if (!handle || !handle->initialized) {
         return 0;
     }
-    return USB_LL_tx_available(handle->interface_id);
+
+    // Move as much data as possible to the USB hardware
+    if (circular_buffer_is_empty(handle->tx_buffer) &&
+        USB_LL_tx_available(handle->interface_id)) {
+        transfer_tx(handle);
+    }
+
+    return circular_buffer_free_space(handle->tx_buffer);
 }
 
 /**
@@ -401,8 +459,8 @@ bool USB_tx_busy(USB_Handle *handle)
     if (!handle || !handle->initialized) {
         return false;
     }
-    // TinyUSB doesn't have a direct way to check if TX is busy,
-    // but we can check if the buffer is non-empty
-    return USB_LL_tx_available(handle->interface_id) <
-           USB_LL_tx_bufsize(handle->interface_id);
+    // Check if either our TX buffer or the hardware TX buffer has data
+    return !circular_buffer_is_empty(handle->tx_buffer) ||
+           (USB_LL_tx_available(handle->interface_id) <
+            USB_LL_tx_bufsize(handle->interface_id));
 }

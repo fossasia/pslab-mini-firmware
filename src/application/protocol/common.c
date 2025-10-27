@@ -61,7 +61,9 @@ extern void dso_reset_state(void);
 
 // Static storage for buffers
 static uint8_t g_usb_rx_buffer_data[USB_RX_BUFFER_SIZE];
+static uint8_t g_usb_tx_buffer_data[USB_TX_BUFFER_SIZE];
 static CircularBuffer g_usb_rx_buffer;
+static CircularBuffer g_usb_tx_buffer;
 static USB_Handle *g_usb_handle = nullptr;
 
 // SCPI context and buffers (internal to protocol module)
@@ -190,8 +192,13 @@ bool protocol_init(void)
         &g_usb_rx_buffer, g_usb_rx_buffer_data, USB_RX_BUFFER_SIZE
     );
 
+    // Initialize USB TX buffer
+    circular_buffer_init(
+        &g_usb_tx_buffer, g_usb_tx_buffer_data, USB_TX_BUFFER_SIZE
+    );
+
     // Initialize USB interface
-    g_usb_handle = USB_init(0, &g_usb_rx_buffer);
+    g_usb_handle = USB_init(0, &g_usb_rx_buffer, &g_usb_tx_buffer);
     if (!g_usb_handle) {
         return false;
     }
