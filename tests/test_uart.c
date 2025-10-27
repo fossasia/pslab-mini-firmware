@@ -8,7 +8,6 @@
 
 #include "util/error.h"
 
-#include "syscalls_config.h"
 #include "uart.h"
 
 
@@ -18,9 +17,6 @@ static CircularBuffer g_tx_buffer;
 static uint8_t g_rx_data[256];
 static uint8_t g_tx_data[256];
 static UART_Handle *g_test_handle;
-
-// This flag is normally set by syscalls.c when claiming the UART bus
-bool g_SYSCALLS_uart_claim = false;
 
 void setUp(void)
 {
@@ -125,25 +121,6 @@ void test_UART_init_invalid_bus(void)
 
     // Assert
     TEST_ASSERT_EQUAL(ERROR_INVALID_ARGUMENT, caught_error);
-    TEST_ASSERT_NULL(handle);
-}
-
-void test_UART_init_syscalls_bus(void)
-{
-    // Arrange
-    size_t bus = SYSCALLS_UART_BUS;
-    UART_Handle *handle = nullptr;
-    Error caught_error = ERROR_NONE;
-
-    // Act
-    TRY {
-        handle = UART_init(bus, &g_rx_buffer, &g_tx_buffer);
-    } CATCH(caught_error) {
-        // Expected to catch an error since only syscalls can claim this bus
-    }
-
-    // Assert - Should fail since only syscalls can claim this bus
-    TEST_ASSERT_EQUAL(ERROR_RESOURCE_UNAVAILABLE, caught_error);
     TEST_ASSERT_NULL(handle);
 }
 

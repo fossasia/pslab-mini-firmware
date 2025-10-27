@@ -32,11 +32,7 @@
 #include "util/error.h"
 #include "util/util.h"
 
-#include "syscalls_config.h"
 #include "uart.h"
-
-/* syscalls module sets this when claiming its bus */
-extern bool g_SYSCALLS_uart_claim;
 
 /**
  * @brief UART bus handle structure
@@ -246,14 +242,6 @@ UART_Handle *UART_init(
     if (!rx_buffer || !tx_buffer || bus >= UART_BUS_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
     }
-
-/* Check if syscalls is claiming the UART */
-#if defined(SYSCALLS_UART_BUS) && SYSCALLS_UART_BUS >= 0
-    if (bus == SYSCALLS_UART_BUS && !g_SYSCALLS_uart_claim) {
-        /* Only syscalls can claim this bus */
-        THROW(ERROR_RESOURCE_UNAVAILABLE);
-    }
-#endif
 
     UART_Bus bus_id = (UART_Bus)bus;
 

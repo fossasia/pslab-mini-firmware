@@ -7,22 +7,44 @@
  * other hardware access.
  */
 
+#include <stddef.h>
+#include <stdint.h>
+
 #include "platform/platform.h"
 #include "platform/uart_ll.h"
 #include "util/error.h"
 #include "util/logging.h"
 #include "util/si_prefix.h"
+#include "util/util.h"
 
+#include "bus/uart.h"
 #include "led.h"
-#include "syscalls_config.h"
 #include "system.h"
+
+// Global variables for logging
+static UART_Handle *g_logging_uart_handle = nullptr;
+static uint8_t g_log_buf[0xFF];
+static uint8_t g_log_rx_buf[1];
+static CircularBuffer *g_log_cb;
+static CircularBuffer *g_log_rx_cb;
 
 void SYSTEM_init(void)
 {
+    // Initialize logging first so that it is available during start up
+    (void)LOG_init();
+
     PLATFORM_init();
-    // Read any logs that were generated during platform initialization
-    unsigned const max_log_entries = 32;
-    LOG_task(max_log_entries);
+
+    // Set up log output
+    circular_buffer_init(g_log_cb, g_log_buf, sizeof(g_log_buf));
+    circular_buffer_init(g_log_rx_cb, g_log_rx_buf, sizeof(g_log_rx_buf));
+    uint8_t log_bus = 0;
+    g_logging_uart_handle = UART_init(log_bus, g_log_cb, g_log_rx_cb);
+    extern void syscalls_init(UART_Handle * handle);
+    syscalls_init(g_logging_uart_handle);
+    // Buffered log messages can now be output with LOG_task
+    LOG_task(0xFF);
+
     LED_init();
 }
 
@@ -35,8 +57,7 @@ __attribute__((noreturn)) void SYSTEM_reset(void)
     // Flush any pending log messages
     LOG_task(UINT32_MAX);
     unsigned const bits_per_uart_byte = 10;
-    uint64_t const buffer_size_bits =
-        (uint64_t)SYSCALLS_UART_TX_BUFFER_SIZE * bits_per_uart_byte;
+    size_t const buffer_size_bits = sizeof(g_log_buf) * bits_per_uart_byte;
     // Timeout to wait for TX buffer to empty (2x time for safety)
     uint32_t timeout =
         ((buffer_size_bits * SI_MILLI_DIV * 2) / UART_DEFAULT_BAUDRATE);
