@@ -37,8 +37,8 @@ void SYSTEM_init(void)
     // Set up log output
     circular_buffer_init(&g_log_cb, g_log_buf, sizeof(g_log_buf));
     circular_buffer_init(&g_log_rx_cb, g_log_rx_buf, sizeof(g_log_rx_buf));
-    uint8_t log_bus = 2;
-    g_logging_uart_handle = UART_init(log_bus, &g_log_rx_cb, &g_log_cb);
+    // uint8_t log_bus = 2;
+    // g_logging_uart_handle = UART_init(log_bus, &g_log_rx_cb, &g_log_cb);
     extern void syscalls_init(UART_Handle * handle);
     syscalls_init(g_logging_uart_handle);
     // Buffered log messages can now be output with LOG_task
