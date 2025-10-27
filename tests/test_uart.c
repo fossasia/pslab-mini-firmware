@@ -848,9 +848,6 @@ void test_UART_disable_passthrough_invalid_pair(void)
     uint8_t rx_data2[256], tx_data2[256];
     uint8_t rx_data3[256], tx_data3[256];
 
-    // Claim bus 2 for this test (normally reserved by syscalls module)
-    g_SYSCALLS_uart_claim = true;
-
     circular_buffer_init(&rx_buffer1, rx_data1, sizeof(rx_data1));
     circular_buffer_init(&tx_buffer1, tx_data1, sizeof(tx_data1));
     circular_buffer_init(&rx_buffer2, rx_data2, sizeof(rx_data2));
@@ -910,9 +907,6 @@ void test_UART_disable_passthrough_invalid_pair(void)
     UART_deinit(handle1);
     UART_deinit(handle2);
     UART_deinit(handle3);
-
-    // Reset syscalls claim flag
-    g_SYSCALLS_uart_claim = false;
 }
 
 void test_UART_enable_passthrough_already_active(void)
@@ -925,8 +919,6 @@ void test_UART_enable_passthrough_already_active(void)
     uint8_t rx_data2[256], tx_data2[256];
     uint8_t rx_data3[256], tx_data3[256];
 
-    // Claim bus 2 for this test (normally reserved by syscalls module)
-    g_SYSCALLS_uart_claim = true;
 
     circular_buffer_init(&rx_buffer1, rx_data1, sizeof(rx_data1));
     circular_buffer_init(&tx_buffer1, tx_data1, sizeof(tx_data1));
@@ -987,9 +979,6 @@ void test_UART_enable_passthrough_already_active(void)
     UART_deinit(handle1);
     UART_deinit(handle2);
     UART_deinit(handle3);
-
-    // Reset syscalls claim flag
-    g_SYSCALLS_uart_claim = false;
 }
 
 void test_UART_deinit_with_active_passthrough(void)
