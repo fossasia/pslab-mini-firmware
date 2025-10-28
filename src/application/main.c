@@ -1,6 +1,7 @@
 
 #include "protocol.h"
 #include "system/bus/uart.h"
+#include "system/esp.h"
 #include "system/led.h"
 #include "system/system.h"
 #include "util/error.h"
@@ -12,6 +13,9 @@ int main(void)
     SYSTEM_init();
     LOG_INIT("Main application");
 
+    ESP_init();
+    ESP_enter_bootloader();
+    
     // Enable UART passthrough
     uint8_t rx1_buffer[512];
     CircularBuffer rx1_cb;
