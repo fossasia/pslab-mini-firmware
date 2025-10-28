@@ -15,7 +15,7 @@ int main(void)
 
     ESP_init();
     ESP_enter_bootloader();
-    
+
     // Enable UART passthrough
     uint8_t rx1_buffer[512];
     CircularBuffer rx1_cb;
