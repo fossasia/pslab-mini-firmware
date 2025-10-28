@@ -169,8 +169,9 @@ static void advance_system_time(uint32_t ms)
  */
 static void setup_protocol_for_dmm_test(void)
 {
-    USB_init_ExpectAndReturn(0, NULL, g_mock_usb_handle);
+    USB_init_ExpectAndReturn(0, NULL, NULL, g_mock_usb_handle);
     USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer();
     USB_set_rx_callback_Ignore();
     protocol_init();
 

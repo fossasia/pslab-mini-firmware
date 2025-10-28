@@ -140,8 +140,9 @@ static void simulate_dso_acquisition_completion(void)
  */
 static void setup_protocol_for_dso_test(void)
 {
-    USB_init_ExpectAndReturn(0, NULL, g_mock_usb_handle);
+    USB_init_ExpectAndReturn(0, NULL, NULL, g_mock_usb_handle);
     USB_init_IgnoreArg_rx_buffer();
+    USB_init_IgnoreArg_tx_buffer();
     USB_set_rx_callback_Ignore();
     protocol_init();
 }

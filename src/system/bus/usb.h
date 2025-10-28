@@ -11,17 +11,20 @@
  * - Non-blocking read/write operations
  * - Configurable RX callback for protocol implementations
  * - Buffer status inquiry functions
- * - Circular buffer for reliable USB data reception
+ * - Circular buffers for reliable USB data reception and transmission
  *
  * Basic Usage:
  * @code
  * // Initialize USB with handle and buffers
  * USB_Handle *usb_handle;
  * CircularBuffer rx_buffer;
+ * CircularBuffer tx_buffer;
  * uint8_t rx_data[256];
+ * uint8_t tx_data[256];
  *
  * circular_buffer_init(&rx_buffer, rx_data, 256);
- * usb_handle = USB_init(0, &rx_buffer);
+ * circular_buffer_init(&tx_buffer, tx_data, 256);
+ * usb_handle = USB_init(0, &rx_buffer, &tx_buffer);
  * if (usb_handle == nullptr) {
  *     // Initialization failed
  *     return;
@@ -84,10 +87,15 @@ size_t USB_get_interface_count(void);
  * @param interface USB interface to initialize (0-based index, currently only 0
  * is supported)
  * @param rx_buffer Pointer to pre-allocated RX circular buffer
+ * @param tx_buffer Pointer to pre-allocated TX circular buffer
  * @return Pointer to USB handle on success, nullptr on failure (including
  *         invalid interface number)
  */
-USB_Handle *USB_init(size_t interface, CircularBuffer *rx_buffer);
+USB_Handle *USB_init(
+    size_t interface,
+    CircularBuffer *rx_buffer,
+    CircularBuffer *tx_buffer
+);
 
 /**
  * @brief Deinitialize the USB interface
