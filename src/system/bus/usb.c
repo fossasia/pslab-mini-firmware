@@ -394,8 +394,7 @@ uint32_t USB_write(USB_Handle *handle, uint8_t const *buf, uint32_t sz)
     uint32_t const written = circular_buffer_write(handle->tx_buffer, buf, sz);
 
     // Move as much data as possible to the USB hardware
-    if (circular_buffer_is_empty(handle->tx_buffer) &&
-        USB_LL_tx_available(handle->interface_id)) {
+    if (!circular_buffer_is_empty(handle->tx_buffer)) {
         transfer_tx(handle);
     }
 
@@ -440,8 +439,7 @@ uint32_t USB_tx_free_space(USB_Handle *handle)
     }
 
     // Move as much data as possible to the USB hardware
-    if (circular_buffer_is_empty(handle->tx_buffer) &&
-        USB_LL_tx_available(handle->interface_id)) {
+    if (!circular_buffer_is_empty(handle->tx_buffer)) {
         transfer_tx(handle);
     }
 
