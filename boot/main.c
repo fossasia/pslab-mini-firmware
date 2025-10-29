@@ -258,11 +258,6 @@ void HAL_MspInit(void)
   LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
   LL_GPIO_ResetOutputPin(GPIOB, LL_GPIO_PIN_12);
 
-  /* Configure GPIO pin for (optional) backdoor entry input. */
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_13;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 #if (BOOT_COM_RS232_ENABLE > 0)
   /* UART TX and RX GPIO pin configuration. */
   GPIO_InitStruct.Pin = LL_GPIO_PIN_8 | LL_GPIO_PIN_9;
