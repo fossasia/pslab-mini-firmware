@@ -6,7 +6,8 @@
 #ifndef SPI_LL_H
 #define SPI_LL_H
 
-#include "stm32h5xx_hal.h"
+#include <stddef.h>
+#include <stdint.h>
 
 /**
  * @brief SPI bus instance enumeration
@@ -29,14 +30,14 @@ void SPI_LL_deinit(SPI_Bus bus);
  * @param txdata Pointer to the data buffer to transmit.
  * @param size Size of the data buffer.
  */
-void SPI_LL_transmit(SPI_Bus bus, uint8_t *txdata, uint16_t size);
+void SPI_LL_transmit(SPI_Bus bus, uint8_t const *txdata, size_t size);
 
 /**
  * @brief Receive data over SPI.
  * @param rxdata Pointer to the buffer to store received data.
  * @param size Size of the data buffer.
  */
-void SPI_LL_receive(SPI_Bus bus, uint8_t *rxdata, uint16_t size);
+void SPI_LL_receive(SPI_Bus bus, uint8_t *rxdata, size_t size);
 
 /**
  * @brief Transmit and receive data over SPI.

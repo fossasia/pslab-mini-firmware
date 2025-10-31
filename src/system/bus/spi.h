@@ -44,7 +44,7 @@ void SPI_deinit(SPI_Handle *handle);
  * @param txbuf Pointer to the data buffer to transmit
  * @param sz Size of the data buffer
  */
-void SPI_transmit(SPI_Handle *handle, const uint8_t *txbuf, size_t sz);
+void SPI_transmit(SPI_Handle *handle, uint8_t const *txbuf, size_t sz);
 
 /**
  * @brief Receive data over SPI.
@@ -65,7 +65,7 @@ void SPI_receive(SPI_Handle *handle, uint8_t *rxbuf, size_t sz);
  */
 void SPI_transmit_receive(
     SPI_Handle *handle,
-    const uint8_t *tx_data,
+    uint8_t const *tx_data,
     uint8_t *rx_data,
     size_t size
 );

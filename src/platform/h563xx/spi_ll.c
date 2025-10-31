@@ -15,6 +15,10 @@
  * @date    2025-10-31
  */
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
 #include "stm32h5xx_hal.h"
 
 #include "util/error.h"
@@ -90,7 +94,6 @@ void SPI_LL_init(SPI_Bus bus)
     instance->hspi->Init.FirstBit = SPI_FIRSTBIT_MSB;
     instance->hspi->Init.TIMode = SPI_TIMODE_DISABLE;
     instance->hspi->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-    instance->hspi->Init.CRCPolynomial = 7;
 
     if (HAL_SPI_Init(instance->hspi) != HAL_OK) {
         THROW(ERROR_HARDWARE_FAULT);
@@ -191,10 +194,6 @@ void SPI_LL_transmit_receive(
 
     // Start the transmission and reception
     HAL_SPI_TransmitReceive(
-        instance->hspi,
-        (uint8_t *)tx_data,
-        rx_data,
-        size,
-        HAL_MAX_DELAY
+        instance->hspi, (uint8_t *)tx_data, rx_data, size, HAL_MAX_DELAY
     );
 }

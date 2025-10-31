@@ -1,9 +1,11 @@
 #include "protocol.h"
-#include "system/led.h"
 #include "system/bus/spi.h"
+#include "system/led.h"
 #include "system/system.h"
 #include "util/error.h"
 #include "util/logging.h"
+
+typedef enum { TX_BUFFER_DATA = 0x9F, RX_BUFFER_LENGTH = 38 } BufferConstants;
 
 int main(void)
 {
@@ -37,11 +39,17 @@ int main(void)
         }
 
         // SPI communication example
-        uint8_t tx_data = 0x9F;
-        uint8_t rx_data[5] = {0};
+        uint8_t tx_data = TX_BUFFER_DATA;
+        uint8_t rx_data[RX_BUFFER_LENGTH] = { 0 };
         SPI_transmit_receive(spi_handle, &tx_data, rx_data, sizeof(rx_data));
-        LOG_INFO("SPI Received: %02X %02X %02X %02X %02X",
-            rx_data[0], rx_data[1], rx_data[2], rx_data[3], rx_data[4]);
+        LOG_INFO(
+            "SPI Received: %02X %02X %02X %02X %02X",
+            rx_data[0],
+            rx_data[1],
+            rx_data[2],
+            rx_data[3],
+            rx_data[4]
+        );
     }
 
     __builtin_unreachable();

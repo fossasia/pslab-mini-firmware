@@ -12,6 +12,11 @@
 
 #include "spi.h"
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+
 struct SPI_Handle {
     SPI_Bus bus_id;
     bool initialized;
@@ -30,10 +35,9 @@ SPI_Handle *SPI_init(size_t bus)
     if (bus >= SPI_BUS_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
     }
-
-    SPIInstance *instance = &g_spi_instances[bus];
-    if (instance->initialized) {
-        return;
+    SPI_Bus bus_id = (SPI_Bus)bus;
+    if (g_spi_instances[bus_id]->initialized) {
+        THROW(ERROR_RESOURCE_BUSY);
     }
     /* Allocate handle */
     SPI_Handle *handle = malloc(sizeof(SPI_Handle));
@@ -41,9 +45,11 @@ SPI_Handle *SPI_init(size_t bus)
         THROW(ERROR_OUT_OF_MEMORY);
     }
 
+    handle->bus_id = bus_id;
     /* Initialize SPI */
     SPI_LL_init(bus);
-    instance->initialized = true;
+    handle->initialized = true;
+    g_spi_instances[bus_id] = handle;
 
     return handle;
 }
@@ -79,7 +85,7 @@ void SPI_deinit(SPI_Handle *handle)
  * @param txbuf Pointer to the data buffer to transmit
  * @param sz Size of the data buffer
  */
-void SPI_transmit(SPI_Handle *handle, const uint8_t *txbuf, size_t sz)
+void SPI_transmit(SPI_Handle *handle, uint8_t const *txbuf, size_t sz)
 {
     if (handle == NULL || txbuf == NULL || sz == 0) {
         THROW(ERROR_INVALID_ARGUMENT);
@@ -122,7 +128,7 @@ void SPI_receive(SPI_Handle *handle, uint8_t *rxbuf, size_t sz)
  */
 void SPI_transmit_receive(
     SPI_Handle *handle,
-    const uint8_t *tx_data,
+    uint8_t const *tx_data,
     uint8_t *rx_data,
     size_t size
 )
