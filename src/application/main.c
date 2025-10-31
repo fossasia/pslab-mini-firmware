@@ -1,9 +1,11 @@
-
 #include "protocol.h"
+#include "system/bus/spi.h"
 #include "system/led.h"
 #include "system/system.h"
 #include "util/error.h"
 #include "util/logging.h"
+
+typedef enum { TX_BUFFER_DATA = 0x9F, RX_BUFFER_LENGTH = 38 } BufferConstants;
 
 int main(void)
 {
@@ -14,6 +16,12 @@ int main(void)
     if (!protocol_init()) {
         LOG_ERROR("Failed to initialize protocol");
         return -1;
+    }
+
+    // Initialize the SPI bus
+    SPI_Handle *spi_handle = SPI_init(0);
+    if (spi_handle == NULL) {
+        LOG_ERROR("Failed to initialize SPI bus");
     }
 
     // Main application loop
@@ -29,6 +37,19 @@ int main(void)
             LED_toggle(LED_GREEN);
             last_toggle = SYSTEM_get_tick();
         }
+
+        // SPI communication example
+        uint8_t tx_data = TX_BUFFER_DATA;
+        uint8_t rx_data[RX_BUFFER_LENGTH] = { 0 };
+        SPI_transmit_receive(spi_handle, &tx_data, rx_data, sizeof(rx_data));
+        LOG_INFO(
+            "SPI Received: %02X %02X %02X %02X %02X",
+            rx_data[0],
+            rx_data[1],
+            rx_data[2],
+            rx_data[3],
+            rx_data[4]
+        );
     }
 
     __builtin_unreachable();
