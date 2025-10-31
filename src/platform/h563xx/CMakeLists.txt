@@ -4,6 +4,7 @@ target_sources(pslab-platform
         esp_ll.c
         led_ll.c
         platform.c
+        spi_ll.c
         tim_ll.c
         uart_ll.c
         usb_ll.c
@@ -32,6 +33,7 @@ target_link_libraries(pslab-platform
         HAL::STM32::H5::ICACHE
         HAL::STM32::H5::GPIO
         HAL::STM32::H5::RCCEx
+        HAL::STM32::H5::SPIEx
         HAL::STM32::H5::PWREx
         HAL::STM32::H5::TIMEx
         HAL::STM32::H5::UARTEx

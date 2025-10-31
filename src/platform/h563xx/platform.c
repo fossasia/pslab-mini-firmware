@@ -138,8 +138,10 @@ static void system_clock_config(void)
 
     /* Configure peripheral clocks - Set ADC clock source to PLL2R (75 MHz) */
     RCC_PeriphCLKInitTypeDef periph_clk_init = { 0 };
-    periph_clk_init.PeriphClockSelection = RCC_PERIPHCLK_ADCDAC;
+    periph_clk_init.PeriphClockSelection = RCC_PERIPHCLK_ADCDAC | 
+                                           RCC_PERIPHCLK_SPI3;
     periph_clk_init.AdcDacClockSelection = RCC_ADCDACCLKSOURCE_PLL2R;
+    periph_clk_init.Spi3ClockSelection = RCC_SPI3CLKSOURCE_PLL2P;
 
     // Configure PLL2 structure to match our desired configuration
     // This is required because HAL_RCCEx_PeriphCLKConfig calls
@@ -148,7 +150,7 @@ static void system_clock_config(void)
     // NOLINTBEGIN: readability-magic-numbers
     periph_clk_init.PLL2.PLL2M = 5; // 25 MHz / 5 = 5 MHz
     periph_clk_init.PLL2.PLL2N = 60; // 5 MHz * 60 = 300 MHz VCO
-    periph_clk_init.PLL2.PLL2P = 2; // 300 MHz / 2 = 150 MHz
+    periph_clk_init.PLL2.PLL2P = 3; // 300 MHz / 3 = 100 MHz (for SPI3)
     periph_clk_init.PLL2.PLL2Q = 2; // 300 MHz / 2 = 150 MHz
     periph_clk_init.PLL2.PLL2R = 4; // 300 MHz / 4 = 75 MHz (for ADC)
     // NOLINTEND: readability-magic-numbers
@@ -156,8 +158,10 @@ static void system_clock_config(void)
     periph_clk_init.PLL2.PLL2VCOSEL =
         RCC_PLL2_VCORANGE_MEDIUM; // 150-420 MHz VCO
     periph_clk_init.PLL2.PLL2FRACN = 0;
+    // Enable PLL2R outputs
     periph_clk_init.PLL2.PLL2ClockOut =
-        RCC_PLL2_DIVR; // Enable PLL2R output for ADC
+        RCC_PLL2_DIVR | // Enable PLL2R output for ADC
+        RCC_PLL2_DIVP;   // Enable PLL2P output for SPI3    
 
     if (HAL_RCCEx_PeriphCLKConfig(&periph_clk_init) != HAL_OK) {
         /* ADC clock configuration failed */
