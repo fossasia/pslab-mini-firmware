@@ -1,35 +1,10 @@
-
-#include "protocol.h"
-#include "system/led.h"
-#include "system/system.h"
-#include "util/error.h"
-#include "util/logging.h"
+#include "application/protocol.h"
 
 int main(void)
 {
-    SYSTEM_init();
-    LOG_INIT("Main application");
+    protocol_init();
 
-    // Initialize the protocol
-    if (!protocol_init()) {
-        LOG_ERROR("Failed to initialize protocol");
-        return -1;
-    }
-
-    // Main application loop
-    while (1) {
-        // Process protocol tasks
+    while (true) {
         protocol_task();
-
-        LOG_task(0xF);
-
-        static uint32_t last_toggle = 0;
-        uint32_t const blink_period = 1000; // 1 second
-        if (SYSTEM_get_tick() - last_toggle >= blink_period) {
-            LED_toggle(LED_YELLOW);
-            last_toggle = SYSTEM_get_tick();
-        }
     }
-
-    __builtin_unreachable();
 }

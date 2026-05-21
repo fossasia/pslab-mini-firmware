@@ -1,2 +1,0 @@
-# Ensure all text files are normalized to LF on check-in
-* text=auto eol=lf
