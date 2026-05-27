@@ -1,7 +1,0 @@
-# Source directory configuration for target builds
-
-# Add subdirectories
-add_subdirectory(application)
-add_subdirectory(system)
-add_subdirectory(platform)
-add_subdirectory(util)
