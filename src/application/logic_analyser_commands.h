@@ -31,6 +31,13 @@ bool la_initiate(void);
 bool la_fetch(uint8_t const **data, size_t *len);
 uint32_t la_status(void);
 
+bool la_stream_start(void);
+void la_stream_stop(void);
+bool la_stream_is_enabled(void);
+uint32_t la_stream_get_sequence(void);
+uint32_t la_stream_get_overruns(void);
+bool la_stream_next_frame(uint8_t const **data, size_t *len, uint32_t *sequence);
+
 #ifdef __cplusplus
 }
 #endif

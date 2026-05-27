@@ -275,6 +275,35 @@ immediately if the trigger pin is still at that level.
 Captures are blocking in this first implementation. `LA:INIT` returns only
 after DMA has completed.
 
+### Logic Analyser Streaming
+
+Streaming mode runs the logic analyser as a double-buffered live capture. While
+one completed frame is being sent over USB CDC, DMA can fill the other frame
+buffer. This is intended for GUI live-view testing. It reduces the large
+capture/send/capture gaps from repeated `LA:READ?` polling, but it is still a
+framed stream rather than an infinite ring-buffer capture.
+
+| Command | Response | Description |
+| --- | --- | --- |
+| `LA:STREAM:START` | `OK` followed by stream frames | Start repeated capture streaming using the current logic analyser configuration. |
+| `LA:STREAM:STOP` | `OK` | Stop streaming. |
+| `LA:STREAM:STATUS?` / `LA:STREAM:STAT?` | `enabled,sequence,overruns` | Query stream state. |
+
+Each stream frame is sent as:
+
+```text
+LA:STREAM:FRAME <sequence> <byte_count>
+#<digits><byte_count><payload>
+```
+
+The frame payload uses the same packed little-endian `uint32_t` format as
+`LA:READ?`. `sequence` increments once per delivered frame.
+
+For live display, `TRIG:MODE LEVEL` is usually easier than `EDGE`, because the
+initial stream start can block while waiting for the re-arm/trigger condition.
+After the first triggered frame starts, subsequent frames free-run into the
+ping-pong buffers.
+
 ### Test Signal Commands
 
 | Command | Response | Description |

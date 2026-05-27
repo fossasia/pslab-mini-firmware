@@ -62,6 +62,34 @@ static void write_block(uint8_t const *data, size_t len)
     protocol_write_text("\n");
 }
 
+static void write_stream_frame(uint32_t sequence, uint8_t const *data, size_t len)
+{
+    char line[48];
+    snprintf(
+        line,
+        sizeof(line),
+        "LA:STREAM:FRAME %lu %lu\n",
+        (unsigned long)sequence,
+        (unsigned long)len
+    );
+    protocol_write_text(line);
+    write_block(data, len);
+}
+
+static void write_stream_status(void)
+{
+    char line[80];
+    snprintf(
+        line,
+        sizeof(line),
+        "%u,%lu,%lu\n",
+        la_stream_is_enabled() ? 1u : 0u,
+        (unsigned long)la_stream_get_sequence(),
+        (unsigned long)la_stream_get_overruns()
+    );
+    protocol_write_text(line);
+}
+
 static char *trim(char *text)
 {
     while (isspace((unsigned char)*text)) {
@@ -304,6 +332,14 @@ static void handle_line(char *line)
         }
     } else if (command_is(message, "LA:STATUS?", "LA:STAT?")) {
         write_uint(la_status());
+    } else if (strcmp(message, "LA:STREAM:START") == 0) {
+        la_stream_start() ? write_ok() : write_error("-200,\"Execution error\"");
+    } else if (strcmp(message, "LA:STREAM:STOP") == 0) {
+        la_stream_stop();
+        write_ok();
+    } else if (strcmp(message, "LA:STREAM:STATUS?") == 0 ||
+               strcmp(message, "LA:STREAM:STAT?") == 0) {
+        write_stream_status();
     } else if (strcmp(message, "TEST:SQUARE?") == 0) {
         protocol_write_text(test_signal_is_enabled() ? "1\n" : "0\n");
     } else if (strcmp(message, "TEST:SQUARE") == 0) {
@@ -376,6 +412,15 @@ void protocol_task(void)
         } else {
             line_len = 0;
             set_error("-363,\"Input buffer overrun\"");
+        }
+    }
+
+    if (la_stream_is_enabled()) {
+        uint8_t const *data;
+        size_t len;
+        uint32_t sequence;
+        if (la_stream_next_frame(&data, &len, &sequence)) {
+            write_stream_frame(sequence, data, len);
         }
     }
 }

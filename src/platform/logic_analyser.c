@@ -164,6 +164,34 @@ bool logic_analyser_capture(
     LogicAnalyserCaptureInfo *info
 )
 {
+    if (!logic_analyser_capture_start(
+            la,
+            trigger_pin,
+            trigger_level,
+            trigger_mode,
+            capture_buf,
+            sample_count,
+            info,
+            true
+        )) {
+        return false;
+    }
+
+    dma_channel_wait_for_finish_blocking((uint)la->dma_chan);
+    return logic_analyser_capture_complete(la);
+}
+
+bool logic_analyser_capture_start(
+    LogicAnalyser *la,
+    uint trigger_pin,
+    bool trigger_level,
+    LogicAnalyserTriggerMode trigger_mode,
+    uint32_t *capture_buf,
+    uint sample_count,
+    LogicAnalyserCaptureInfo *info,
+    bool wait_for_trigger
+)
+{
     if (!la || !la->initialized || !capture_buf || sample_count == 0 ||
         logic_analyser_is_busy(la)) {
         return false;
@@ -176,8 +204,10 @@ bool logic_analyser_capture(
         return false;
     }
 
-    prepare_trigger_pin(trigger_pin, trigger_level);
-    if (trigger_mode == LOGIC_ANALYSER_TRIGGER_EDGE) {
+    if (wait_for_trigger) {
+        prepare_trigger_pin(trigger_pin, trigger_level);
+    }
+    if (wait_for_trigger && trigger_mode == LOGIC_ANALYSER_TRIGGER_EDGE) {
         wait_for_trigger_rearm(trigger_pin, trigger_level);
     }
 
@@ -202,13 +232,14 @@ bool logic_analyser_capture(
         true
     );
 
-    pio_sm_exec(
-        la->config.pio,
-        la->config.sm,
-        pio_encode_wait_gpio(trigger_level, trigger_pin)
-    );
+    if (wait_for_trigger) {
+        pio_sm_exec(
+            la->config.pio,
+            la->config.sm,
+            pio_encode_wait_gpio(trigger_level, trigger_pin)
+        );
+    }
     pio_sm_set_enabled(la->config.pio, la->config.sm, true);
-    dma_channel_wait_for_finish_blocking((uint)la->dma_chan);
 
     if (info) {
         *info = (LogicAnalyserCaptureInfo){
@@ -223,4 +254,29 @@ bool logic_analyser_capture(
     }
 
     return true;
+}
+
+bool logic_analyser_capture_complete(LogicAnalyser *la)
+{
+    if (!la || !la->initialized || la->dma_chan < 0 ||
+        dma_channel_is_busy((uint)la->dma_chan)) {
+        return false;
+    }
+
+    pio_sm_set_enabled(la->config.pio, la->config.sm, false);
+    return true;
+}
+
+void logic_analyser_capture_abort(LogicAnalyser *la)
+{
+    if (!la || !la->initialized) {
+        return;
+    }
+
+    pio_sm_set_enabled(la->config.pio, la->config.sm, false);
+    if (la->dma_chan >= 0) {
+        dma_channel_abort((uint)la->dma_chan);
+    }
+    pio_sm_clear_fifos(la->config.pio, la->config.sm);
+    pio_sm_restart(la->config.pio, la->config.sm);
 }
