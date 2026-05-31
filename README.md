@@ -7,6 +7,8 @@ The current firmware contains a logic analyser and an early oscilloscope path.
 The project is laid out so more instruments can be added without mixing
 application protocol code with PIO/DMA/ADC hardware details.
 
+Use [my fork of the PSLab Python](https://github.com/IM-TechieScientist/pslab-python) project for testing and SCPI support.
+
 ## Project Layout
 
 ```text
