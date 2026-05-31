@@ -15,9 +15,12 @@ target_sources(pslab_pico PRIVATE
         src/application/main.c
         src/application/protocol.c
         src/application/logic_analyser_commands.c
+        src/application/dso_commands.c
         src/platform/logic_analyser.c
-        src/system/status_led.c
+        src/platform/dso.c
+        src/system/adc_capture.c
         src/system/test_signal.c
+        src/system/status_led.c
         src/system/usb_cdc.c
         src/system/usb_descriptors.c
         )
@@ -32,6 +35,7 @@ target_link_libraries(pslab_pico PRIVATE
         pico_unique_id
         hardware_pio
         hardware_dma
+        hardware_adc
         hardware_pwm
         hardware_clocks
         tinyusb_device

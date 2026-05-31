@@ -1,14 +1,12 @@
 # PSLab Pico
 
-Standalone Raspberry Pi Pico firmware for capturing digital logic samples with
-PIO and streaming the captured values over USB CDC using SCPI-style text
-commands.
+Standalone Raspberry Pi Pico firmware for instrument-style data acquisition
+over USB CDC using SCPI-style text commands.
 
-The first implemented instrument is the logic analyser. The project is laid out
-so more instruments can be added without mixing application protocol code with
-PIO/DMA details.
+The current firmware contains a logic analyser and an early oscilloscope path.
+The project is laid out so more instruments can be added without mixing
+application protocol code with PIO/DMA/ADC hardware details.
 
-Use [my fork of the PSLab Python](https://github.com/IM-TechieScientist/pslab-python) project for testing and SCPI support.
 ## Project Layout
 
 ```text
@@ -20,12 +18,18 @@ Use [my fork of the PSLab Python](https://github.com/IM-TechieScientist/pslab-py
     │   ├── main.c
     │   ├── protocol.c
     │   ├── protocol.h
+    │   ├── dso_commands.c
+    │   ├── dso_commands.h
     │   ├── logic_analyser_commands.c
     │   └── logic_analyser_commands.h
     ├── platform
+    │   ├── dso.c
+    │   ├── dso.h
     │   ├── logic_analyser.c
     │   └── logic_analyser.h
     └── system
+        ├── adc_capture.c
+        ├── adc_capture.h
         ├── tusb_config.h
         ├── usb_cdc.c
         ├── usb_cdc.h
@@ -41,18 +45,22 @@ Use [my fork of the PSLab Python](https://github.com/IM-TechieScientist/pslab-py
 - Initializes TinyUSB in device mode.
 - Exposes USB CDC as a simple byte stream.
 - Holds the USB descriptors and TinyUSB configuration.
-- Does not know anything about logic analyser commands or capture settings.
+- Owns board/peripheral services such as status LED, USB CDC, PWM test signal,
+  and raw ADC DMA capture.
+- Does not know anything about SCPI parsing.
 
 ### Platform Layer
 
-`src/platform` owns the low-level Pico hardware driver.
+`src/platform` owns instrument drivers built on top of system services and Pico
+hardware blocks.
 
 - Configures the PIO state machine with a one-instruction capture loop.
 - Uses DMA to move PIO RX FIFO words into a caller-provided buffer.
+- Owns the DSO instrument state machine and uses the system ADC capture service.
 - Handles GPIO input setup, PIO program load/unload, state-machine reset, and
   DMA channel ownership.
-- Exposes capture metadata such as captured pin range, sample count, word count,
-  and packed bits per word.
+- Exposes capture metadata such as captured pin range, ADC channel, sample
+  count, word count, and packed bits per word.
 
 ### Application Layer
 
@@ -61,12 +69,12 @@ Use [my fork of the PSLab Python](https://github.com/IM-TechieScientist/pslab-py
 - Runs the main loop.
 - Reads command lines from USB CDC.
 - Dispatches SCPI-style commands.
-- Maintains logic analyser configuration state.
+- Maintains logic analyser and oscilloscope configuration state.
 - Returns text responses or SCPI arbitrary binary blocks.
 
-The command dispatcher is intentionally small for this first logic-analyser-only
-version. It supports the command set below and can later be replaced by a full
-SCPI parser if the command tree grows.
+The command dispatcher is intentionally small for the current firmware. It
+supports the command set below and can later be replaced by a full SCPI parser
+if the command tree grows.
 
 ## Build
 
@@ -275,34 +283,65 @@ immediately if the trigger pin is still at that level.
 Captures are blocking in this first implementation. `LA:INIT` returns only
 after DMA has completed.
 
-### Logic Analyser Streaming
+### Oscilloscope Configuration
 
-Streaming mode runs the logic analyser as a double-buffered live capture. While
-one completed frame is being sent over USB CDC, DMA can fill the other frame
-buffer. This is intended for GUI live-view testing. It reduces the large
-capture/send/capture gaps from repeated `LA:READ?` polling, but it is still a
-framed stream rather than an infinite ring-buffer capture.
+The oscilloscope currently supports single-channel raw ADC captures using the
+Pico ADC FIFO and DMA. ADC samples are returned as raw 12-bit readings in
+little-endian `uint16_t` form.
+
+Analog inputs must stay within the Pico ADC input range. Do not connect signals
+below GND or above 3.3 V directly to GPIO26-GPIO29.
+
+| Long Form | Short Form | Range | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DSO:CONFIGURE:CHANNEL <n>` | `DSO:CONF:CHAN <n>` | `0..3` | `0` | ADC channel to sample. Channel 0 maps to GPIO26, channel 1 to GPIO27, channel 2 to GPIO28, and channel 3 to GPIO29. |
+| `DSO:CONFIGURE:CHANNEL?` | `DSO:CONF:CHAN?` | - | - | Query ADC channel. |
+| `DSO:CONFIGURE:GPIO?` | `DSO:CONF:GPIO?` | - | - | Query the GPIO used by the selected ADC channel. |
+| `DSO:CONFIGURE:RATE <hz>` | `DSO:CONF:RATE <hz>` | `1..500000` | `100000` | Requested ADC sample rate in samples per second. |
+| `DSO:CONFIGURE:RATE?` | `DSO:CONF:RATE?` | - | - | Query sample rate. |
+| `DSO:CONFIGURE:SAMPLES <n>` | `DSO:CONF:SAMP <n>` | `1..4096` | `1024` | Number of ADC samples to capture. |
+| `DSO:CONFIGURE:SAMPLES?` | `DSO:CONF:SAMP?` | - | - | Query sample count. |
+| `DSO:CONFIGURE:TRIGGER:LEVEL <n>` | `DSO:CONF:TRIG:LEV <n>` | `0..4095` | `2048` | ADC threshold for analog triggering. |
+| `DSO:CONFIGURE:TRIGGER:LEVEL?` | `DSO:CONF:TRIG:LEV?` | - | - | Query trigger threshold. |
+| `DSO:CONFIGURE:TRIGGER:MODE <v>` | `DSO:CONF:TRIG:MODE <v>` | `OFF`, `LEVEL`, `EDGE` | `OFF` | Trigger mode. `OFF` captures immediately, `LEVEL` waits for the selected level condition, and `EDGE` rearms before waiting for the selected level condition. |
+| `DSO:CONFIGURE:TRIGGER:MODE?` | `DSO:CONF:TRIG:MODE?` | - | - | Query trigger mode. |
+| `DSO:CONFIGURE:TRIGGER:SLOPE <v>` | `DSO:CONF:TRIG:SLOP <v>` | `RISE`, `RISING`, `FALL`, `FALLING` | `RISE` | Trigger direction. Rising means sample is greater than or equal to threshold; falling means sample is less than or equal to threshold. |
+| `DSO:CONFIGURE:TRIGGER:SLOPE?` | `DSO:CONF:TRIG:SLOP?` | - | - | Query trigger slope. |
+
+### Oscilloscope Acquisition
 
 | Command | Response | Description |
 | --- | --- | --- |
-| `LA:STREAM:START` | `OK` followed by stream frames | Start repeated capture streaming using the current logic analyser configuration. |
-| `LA:STREAM:STOP` | `OK` | Stop streaming. |
-| `LA:STREAM:STATUS?` / `LA:STREAM:STAT?` | `enabled,sequence,overruns` | Query stream state. |
+| `DSO:INITIATE` / `DSO:INIT` | `OK` | Run one ADC DMA capture using the current DSO configuration. |
+| `DSO:FETCH?` / `DSO:FETC?` | Binary block | Return the most recent DSO capture. Fails if no capture is ready. |
+| `DSO:FETCH:DATA?` / `DSO:FETC:DATA?` | Binary block | Same as `DSO:FETCH?`. |
+| `DSO:READ?` | Binary block | Run one DSO capture, then return it. |
+| `DSO:STATUS?` / `DSO:STAT?` | `0`, `1`, or `2` | `0` means idle/no data, `1` means capture data ready, `2` means busy. |
+| `DSO:STREAM:START` | `OK` followed by stream frames | Start repeated ADC capture streaming using the current DSO configuration. |
+| `DSO:STREAM:STOP` | `OK` | Stop DSO streaming. |
+| `DSO:STREAM:STATUS?` / `DSO:STREAM:STAT?` | `enabled,sequence,overruns` | Query DSO stream state. |
 
-Each stream frame is sent as:
+Example DSO session:
 
 ```text
-LA:STREAM:FRAME <sequence> <byte_count>
+DSO:CONF:CHAN 0
+DSO:CONF:RATE 100000
+DSO:CONF:SAMP 1024
+DSO:CONF:TRIG:MODE OFF
+DSO:READ?
+```
+
+Each DSO stream frame is sent as:
+
+```text
+DSO:STREAM:FRAME <sequence> <byte_count>
 #<digits><byte_count><payload>
 ```
 
-The frame payload uses the same packed little-endian `uint32_t` format as
-`LA:READ?`. `sequence` increments once per delivered frame.
-
-For live display, `TRIG:MODE LEVEL` is usually easier than `EDGE`, because the
-initial stream start can block while waiting for the re-arm/trigger condition.
-After the first triggered frame starts, subsequent frames free-run into the
-ping-pong buffers.
+The payload is the same little-endian `uint16_t` sample array returned by
+`DSO:READ?`. Stream metadata such as channel, sample rate, sample count, trigger
+mode, and ADC GPIO is currently exposed through SCPI query commands instead of
+being embedded into the binary sample payload.
 
 ### Test Signal Commands
 
@@ -315,9 +354,9 @@ ping-pong buffers.
 | `TEST:SQUARE:PIN?` | GPIO number | Query the active test output pin. |
 | `TEST:SQUARE:FREQ?` | Frequency in Hz | Query the active test output frequency. |
 
-## Capture Data Format
+## Logic Analyser Data Format
 
-Capture data is returned as a SCPI arbitrary block:
+Logic analyser capture data is returned as a SCPI arbitrary block:
 
 ```text
 #<digits><byte_count><payload>
@@ -349,3 +388,30 @@ word_index = bit_index / bits_per_word;
 word_mask = 1u << (bit_index % bits_per_word + 32 - bits_per_word);
 pin_is_high = capture_words[word_index] & word_mask;
 ```
+
+## Oscilloscope Data Format
+
+Oscilloscope capture data is also returned as a SCPI arbitrary block:
+
+```text
+#<digits><byte_count><payload>
+```
+
+The payload is an array of little-endian `uint16_t` ADC samples copied from the
+Pico ADC FIFO by DMA. The ADC is configured for 12-bit samples, so the useful
+range is approximately:
+
+```text
+0      -> 0 V
+4095   -> 3.3 V
+```
+
+Host-side voltage conversion can start with:
+
+```c
+volts = sample * 3.3f / 4095.0f;
+```
+
+This assumes the signal is connected directly to a Pico ADC pin and uses the
+board's 3.3 V ADC reference. A future analog front-end will need its own scale,
+offset, protection, and calibration handling.

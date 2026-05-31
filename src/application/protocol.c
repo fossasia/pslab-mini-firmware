@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "application/dso_commands.h"
 #include "application/logic_analyser_commands.h"
 #include "system/status_led.h"
 #include "system/test_signal.h"
@@ -86,6 +87,34 @@ static void write_stream_status(void)
         la_stream_is_enabled() ? 1u : 0u,
         (unsigned long)la_stream_get_sequence(),
         (unsigned long)la_stream_get_overruns()
+    );
+    protocol_write_text(line);
+}
+
+static void write_dso_stream_frame(uint32_t sequence, uint8_t const *data, size_t len)
+{
+    char line[48];
+    snprintf(
+        line,
+        sizeof(line),
+        "DSO:STREAM:FRAME %lu %lu\n",
+        (unsigned long)sequence,
+        (unsigned long)len
+    );
+    protocol_write_text(line);
+    write_block(data, len);
+}
+
+static void write_dso_stream_status(void)
+{
+    char line[80];
+    snprintf(
+        line,
+        sizeof(line),
+        "%u,%lu,%lu\n",
+        dso_commands_stream_is_enabled() ? 1u : 0u,
+        (unsigned long)dso_commands_stream_get_sequence(),
+        (unsigned long)dso_commands_stream_get_overruns()
     );
     protocol_write_text(line);
 }
@@ -182,6 +211,51 @@ static bool parse_trigger_mode(char const *text, bool *edge_mode)
     return false;
 }
 
+static bool parse_dso_trigger_mode(char const *text)
+{
+    char normalized[16];
+
+    if (!text || !*text) {
+        return false;
+    }
+
+    snprintf(normalized, sizeof(normalized), "%s", text);
+    uppercase(normalized);
+
+    if (strcmp(normalized, "OFF") == 0) {
+        return dso_commands_set_trigger_mode_off();
+    }
+    if (strcmp(normalized, "LEVEL") == 0) {
+        return dso_commands_set_trigger_mode_level();
+    }
+    if (strcmp(normalized, "EDGE") == 0) {
+        return dso_commands_set_trigger_mode_edge();
+    }
+
+    return false;
+}
+
+static bool parse_dso_trigger_slope(char const *text)
+{
+    char normalized[16];
+
+    if (!text || !*text) {
+        return false;
+    }
+
+    snprintf(normalized, sizeof(normalized), "%s", text);
+    uppercase(normalized);
+
+    if (strcmp(normalized, "RISE") == 0 || strcmp(normalized, "RISING") == 0) {
+        return dso_commands_set_trigger_slope_rising();
+    }
+    if (strcmp(normalized, "FALL") == 0 || strcmp(normalized, "FALLING") == 0) {
+        return dso_commands_set_trigger_slope_falling();
+    }
+
+    return false;
+}
+
 static bool command_is(char const *command, char const *long_name, char const *short_name)
 {
     return strcmp(command, long_name) == 0 || strcmp(command, short_name) == 0;
@@ -254,6 +328,7 @@ static void handle_line(char *line)
         protocol_write_text("FOSSASIA,PSLab Pico,1.0,v0.1.0\n");
     } else if (strcmp(message, "*RST") == 0) {
         la_reset_state();
+        dso_commands_reset();
         set_error("0,\"No error\"");
         write_ok();
     } else if (strcmp(message, "*TST?") == 0 || strcmp(message, "*OPC?") == 0) {
@@ -333,6 +408,7 @@ static void handle_line(char *line)
     } else if (command_is(message, "LA:STATUS?", "LA:STAT?")) {
         write_uint(la_status());
     } else if (strcmp(message, "LA:STREAM:START") == 0) {
+        dso_commands_stream_stop();
         la_stream_start() ? write_ok() : write_error("-200,\"Execution error\"");
     } else if (strcmp(message, "LA:STREAM:STOP") == 0) {
         la_stream_stop();
@@ -340,6 +416,70 @@ static void handle_line(char *line)
     } else if (strcmp(message, "LA:STREAM:STATUS?") == 0 ||
                strcmp(message, "LA:STREAM:STAT?") == 0) {
         write_stream_status();
+    } else if (command_is(message, "DSO:CONFIGURE:CHANNEL?", "DSO:CONF:CHAN?")) {
+        write_uint(dso_commands_get_channel());
+    } else if (command_is(message, "DSO:CONFIGURE:CHANNEL", "DSO:CONF:CHAN")) {
+        command_param_u32(args, dso_commands_set_channel) ? write_ok()
+                                                          : write_error("-224,\"Illegal parameter value\"");
+    } else if (command_is(message, "DSO:CONFIGURE:GPIO?", "DSO:CONF:GPIO?")) {
+        write_uint(dso_commands_get_gpio());
+    } else if (command_is(message, "DSO:CONFIGURE:SAMPLES?", "DSO:CONF:SAMP?")) {
+        write_uint(dso_commands_get_samples());
+    } else if (command_is(message, "DSO:CONFIGURE:SAMPLES", "DSO:CONF:SAMP")) {
+        command_param_u32(args, dso_commands_set_samples) ? write_ok()
+                                                          : write_error("-224,\"Illegal parameter value\"");
+    } else if (command_is(message, "DSO:CONFIGURE:RATE?", "DSO:CONF:RATE?")) {
+        write_uint(dso_commands_get_sample_rate());
+    } else if (command_is(message, "DSO:CONFIGURE:RATE", "DSO:CONF:RATE")) {
+        command_param_u32(args, dso_commands_set_sample_rate) ? write_ok()
+                                                              : write_error("-224,\"Illegal parameter value\"");
+    } else if (command_is(message, "DSO:CONFIGURE:TRIGGER:LEVEL?", "DSO:CONF:TRIG:LEV?")) {
+        write_uint(dso_commands_get_trigger_level());
+    } else if (command_is(message, "DSO:CONFIGURE:TRIGGER:LEVEL", "DSO:CONF:TRIG:LEV")) {
+        command_param_u32(args, dso_commands_set_trigger_level) ? write_ok()
+                                                                : write_error("-224,\"Illegal parameter value\"");
+    } else if (command_is(message, "DSO:CONFIGURE:TRIGGER:MODE?", "DSO:CONF:TRIG:MODE?")) {
+        protocol_write_text(dso_commands_get_trigger_mode());
+        protocol_write_text("\n");
+    } else if (command_is(message, "DSO:CONFIGURE:TRIGGER:MODE", "DSO:CONF:TRIG:MODE")) {
+        parse_dso_trigger_mode(args) ? write_ok()
+                                     : write_error("-224,\"Illegal parameter value\"");
+    } else if (command_is(message, "DSO:CONFIGURE:TRIGGER:SLOPE?", "DSO:CONF:TRIG:SLOP?")) {
+        protocol_write_text(dso_commands_get_trigger_slope());
+        protocol_write_text("\n");
+    } else if (command_is(message, "DSO:CONFIGURE:TRIGGER:SLOPE", "DSO:CONF:TRIG:SLOP")) {
+        parse_dso_trigger_slope(args) ? write_ok()
+                                      : write_error("-224,\"Illegal parameter value\"");
+    } else if (command_is(message, "DSO:INITIATE", "DSO:INIT")) {
+        dso_commands_initiate() ? write_ok() : write_error("-200,\"Execution error\"");
+    } else if (command_is(message, "DSO:FETCH?", "DSO:FETC?") ||
+               command_is(message, "DSO:FETCH:DATA?", "DSO:FETC:DATA?")) {
+        uint8_t const *data;
+        size_t len;
+        if (dso_commands_fetch(&data, &len)) {
+            write_block(data, len);
+        } else {
+            write_error("-200,\"Execution error\"");
+        }
+    } else if (strcmp(message, "DSO:READ?") == 0) {
+        uint8_t const *data;
+        size_t len;
+        if (dso_commands_initiate() && dso_commands_fetch(&data, &len)) {
+            write_block(data, len);
+        } else {
+            write_error("-200,\"Execution error\"");
+        }
+    } else if (command_is(message, "DSO:STATUS?", "DSO:STAT?")) {
+        write_uint(dso_commands_status());
+    } else if (strcmp(message, "DSO:STREAM:START") == 0) {
+        la_stream_stop();
+        dso_commands_stream_start() ? write_ok() : write_error("-200,\"Execution error\"");
+    } else if (strcmp(message, "DSO:STREAM:STOP") == 0) {
+        dso_commands_stream_stop();
+        write_ok();
+    } else if (strcmp(message, "DSO:STREAM:STATUS?") == 0 ||
+               strcmp(message, "DSO:STREAM:STAT?") == 0) {
+        write_dso_stream_status();
     } else if (strcmp(message, "TEST:SQUARE?") == 0) {
         protocol_write_text(test_signal_is_enabled() ? "1\n" : "0\n");
     } else if (strcmp(message, "TEST:SQUARE") == 0) {
@@ -422,6 +562,13 @@ void protocol_task(void)
         if (la_stream_next_frame(&data, &len, &sequence)) {
             write_stream_frame(sequence, data, len);
         }
+    } else if (dso_commands_stream_is_enabled()) {
+        uint8_t const *data;
+        size_t len;
+        uint32_t sequence;
+        if (dso_commands_stream_next_frame(&data, &len, &sequence)) {
+            write_dso_stream_frame(sequence, data, len);
+        }
     }
 }
 
@@ -432,6 +579,7 @@ void protocol_deinit(void)
     }
 
     la_reset_state();
+    dso_commands_reset();
     initialized = false;
 }
 
