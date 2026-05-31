@@ -13,6 +13,7 @@
 #include "scpi/error.h"
 #include "scpi/scpi.h"
 
+#include "application/dso_commands.h"
 #include "application/logic_analyser_commands.h"
 #include "platform/test_signal.h"
 
@@ -178,6 +179,7 @@ scpi_result_t scpi_cmd_status_logic_analyser_q(scpi_t *context)
 
 scpi_result_t scpi_cmd_stream_logic_analyser_start(scpi_t *context)
 {
+    dso_commands_stream_stop();
     return la_stream_start() ? result_ok() : result_execution_error(context);
 }
 
