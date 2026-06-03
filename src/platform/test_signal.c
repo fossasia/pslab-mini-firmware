@@ -1,4 +1,4 @@
-#include "system/test_signal.h"
+#include "platform/test_signal.h"
 
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
