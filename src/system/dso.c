@@ -1,11 +1,11 @@
-#include "platform/dso.h"
+#include "system/dso.h"
 
 #include <string.h>
 
 #include "pico/stdlib.h"
 
-#include "system/adc_capture.h"
-#include "system/status_led.h"
+#include "platform/adc_capture.h"
+#include "platform/status_led.h"
 
 enum {
     DSO_DEFAULT_CHANNEL = 0,
