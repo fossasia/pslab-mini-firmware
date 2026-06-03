@@ -13,27 +13,18 @@ add_executable(pslab_pico)
 
 target_sources(pslab_pico PRIVATE
         src/application/main.c
-        src/application/protocol.c
-        src/application/logic_analyser_commands.c
-        src/platform/logic_analyser.c
-        src/system/status_led.c
-        src/system/test_signal.c
-        src/system/usb_cdc.c
-        src/system/usb_descriptors.c
+        src/platform/usb_cdc.c
+        src/platform/usb_descriptors.c
         )
 
 target_include_directories(pslab_pico PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/src
-        ${CMAKE_CURRENT_LIST_DIR}/src/system
+        ${CMAKE_CURRENT_LIST_DIR}/src/platform
         )
 
 target_link_libraries(pslab_pico PRIVATE
         pico_stdlib
         pico_unique_id
-        hardware_pio
-        hardware_dma
-        hardware_pwm
-        hardware_clocks
         tinyusb_device
         tinyusb_board
         )
