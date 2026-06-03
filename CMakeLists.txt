@@ -23,11 +23,15 @@ target_sources(pslab_pico PRIVATE
         src/platform/status_led.c
         src/platform/usb_cdc.c
         src/platform/usb_descriptors.c
+        src/util/circular_buffer.c
+        src/util/logging.c
+        lib/CException/CException.c
         )
 
 target_include_directories(pslab_pico PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/src
         ${CMAKE_CURRENT_LIST_DIR}/src/platform
+        ${CMAKE_CURRENT_LIST_DIR}/lib/CException
         )
 
 target_link_libraries(pslab_pico PRIVATE
