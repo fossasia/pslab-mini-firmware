@@ -8,9 +8,9 @@
 
 #include "application/dso_commands.h"
 #include "application/logic_analyser_commands.h"
-#include "system/status_led.h"
-#include "system/test_signal.h"
-#include "system/usb_cdc.h"
+#include "platform/status_led.h"
+#include "platform/test_signal.h"
+#include "platform/usb_cdc.h"
 
 enum {
     RX_CHUNK_SIZE = 64,

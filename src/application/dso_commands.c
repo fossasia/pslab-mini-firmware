@@ -1,6 +1,6 @@
 #include "application/dso_commands.h"
 
-#include "platform/dso.h"
+#include "system/dso.h"
 
 void dso_commands_reset(void) { dso_reset_state(); }
 

@@ -1,4 +1,4 @@
-#include "platform/logic_analyser.h"
+#include "system/logic_analyser.h"
 
 #include "hardware/dma.h"
 #include "hardware/gpio.h"

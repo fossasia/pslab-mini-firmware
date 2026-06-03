@@ -3,8 +3,8 @@
 #include <string.h>
 
 #include "hardware/pio.h"
-#include "platform/logic_analyser.h"
-#include "system/status_led.h"
+#include "system/logic_analyser.h"
+#include "platform/status_led.h"
 
 enum {
     LA_DEFAULT_PIN_BASE = 16,

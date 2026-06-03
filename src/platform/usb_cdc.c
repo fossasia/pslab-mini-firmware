@@ -1,4 +1,4 @@
-#include "system/usb_cdc.h"
+#include "platform/usb_cdc.h"
 
 #include "bsp/board_api.h"
 #include "pico/time.h"

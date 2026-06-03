@@ -1,4 +1,4 @@
-#include "system/adc_capture.h"
+#include "platform/adc_capture.h"
 
 #include "hardware/adc.h"
 #include "hardware/dma.h"

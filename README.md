@@ -7,8 +7,6 @@ The current firmware contains a logic analyser and an early oscilloscope path.
 The project is laid out so more instruments can be added without mixing
 application protocol code with PIO/DMA/ADC hardware details.
 
-Use [my fork of the PSLab Python](https://github.com/IM-TechieScientist/pslab-python) project for testing and SCPI support.
-
 ## Project Layout
 
 ```text
@@ -25,40 +23,47 @@ Use [my fork of the PSLab Python](https://github.com/IM-TechieScientist/pslab-py
     │   ├── logic_analyser_commands.c
     │   └── logic_analyser_commands.h
     ├── platform
-    │   ├── dso.c
-    │   ├── dso.h
-    │   ├── logic_analyser.c
-    │   └── logic_analyser.h
+    │   ├── adc_capture.c
+    │   ├── adc_capture.h
+    │   ├── status_led.c
+    │   ├── status_led.h
+    │   ├── test_signal.c
+    │   ├── test_signal.h
+    │   ├── tusb_config.h
+    │   ├── usb_cdc.c
+    │   ├── usb_cdc.h
+    │   └── usb_descriptors.c
     └── system
-        ├── adc_capture.c
-        ├── adc_capture.h
-        ├── tusb_config.h
-        ├── usb_cdc.c
-        ├── usb_cdc.h
-        └── usb_descriptors.c
+        ├── dso.c
+        ├── dso.h
+        ├── logic_analyser.c
+        └── logic_analyser.h
 ```
 
 ## Architecture
 
-### System Layer
+### Platform Layer
 
-`src/system` owns board-level and transport services.
+`src/platform` owns the lowest-level Pico-specific hardware and transport
+services.
 
 - Initializes TinyUSB in device mode.
 - Exposes USB CDC as a simple byte stream.
 - Holds the USB descriptors and TinyUSB configuration.
-- Owns board/peripheral services such as status LED, USB CDC, PWM test signal,
-  and raw ADC DMA capture.
+- Owns board/peripheral services such as status LED, PWM test signal, and raw
+  ADC DMA capture.
+- Wraps direct Pico SDK hardware blocks such as ADC, DMA, PWM, GPIO, and USB.
 - Does not know anything about SCPI parsing.
+- Does not own instrument state machines.
 
-### Platform Layer
+### System Layer
 
-`src/platform` owns instrument drivers built on top of system services and Pico
-hardware blocks.
+`src/system` owns instrument drivers built on top of the platform layer.
 
 - Configures the PIO state machine with a one-instruction capture loop.
 - Uses DMA to move PIO RX FIFO words into a caller-provided buffer.
-- Owns the DSO instrument state machine and uses the system ADC capture service.
+- Owns the DSO instrument state machine and uses the platform ADC capture
+  service.
 - Handles GPIO input setup, PIO program load/unload, state-machine reset, and
   DMA channel ownership.
 - Exposes capture metadata such as captured pin range, ADC channel, sample
