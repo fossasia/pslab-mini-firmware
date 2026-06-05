@@ -28,6 +28,7 @@ target_sources(pslab_pico PRIVATE
         src/platform/usb_cdc.c
         src/platform/usb_descriptors.c
         src/util/circular_buffer.c
+        src/util/fixed_point.c
         src/util/logging.c
         lib/CException/CException.c
         )
