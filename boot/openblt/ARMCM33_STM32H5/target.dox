@@ -1,9 +1,0 @@
-/**
-\defgroup   Target_ARMCM33_STM32H5 Target ARMCM33 STM32H5
-\ingroup    Ports
-\brief      Target dependent code for the ARMCM33 STM32H5 microcontroller family.
-\details    This module implements the bootloader's target dependent part for the
-            ARMCM33 STM32H5 microcontroller family.
-*/
-
-
