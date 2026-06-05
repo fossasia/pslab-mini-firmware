@@ -13,7 +13,9 @@
 #include <errno.h>
 #include <stdint.h>
 
+#ifndef CEXCEPTION_USE_CONFIG_FILE
 #define CEXCEPTION_USE_CONFIG_FILE
+#endif
 #include "CException.h"
 
 /*

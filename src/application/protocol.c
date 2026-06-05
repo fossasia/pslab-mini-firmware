@@ -11,6 +11,7 @@
 #include "platform/status_led.h"
 #include "platform/test_signal.h"
 #include "platform/usb_cdc.h"
+#include "util/logging.h"
 
 enum {
     RX_CHUNK_SIZE = 64,
@@ -521,13 +522,14 @@ static void handle_line(char *line)
 bool protocol_init(void)
 {
     if (initialized) {
+        LOG_WARN("Protocol already initialized");
         return true;
     }
 
-    usb_cdc_init();
-    status_led_init();
-    test_signal_init();
+    line_len = 0;
+    set_error("0,\"No error\"");
     initialized = true;
+    LOG_INFO("Protocol initialized");
     return true;
 }
 
@@ -581,6 +583,7 @@ void protocol_deinit(void)
     la_reset_state();
     dso_commands_reset();
     initialized = false;
+    LOG_INFO("Protocol deinitialized");
 }
 
 bool protocol_is_initialized(void) { return initialized; }

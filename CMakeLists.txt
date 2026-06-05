@@ -18,6 +18,8 @@ target_sources(pslab_pico PRIVATE
         src/application/dso_commands.c
         src/system/logic_analyser.c
         src/system/dso.c
+        src/system/system.c
+        src/system/syscalls.c
         src/system/bus/uart.c
         src/platform/adc_capture.c
         src/platform/uart_ll.c
@@ -36,6 +38,10 @@ target_include_directories(pslab_pico PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/lib/CException
         )
 
+target_compile_definitions(pslab_pico PRIVATE
+        CEXCEPTION_USE_CONFIG_FILE
+        )
+
 target_link_libraries(pslab_pico PRIVATE
         pico_stdlib
         pico_unique_id
@@ -45,6 +51,7 @@ target_link_libraries(pslab_pico PRIVATE
         hardware_pwm
         hardware_uart
         hardware_clocks
+        hardware_watchdog
         tinyusb_device
         tinyusb_board
         )
