@@ -1,11 +1,11 @@
 # PSLab Mini Firmware
 
-This repository is being prepared for the Raspberry Pi RP2350 based PSLab
+This repository is being prepared for the Raspberry Pi Pico based PSLab
 firmware port.
 
-This cleanup branch removes files that are specific to the previous STM32H563
-target and bootloader flow, while keeping the reusable firmware architecture in
-place for follow-up porting work.
+This branch adds the initial Pico SDK based firmware skeleton after the
+STM32-specific cleanup. The skeleton builds a minimal `pslab_pico` firmware
+target for RP2350 boards.
 
 ## Kept For Porting
 
@@ -16,12 +16,25 @@ place for follow-up porting work.
 - `tests`: existing host-side tests, retained until the Pico build/test layout
   is added.
 
-## Removed In This Branch
+## Pico Skeleton
 
-- STM32/OpenBLT bootloader sources.
-- STM32H5 CMSIS/HAL vendor package.
-- STM32-specific CMake toolchain and target files.
-- STM32-specific platform implementation files.
+- Root `CMakeLists.txt` using the Pico SDK.
+- `pico_sdk_import.cmake` for Pico SDK discovery.
+- Minimal `src/application/main.c` entrypoint.
 
-The Pico firmware skeleton and Pico SDK based build system are added in the
-next branch/PR.
+## Build
+
+Configure from the project root:
+
+```bash
+cmake -S . -B build-pico2 \
+  -DPICO_BOARD=pico2 \
+  -DPICO_SDK_PATH=/path/to/pico/sdk/2.1.0 \
+  -Dpicotool_DIR=/path/to/pico/sdk/2.1.0/picotool
+```
+
+Build:
+
+```bash
+cmake --build build-pico2 --target pslab_pico -j4
+```
