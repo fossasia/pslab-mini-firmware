@@ -1,72 +1,27 @@
-# pslab-mini
+# PSLab Mini Firmware
 
-## Build Instructions
+This repository is being prepared for the Raspberry Pi RP2350 based PSLab
+firmware port.
 
-This will build the bootloader and the main firmware application. The
-bootloader binary, `pslab-mini-bootloader`, will be located in build/boot/,
-while the main firmware application, `pslab-mini-firmware` will be located
-in build/src.
+This cleanup branch removes files that are specific to the previous STM32H563
+target and bootloader flow, while keeping the reusable firmware architecture in
+place for follow-up porting work.
 
-### Prerequisites
+## Kept For Porting
 
-- CMake
-- A make tool (e.g., GNU Make or Ninja)
-- `gcc-arm-none-eabi`
-- `libnewlib-arm-none-eabi`
+- `src/application`: application and protocol structure.
+- `src/system`: system services and instrument-level structure.
+- `src/util`: reusable utility, logging, error, buffer, and fixed-point code.
+- `doc`: design and architecture notes that are still useful during the port.
+- `tests`: existing host-side tests, retained until the Pico build/test layout
+  is added.
 
-### Steps
+## Removed In This Branch
 
-```sh
-mkdir build
-cd build
-cmake ..
-make
-```
+- STM32/OpenBLT bootloader sources.
+- STM32H5 CMSIS/HAL vendor package.
+- STM32-specific CMake toolchain and target files.
+- STM32-specific platform implementation files.
 
-## Flashing the Bootloader
-
-Flashing the bootloader requires a hardware programmer, such as ST-Link. The
-Nucleo development board has an onboard ST-Link.
-
-To flash the bootloader using STM32_Programmer_CLI, run:
-
-```sh
-STM32_Programmer_CLI -c port=SWD -d build/boot/pslab-mini-bootloader.srec -v -rst
-```
-
-To flash the bootloader using the Windows application of STM32_Programmer, follow these steps:
-
-- Open the STM32_Programmer application and switch to the Erasing & Programming tab from the left menu bar.
-- Connect to the Board using ST-Link and initiate the connection from the application.
-
-  <img src="./doc/screenshots/Establishing_connection_to_board.jpeg" height="400">
-  
-- Browse and select the .srec file for the bootloader inside the build/boot/ folder of your program directory.
- 
-    <img src="./doc/screenshots/Browsing_for_file.jpeg" height="400">
-  
-- Initiate Start_Programming, and a successfully uploaded message will appear once programming is complete!
-
-## Flashing the Firmware
-
-Once the bootloader is present on the device, the main firmware can be flashed over a serial connection using OpenBLT Host tools, specifically [MicroBoot (GUI)](https://www.feaser.com/openblt/doku.php?id=manual:microboot) or [BootCommander (CLI)](https://www.feaser.com/openblt/doku.php?id=manual:bootcommander).
-
-To flash the firmware using BootCommander, run:
-
-```sh
-BootCommander -d=/dev/ttyACM0 build/src/pslab-mini-firmware.srec
-```
-To flash the firmware using the MicroBoot GUI tool in Windows, follow these steps:
-
-- Connect the board via USB.
-- Open Device Manager, then navigate to the Ports and Comms menu and note down the COMM number the board is connected on.
-- Now open the MicroBoot Application, inside Settings, set it to XCP on RS232 Mode, the Device will have the same COMM port as your Device_manager settings.
-
-  <img src="./doc/screenshots/Microboot_settings.jpeg" height="400">
-      
-- Now, browse and select the .srec for firmware inside the build/src/ folder.
-
-  <img src="./doc/screenshots/Microboot_browsing_for_file.jpeg" height="400">
-
-- Click the reset button to put the board in boot mode, and the firmware will be successfully flashed onto the board!
-  
+The Pico firmware skeleton and Pico SDK based build system are added in the
+next branch/PR.
