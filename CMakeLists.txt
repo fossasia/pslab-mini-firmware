@@ -15,6 +15,7 @@ target_sources(pslab_pico PRIVATE
         src/application/main.c
         src/platform/usb_cdc.c
         src/platform/usb_descriptors.c
+        src/system/logic_analyser.c
         )
 
 target_include_directories(pslab_pico PRIVATE
@@ -25,6 +26,8 @@ target_include_directories(pslab_pico PRIVATE
 target_link_libraries(pslab_pico PRIVATE
         pico_stdlib
         pico_unique_id
+        hardware_pio
+        hardware_dma
         tinyusb_device
         tinyusb_board
         )
