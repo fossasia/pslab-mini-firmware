@@ -19,7 +19,7 @@ extern "C" {
 /**
  * @brief Initialize the SCPI protocol
  *
- * This function initializes the USB interface, ADC, and SCPI parser.
+ * This function initializes the USB interface and SCPI parser.
  * Must be called before using any other protocol functions.
  *
  * @return true on success, false on failure
@@ -29,7 +29,7 @@ bool protocol_init(void);
 /**
  * @brief Deinitialize the SCPI protocol
  *
- * Cleans up all resources used by the protocol including USB and ADC.
+ * Cleans up all resources used by the protocol.
  */
 void protocol_deinit(void);
 

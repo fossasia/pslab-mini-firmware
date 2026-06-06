@@ -1,12 +1,10 @@
-#include "pico/stdlib.h"
+#include "application/protocol.h"
 
 int main(void)
 {
-    stdio_init_all();
+    protocol_init();
 
-    while (1) {
-        tight_loop_contents();
+    while (true) {
+        protocol_task();
     }
-
-    __builtin_unreachable();
 }
