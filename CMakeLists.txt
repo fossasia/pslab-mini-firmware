@@ -18,7 +18,7 @@ target_sources(pslab_pico PRIVATE
         src/application/protocol/dso.c
         src/application/logic_analyser_commands.c
         src/application/dso_commands.c
-        src/system/dso.c
+        src/system/instrument/dso.c
         src/platform/adc_capture.c
         src/platform/usb_cdc.c
         src/platform/usb_descriptors.c

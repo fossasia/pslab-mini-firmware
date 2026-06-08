@@ -35,6 +35,29 @@ test signal control.
 - `src/system/logic_analyser.c`
 - `src/system/logic_analyser.h`
 
+## Oscilloscope System Driver
+
+- `src/platform/adc_capture.c`: Pico ADC capture driver.
+- `src/platform/adc_capture.h`
+- `src/system/instrument/dso.c`: rudimentary oscilloscope instrument built on the Pico ADC.
+- `src/system/instrument/dso.h`
+- `src/application/protocol/dso.c`: oscilloscope SCPI command handlers.
+- `src/application/dso_commands.c`
+- `src/application/dso_commands.h`
+
+The current oscilloscope uses the RP2350 internal ADC. It supports one ADC
+channel at a time, channels `0..3`, mapped to GPIOs `26..29`. Samples are
+returned as little-endian 12-bit ADC values stored in `uint16_t` words.
+
+Default oscilloscope configuration:
+
+- Channel: `0` (`GPIO26`)
+- Sample rate: `100000` samples per second
+- Samples: `1024`
+- Trigger mode: `OFF`
+- Trigger level: `2048`
+- Trigger slope: `RISE`
+
 ## SCPI Command Interface
 
 - `src/application/protocol/common.c`: SCPI context, transport callbacks, and
@@ -59,6 +82,16 @@ Common commands include:
 - `LA:DATA?`
 - `LA:STREAM:START`
 - `LA:STREAM:STOP`
+- `DSO:CONF:CHAN <channel>`
+- `DSO:CONF:GPIO?`
+- `DSO:CONF:RATE <sample_rate_hz>`
+- `DSO:CONF:SAMP <sample_count>`
+- `DSO:CONF:TRIG:MODE <OFF|LEVEL|EDGE>`
+- `DSO:CONF:TRIG:LEV <0..4095>`
+- `DSO:CONF:TRIG:SLOP <RISE|FALL>`
+- `DSO:READ?`
+- `DSO:STREAM:START`
+- `DSO:STREAM:STOP`
 - `TEST:SQUARE:CONF <gpio> <frequency_hz>`
 - `TEST:SQUARE:START`
 - `TEST:SQUARE:STOP`
