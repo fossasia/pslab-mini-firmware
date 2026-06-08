@@ -6,6 +6,7 @@
  * in fixed_point.h.
  */
 #include <inttypes.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -21,8 +22,8 @@ char *FIXED_to_string(
     // Worst case: 1 minus sign, 5 integer digits, 1 decimal point,
     // 5 fractional digits, 1 null terminator == 13
     unsigned const buffer_min_size = 13;
-    if (buffer == nullptr || buffer_size < buffer_min_size) {
-        return nullptr;
+    if (buffer == NULL || buffer_size < buffer_min_size) {
+        return NULL;
     }
 
     // Get integer and fractional parts
@@ -41,12 +42,12 @@ char *FIXED_to_string(
     );
 
     if (result < 0 || (size_t)result >= buffer_size) {
-        return nullptr;
+        return NULL;
     }
 
     // Find the decimal point and truncate trailing zeros
     char *decimal_point = strchr(buffer, '.');
-    if (decimal_point != nullptr) {
+    if (decimal_point != NULL) {
         char *end = buffer + result - 1;
 
         // Remove trailing zeros, but keep at least one decimal place
@@ -59,5 +60,5 @@ char *FIXED_to_string(
     }
 
     // Should be unreachable
-    return nullptr;
+    return NULL;
 }

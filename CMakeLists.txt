@@ -25,6 +25,11 @@ target_sources(pslab_pico PRIVATE
         src/platform/status_led.c
         src/platform/test_signal.c
         src/system/logic_analyser.c
+        src/util/circular_buffer.c
+        src/util/error.c
+        src/util/fixed_point.c
+        src/util/logging.c
+        lib/CException-1.3.4/CException.c
         lib/scpi-parser-2.3/src/error.c
         lib/scpi-parser-2.3/src/expression.c
         lib/scpi-parser-2.3/src/fifo.c
@@ -37,9 +42,15 @@ target_sources(pslab_pico PRIVATE
         )
 
 target_include_directories(pslab_pico PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/src
         ${CMAKE_CURRENT_LIST_DIR}/src/platform
+        ${CMAKE_CURRENT_LIST_DIR}/lib/CException-1.3.4
         ${CMAKE_CURRENT_LIST_DIR}/lib/scpi-parser-2.3/inc
+        )
+
+target_compile_definitions(pslab_pico PRIVATE
+        CEXCEPTION_USE_CONFIG_FILE
         )
 
 target_link_libraries(pslab_pico PRIVATE
