@@ -1,511 +1,343 @@
 /**
  * @file dso.c
- * @brief Digital Storage Oscilloscope implementation for PSLab firmware
+ * @brief Digital Storage Oscilloscope implementation for PSLab Pico firmware
  *
- * This file implements a digital storage oscilloscope using the ADC_LL API
- * in continuous sampling mode, supporting both single-channel and dual-channel
- * modes for high-speed data acquisition.
+ * This file ports the PSLab DSO instrument layer to RP2350. The STM32 firmware
+ * used ADC_LL and TIM_LL for timer-triggered acquisition; this Pico port keeps
+ * the instrument-level DSO responsibility and delegates low-level ADC capture
+ * to platform/adc_capture.
  *
  * @author PSLab Team
  * @date 2025-09-29
  */
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include "system/instrument/dso.h"
 
-#include "platform/adc_ll.h"
-#include "platform/tim_ll.h"
-#include "util/error.h"
-#include "util/logging.h"
+#include <string.h>
 
-#include "dso.h"
+#include "pico/stdlib.h"
 
-/**
- * @brief DSO handle structure
- */
-struct DSO_Handle {
-    DSO_Config config;
-    bool running;
+#include "platform/adc_capture.h"
+#include "platform/status_led.h"
+
+enum {
+    DSO_DEFAULT_CHANNEL = 0,
+    DSO_DEFAULT_SAMPLE_RATE_HZ = 100000,
+    DSO_DEFAULT_SAMPLES = 1024,
+    DSO_DEFAULT_TRIGGER_LEVEL = 2048,
 };
 
-// Static instance for callback context
-static DSO_Handle *g_dso_handle = nullptr;
+static uint16_t capture_buffer[DSO_MAX_SAMPLES];
+static DsoCaptureInfo last_capture;
+static bool capture_valid;
+static bool adc_initialized;
+static bool stream_enabled;
+static uint32_t stream_sequence;
+static uint32_t stream_overruns;
 
-/**
- * @brief Convert DSO channel to ADC_LL channel
- */
-static ADC_LL_Channel dso_channel_to_adc_ll(DSO_Channel channel)
+static struct {
+    uint32_t channel;
+    uint32_t sample_rate_hz;
+    uint32_t samples;
+    uint32_t trigger_level;
+    DsoTriggerMode trigger_mode;
+    DsoTriggerSlope trigger_slope;
+} state = {
+    .channel = DSO_DEFAULT_CHANNEL,
+    .sample_rate_hz = DSO_DEFAULT_SAMPLE_RATE_HZ,
+    .samples = DSO_DEFAULT_SAMPLES,
+    .trigger_level = DSO_DEFAULT_TRIGGER_LEVEL,
+    .trigger_mode = DSO_TRIGGER_OFF,
+    .trigger_slope = DSO_TRIGGER_RISING,
+};
+
+static bool config_is_valid(void)
 {
-    // Map DSO channels to specific ADC channels for oscilloscope functionality
-    switch (channel) {
-    case DSO_CHANNEL_0:
-        return ADC_LL_CHANNEL_0;
-    case DSO_CHANNEL_1:
-        return ADC_LL_CHANNEL_1;
-    default:
-        // This should never happen due to validation, but satisfies linter
-        return ADC_LL_CHANNEL_0;
-    }
+    return state.channel <= ADC_CAPTURE_MAX_CHANNEL &&
+           state.sample_rate_hz >= ADC_CAPTURE_MIN_SAMPLE_RATE_HZ &&
+           state.sample_rate_hz <= ADC_CAPTURE_MAX_SAMPLE_RATE_HZ &&
+           state.samples >= 1 && state.samples <= DSO_MAX_SAMPLES;
 }
 
-/**
- * @brief Convert DSO mode to ADC_LL_Mode
- *
- * @param mode DSO mode.
- * @return Corresponding ADC_LL_Mode.
- */
-static ADC_LL_Mode dso_mode_to_adc_ll(DSO_Mode mode)
+static bool apply_config(void)
 {
-    switch (mode) {
-    case DSO_MODE_SINGLE_CHANNEL:
-        return ADC_LL_MODE_INTERLEAVED;
-    case DSO_MODE_DUAL_CHANNEL:
-        return ADC_LL_MODE_SIMULTANEOUS;
-    default:
-        return ADC_LL_MODE_INTERLEAVED;
+    if (!config_is_valid()) {
+        return false;
     }
+
+    AdcCaptureConfig config = {
+        .channel = state.channel,
+        .sample_rate_hz = state.sample_rate_hz,
+    };
+
+    if (adc_initialized) {
+        return adc_capture_configure(&config);
+    }
+
+    adc_initialized = adc_capture_init(&config);
+    return adc_initialized;
 }
 
-/**
- * @brief ADC completion callback for DSO
- *
- * Called when ADC data acquisition is complete.
- */
-// NOLINTNEXTLINE(readability-non-const-parameter)
-static void dso_adc_complete_callback(uint16_t *buffer, uint32_t total_samples)
+static bool set_and_maybe_reconfigure(
+    uint32_t *target,
+    uint32_t value,
+    uint32_t min,
+    uint32_t max,
+    bool reconfigure
+)
 {
-    (void)buffer;
-    (void)total_samples;
-
-    if (g_dso_handle != nullptr &&
-        g_dso_handle->config.complete_callback != nullptr) {
-        g_dso_handle->running = false;
-        TIM_LL_stop(TIM_NUM_6);
-        g_dso_handle->config.complete_callback();
-    }
-}
-
-/**
- * @brief Validate DSO configuration
- */
-static bool dso_validate_config(DSO_Config const *config)
-{
-    if (config == nullptr) {
-        LOG_ERROR("DSO: Configuration is NULL");
+    if (value < min || value > max) {
         return false;
     }
 
-    // Validate buffer
-    if (config->buffer == nullptr) {
-        LOG_ERROR("DSO: Buffer is NULL");
-        return false;
-    }
+    uint32_t old_value = *target;
+    *target = value;
+    capture_valid = false;
+    dso_stream_stop();
 
-    if (config->buffer_size == 0) {
-        LOG_ERROR("DSO: Buffer size is zero");
-        return false;
-    }
-
-    // Validate mode and channels
-    if (config->mode != DSO_MODE_SINGLE_CHANNEL &&
-        config->mode != DSO_MODE_DUAL_CHANNEL) {
-        LOG_ERROR("DSO: Invalid mode: %d", config->mode);
-        return false;
-    }
-
-    // Validate channel for single-channel mode
-    if (config->mode == DSO_MODE_SINGLE_CHANNEL) {
-        if (config->channel != DSO_CHANNEL_0 &&
-            config->channel != DSO_CHANNEL_1) {
-            LOG_ERROR("DSO: Invalid channel: %d", config->channel);
-            return false;
-        }
-    }
-
-    // Validate sample rate (basic range check)
-    uint32_t max_sample_rate =
-        ADC_LL_get_max_sample_rate(dso_mode_to_adc_ll(config->mode));
-    if (config->sample_rate == 0 || config->sample_rate > max_sample_rate) {
-        LOG_ERROR("DSO: Invalid sample rate: %u", config->sample_rate);
+    if (reconfigure && !apply_config()) {
+        *target = old_value;
         return false;
     }
 
     return true;
 }
 
-/**
- * @brief Create ADC configuration for DSO based on mode
- */
-static ADC_LL_Config dso_create_adc_config(DSO_Handle *handle)
+void dso_reset_state(void)
 {
-    ADC_LL_Config adc_config = { .trigger_source = ADC_TRIGGER_TIMER6 };
+    dso_stream_stop();
 
-    switch (handle->config.mode) {
-    case DSO_MODE_SINGLE_CHANNEL:
-        adc_config.channels[0] = dso_channel_to_adc_ll(handle->config.channel);
-        adc_config.channels[1] = dso_channel_to_adc_ll(handle->config.channel);
-        adc_config.mode =
-            ADC_LL_MODE_INTERLEAVED; // Use interleaved for higher sample rate
-        break;
-
-    case DSO_MODE_DUAL_CHANNEL:
-        adc_config.channels[0] = dso_channel_to_adc_ll(DSO_CHANNEL_0);
-        adc_config.channels[1] = dso_channel_to_adc_ll(DSO_CHANNEL_1);
-        adc_config.mode =
-            ADC_LL_MODE_SIMULTANEOUS; // Simultaneous for dual channel
-        break;
-
-    default:
-        // This should not happen due to validation
-        adc_config.channels[0] = ADC_LL_CHANNEL_0;
-        adc_config.mode = ADC_LL_MODE_SINGLE;
-        break;
+    if (adc_initialized) {
+        adc_capture_deinit();
     }
 
-    adc_config.trigger_source = ADC_TRIGGER_TIMER6;
-    adc_config.output_buffer = handle->config.buffer;
-    adc_config.buffer_size = handle->config.buffer_size;
-    adc_config.oversampling_ratio = 1; // No oversampling for oscilloscope
-
-    return adc_config;
+    adc_initialized = false;
+    capture_valid = false;
+    stream_sequence = 0;
+    stream_overruns = 0;
+    state.channel = DSO_DEFAULT_CHANNEL;
+    state.sample_rate_hz = DSO_DEFAULT_SAMPLE_RATE_HZ;
+    state.samples = DSO_DEFAULT_SAMPLES;
+    state.trigger_level = DSO_DEFAULT_TRIGGER_LEVEL;
+    state.trigger_mode = DSO_TRIGGER_OFF;
+    state.trigger_slope = DSO_TRIGGER_RISING;
 }
 
-/**
- * @brief Allocate and initialize DSO handle
- */
-static DSO_Handle *dso_create_handle(DSO_Config const *config)
+bool dso_set_channel(uint32_t value)
 {
-    // Check if already initialized
-    if (g_dso_handle != nullptr) {
-        LOG_ERROR("DSO: Already initialized");
-        THROW(ERROR_RESOURCE_BUSY);
-    }
-
-    // Allocate handle
-    DSO_Handle *handle = (DSO_Handle *)malloc(sizeof(DSO_Handle));
-    if (handle == nullptr) {
-        LOG_ERROR("DSO: Memory allocation failed");
-        THROW(ERROR_OUT_OF_MEMORY);
-    }
-
-    LOG_DEBUG("DSO: Allocated handle at %p", (void *)handle);
-
-    // Initialize handle
-    handle->config = *config;
-    handle->running = false;
-    g_dso_handle = handle;
-
-    LOG_INFO(
-        "DSO: Init mode %d, sample_rate %u, buffer_size %u",
-        config->mode,
-        config->sample_rate,
-        config->buffer_size
+    return set_and_maybe_reconfigure(
+        &state.channel, value, 0, ADC_CAPTURE_MAX_CHANNEL, true
     );
-
-    return handle;
 }
 
-/**
- * @brief Initialize ADC for DSO operation
- */
-static void dso_init_adc(DSO_Handle *handle)
+bool dso_set_sample_rate(uint32_t value)
 {
-    LOG_FUNCTION_ENTRY();
-
-    // Set up ADC callback
-    ADC_LL_set_complete_callback(dso_adc_complete_callback);
-
-    LOG_DEBUG("DSO: Configuring ADC");
-    ADC_LL_Config adc_config = dso_create_adc_config(handle);
-
-    LOG_DEBUG("DSO: Initializing ADC");
-    Error error = ERROR_NONE;
-    TRY
-    {
-        LOG_DEBUG("DSO: ADC_LL_init called");
-        ADC_LL_init(&adc_config);
-        LOG_DEBUG("DSO: ADC initialized");
-    }
-    CATCH(error)
-    {
-        LOG_ERROR("DSO: ADC init failed, error %d", error);
-        g_dso_handle = nullptr;
-        free(handle);
-        THROW(error);
-    }
-    LOG_FUNCTION_EXIT();
+    return set_and_maybe_reconfigure(
+        &state.sample_rate_hz,
+        value,
+        ADC_CAPTURE_MIN_SAMPLE_RATE_HZ,
+        ADC_CAPTURE_MAX_SAMPLE_RATE_HZ,
+        true
+    );
 }
 
-/**
- * @brief Initialize timer for ADC triggering
- */
-static void dso_init_timer(DSO_Handle *handle)
+bool dso_set_samples(uint32_t value)
 {
-    LOG_FUNCTION_ENTRY();
-
-    Error error = ERROR_NONE;
-    TRY { TIM_LL_init(TIM_NUM_6, handle->config.sample_rate); }
-    CATCH(error)
-    {
-        LOG_ERROR("DSO: Timer init failed, error %d", error);
-        ADC_LL_deinit();
-        g_dso_handle = nullptr;
-        free(handle);
-        THROW(error);
-    }
-    LOG_DEBUG("DSO: Timer init, freq %u Hz", handle->config.sample_rate);
-    LOG_FUNCTION_EXIT();
+    return set_and_maybe_reconfigure(
+        &state.samples, value, 1, DSO_MAX_SAMPLES, false
+    );
 }
 
-// Public API Functions
-
-DSO_Handle *DSO_init(DSO_Config const *config)
+bool dso_set_trigger_level(uint32_t value)
 {
-    LOG_FUNCTION_ENTRY();
-
-    // Validate configuration
-    if (!dso_validate_config(config)) {
-        LOG_ERROR("DSO: Invalid configuration");
-        THROW(ERROR_INVALID_ARGUMENT);
-    }
-
-    // Create and initialize handle
-    DSO_Handle *handle = dso_create_handle(config);
-
-    // Initialize ADC
-    dso_init_adc(handle);
-
-    // Initialize timer
-    dso_init_timer(handle);
-
-    LOG_INFO("DSO: Successfully initialized");
-    LOG_FUNCTION_EXIT();
-    return handle;
+    return set_and_maybe_reconfigure(&state.trigger_level, value, 0, 4095, false);
 }
 
-void DSO_deinit(DSO_Handle *handle)
+bool dso_set_trigger_mode(DsoTriggerMode mode)
 {
-    LOG_FUNCTION_ENTRY();
-
-    if (handle == nullptr) {
-        LOG_WARN("DSO: Attempted to deinitialize NULL handle");
-        return;
+    if (mode != DSO_TRIGGER_OFF && mode != DSO_TRIGGER_LEVEL &&
+        mode != DSO_TRIGGER_EDGE) {
+        return false;
     }
 
-    if (handle != g_dso_handle) {
-        LOG_ERROR("DSO: Invalid handle");
-        THROW(ERROR_INVALID_ARGUMENT);
+    state.trigger_mode = mode;
+    capture_valid = false;
+    dso_stream_stop();
+    return true;
+}
+
+bool dso_set_trigger_slope(DsoTriggerSlope slope)
+{
+    if (slope != DSO_TRIGGER_RISING && slope != DSO_TRIGGER_FALLING) {
+        return false;
     }
 
-    Error error = ERROR_NONE;
+    state.trigger_slope = slope;
+    capture_valid = false;
+    dso_stream_stop();
+    return true;
+}
 
-    TRY
-    {
-        // Stop if running
-        if (handle->running) {
-            DSO_stop(handle);
+uint32_t dso_get_channel(void) { return state.channel; }
+
+uint32_t dso_get_gpio(void) { return adc_capture_channel_to_gpio(state.channel); }
+
+uint32_t dso_get_sample_rate(void) { return state.sample_rate_hz; }
+
+uint32_t dso_get_samples(void) { return state.samples; }
+
+uint32_t dso_get_trigger_level(void) { return state.trigger_level; }
+
+DsoTriggerMode dso_get_trigger_mode(void) { return state.trigger_mode; }
+
+DsoTriggerSlope dso_get_trigger_slope(void) { return state.trigger_slope; }
+
+static bool sample_matches_level(uint16_t sample)
+{
+    if (state.trigger_slope == DSO_TRIGGER_FALLING) {
+        return sample <= state.trigger_level;
+    }
+
+    return sample >= state.trigger_level;
+}
+
+static bool wait_for_trigger(void)
+{
+    if (state.trigger_mode == DSO_TRIGGER_OFF) {
+        return true;
+    }
+
+    uint16_t sample;
+    if (state.trigger_mode == DSO_TRIGGER_LEVEL) {
+        do {
+            if (!adc_capture_read_once(&sample)) {
+                return false;
+            }
+            tight_loop_contents();
+        } while (!sample_matches_level(sample));
+        return true;
+    }
+
+    bool armed = false;
+    while (true) {
+        if (!adc_capture_read_once(&sample)) {
+            return false;
         }
 
-        // Deinitialize hardware
-        LOG_DEBUG("DSO: Deinitializing ADC");
-        ADC_LL_deinit();
-
-        LOG_DEBUG("DSO: Deinitializing Timer");
-        TIM_LL_deinit(TIM_NUM_6);
+        bool matched = sample_matches_level(sample);
+        if (!armed) {
+            armed = !matched;
+        } else if (matched) {
+            return true;
+        }
+        tight_loop_contents();
     }
-    CATCH(error)
-    {
-        LOG_ERROR("DSO: Deinitialization failed, error %d", error);
-        // Don't throw, continue with handle cleanup
-    }
-
-    // Free memory
-    LOG_DEBUG("DSO: Freeing handle at %p", (void *)handle);
-    free(handle);
-
-    // Clear global handle reference
-    g_dso_handle = nullptr;
-
-    LOG_FUNCTION_EXIT();
 }
 
-void DSO_start(DSO_Handle *handle)
+bool dso_initiate(void)
 {
-    LOG_FUNCTION_ENTRY();
+    dso_stream_stop();
 
-    if (handle == nullptr) {
-        LOG_ERROR("DSO: Handle is NULL");
-        THROW(ERROR_INVALID_ARGUMENT);
+    if (!adc_initialized && !apply_config()) {
+        return false;
     }
 
-    if (handle != g_dso_handle) {
-        LOG_ERROR("DSO: Invalid handle");
-        THROW(ERROR_INVALID_ARGUMENT);
+    memset(capture_buffer, 0, state.samples * sizeof(capture_buffer[0]));
+
+    status_led_capture_started();
+    AdcCaptureInfo info;
+    bool captured = wait_for_trigger() &&
+                    adc_capture_run(capture_buffer, state.samples, &info);
+    status_led_capture_finished();
+
+    if (!captured) {
+        return false;
     }
 
-    if (handle->running) {
-        LOG_WARN("DSO: Already running");
-        return;
-    }
-
-    LOG_DEBUG("DSO: Starting data acquisition");
-
-    Error error = ERROR_NONE;
-    TRY
-    {
-        // Start ADC conversion first (DMA ready but not triggered)
-        LOG_DEBUG("DSO: Starting ADC...");
-        ADC_LL_start();
-        LOG_DEBUG("DSO: ADC started successfully");
-
-        // Start timer to trigger ADC (must be after ADC is ready)
-        LOG_DEBUG("DSO: Starting Timer...");
-        TIM_LL_start(TIM_NUM_6);
-        LOG_DEBUG("DSO: Timer started successfully");
-
-        handle->running = true;
-        LOG_INFO("DSO: Data acquisition started");
-    }
-    CATCH(error)
-    {
-        LOG_ERROR("DSO: Failed to start, error %d", error);
-        // Clean up partial state
-        TIM_LL_stop(TIM_NUM_6);
-        ADC_LL_stop();
-        THROW(error);
-    }
-
-    LOG_FUNCTION_EXIT();
+    last_capture = (DsoCaptureInfo){
+        .channel = info.channel,
+        .gpio = info.gpio,
+        .sample_rate_hz = info.sample_rate_hz,
+        .sample_count = info.sample_count,
+    };
+    capture_valid = true;
+    return true;
 }
 
-void DSO_stop(DSO_Handle *handle)
+bool dso_fetch(uint8_t const **data, size_t *len)
 {
-    LOG_FUNCTION_ENTRY();
-
-    if (handle == nullptr) {
-        LOG_ERROR("DSO: Handle is NULL");
-        THROW(ERROR_INVALID_ARGUMENT);
+    if (!capture_valid || !data || !len) {
+        return false;
     }
 
-    if (handle != g_dso_handle) {
-        LOG_ERROR("DSO: Invalid handle");
-        THROW(ERROR_INVALID_ARGUMENT);
-    }
-
-    if (!handle->running) {
-        LOG_WARN("DSO: Already stopped");
-    }
-
-    LOG_DEBUG("DSO: Stopping data acquisition");
-
-    // Stop ADC and timer
-    ADC_LL_stop();
-    TIM_LL_stop(TIM_NUM_6);
-
-    handle->running = false;
-
-    LOG_INFO("DSO: Data acquisition stopped");
-    LOG_FUNCTION_EXIT();
+    *data = (uint8_t const *)capture_buffer;
+    *len = last_capture.sample_count * sizeof(uint16_t);
+    return true;
 }
 
-DSO_Config DSO_get_config(DSO_Handle *handle)
+uint32_t dso_status(void)
 {
-    LOG_FUNCTION_ENTRY();
-
-    if (handle == nullptr) {
-        LOG_ERROR("DSO: Handle is NULL");
-        THROW(ERROR_INVALID_ARGUMENT);
+    if (stream_enabled || adc_capture_is_busy()) {
+        return 2;
     }
 
-    if (handle != g_dso_handle) {
-        LOG_ERROR("DSO: Invalid handle");
-        THROW(ERROR_INVALID_ARGUMENT);
-    }
-
-    LOG_DEBUG("DSO: Returning current configuration");
-    LOG_FUNCTION_EXIT();
-    return handle->config;
+    return capture_valid ? 1 : 0;
 }
 
-void DSO_set_config(DSO_Handle *handle, DSO_Config const *config)
+bool dso_stream_start(void)
 {
-    LOG_FUNCTION_ENTRY();
+    dso_stream_stop();
 
-    if (handle == nullptr) {
-        LOG_ERROR("DSO: Handle is NULL");
-        THROW(ERROR_INVALID_ARGUMENT);
+    if (!adc_initialized && !apply_config()) {
+        ++stream_overruns;
+        return false;
     }
 
-    if (handle != g_dso_handle) {
-        LOG_ERROR("DSO: Invalid handle");
-        THROW(ERROR_INVALID_ARGUMENT);
-    }
-
-    if (handle->running) {
-        LOG_ERROR("DSO: Cannot update configuration while running");
-        THROW(ERROR_RESOURCE_BUSY);
-    }
-
-    // Validate new configuration
-    if (!dso_validate_config(config)) {
-        LOG_ERROR("DSO: Invalid configuration");
-        THROW(ERROR_INVALID_ARGUMENT);
-    }
-
-    LOG_DEBUG("DSO: Updating configuration");
-
-    Error error = ERROR_NONE;
-    TRY
-    {
-        // Deinitialize current hardware configuration
-        LOG_DEBUG("DSO: Deinitializing current hardware");
-        ADC_LL_deinit();
-        TIM_LL_deinit(TIM_NUM_6);
-
-        // Update configuration
-        handle->config = *config;
-
-        // Reinitialize hardware with new configuration
-        LOG_DEBUG("DSO: Reinitializing hardware with new config");
-        dso_init_adc(handle);
-        dso_init_timer(handle);
-
-        LOG_INFO("DSO: Configuration updated successfully");
-    }
-    CATCH(error)
-    {
-        LOG_ERROR("DSO: Failed to update configuration, error %d", error);
-        THROW(error);
-    }
-
-    LOG_FUNCTION_EXIT();
+    capture_valid = false;
+    stream_enabled = true;
+    stream_sequence = 0;
+    stream_overruns = 0;
+    status_led_capture_started();
+    return true;
 }
 
-uint32_t DSO_get_max_sample_rate(DSO_Mode mode)
+void dso_stream_stop(void)
 {
-    LOG_FUNCTION_ENTRY();
-
-    ADC_LL_Mode adc_mode = dso_mode_to_adc_ll(mode);
-    uint32_t max_rate = ADC_LL_get_max_sample_rate(adc_mode);
-
-    LOG_DEBUG("DSO: Max sample rate for mode %d: %u Hz", mode, max_rate);
-    LOG_FUNCTION_EXIT();
-
-    return max_rate;
+    if (stream_enabled) {
+        status_led_capture_finished();
+    }
+    stream_enabled = false;
 }
 
-bool DSO_is_acquisition_in_progress(DSO_Handle *handle)
+bool dso_stream_is_enabled(void) { return stream_enabled; }
+
+uint32_t dso_stream_get_sequence(void) { return stream_sequence; }
+
+uint32_t dso_stream_get_overruns(void) { return stream_overruns; }
+
+bool dso_stream_next_frame(uint8_t const **data, size_t *len, uint32_t *sequence)
 {
-    if (handle == nullptr) {
-        LOG_ERROR("DSO: Handle is NULL");
-        THROW(ERROR_INVALID_ARGUMENT);
+    if (!stream_enabled || !data || !len || !sequence) {
+        return false;
     }
 
-    if (handle != g_dso_handle) {
-        LOG_ERROR("DSO: Invalid handle");
-        THROW(ERROR_INVALID_ARGUMENT);
+    AdcCaptureInfo info;
+    bool captured = wait_for_trigger() &&
+                    adc_capture_run(capture_buffer, state.samples, &info);
+    if (!captured) {
+        ++stream_overruns;
+        return false;
     }
 
-    return handle->running;
+    last_capture = (DsoCaptureInfo){
+        .channel = info.channel,
+        .gpio = info.gpio,
+        .sample_rate_hz = info.sample_rate_hz,
+        .sample_count = info.sample_count,
+    };
+    capture_valid = true;
+    *data = (uint8_t const *)capture_buffer;
+    *len = last_capture.sample_count * sizeof(uint16_t);
+    *sequence = stream_sequence++;
+    return true;
 }

@@ -15,6 +15,7 @@
 #include "scpi/error.h"
 #include "scpi/scpi.h"
 
+#include "application/dso_commands.h"
 #include "application/logic_analyser_commands.h"
 #include "platform/status_led.h"
 #include "platform/test_signal.h"
@@ -50,6 +51,28 @@ extern scpi_result_t scpi_cmd_stream_logic_analyser_start(scpi_t *context);
 extern scpi_result_t scpi_cmd_stream_logic_analyser_stop(scpi_t *context);
 extern scpi_result_t scpi_cmd_stream_logic_analyser_status_q(scpi_t *context);
 
+// Forward declarations of oscilloscope functions needed by common
+extern scpi_result_t scpi_cmd_configure_dso_channel(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_dso_channel_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_dso_gpio_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_dso_samples(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_dso_samples_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_dso_rate(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_dso_rate_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_dso_trigger_level(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_dso_trigger_level_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_dso_trigger_mode(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_dso_trigger_mode_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_dso_trigger_slope(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_dso_trigger_slope_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_initiate_dso(scpi_t *context);
+extern scpi_result_t scpi_cmd_fetch_dso_data_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_read_dso_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_status_dso_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_stream_dso_start(scpi_t *context);
+extern scpi_result_t scpi_cmd_stream_dso_stop(scpi_t *context);
+extern scpi_result_t scpi_cmd_stream_dso_status_q(scpi_t *context);
+
 // Forward declarations of test signal functions needed by common
 extern scpi_result_t scpi_cmd_test_square(scpi_t *context);
 extern scpi_result_t scpi_cmd_test_square_q(scpi_t *context);
@@ -81,6 +104,7 @@ static scpi_result_t protocol_reset(scpi_t *context)
 {
     (void)context; // Unused parameter
     la_reset_state();
+    dso_commands_reset();
     return SCPI_RES_OK;
 }
 
@@ -137,6 +161,28 @@ static scpi_command_t const g_SCPI_COMMANDS[] = {
     { "LA:STREAM:STARt", scpi_cmd_stream_logic_analyser_start },
     { "LA:STREAM:STOP", scpi_cmd_stream_logic_analyser_stop },
     { "LA:STREAM:STATus?", scpi_cmd_stream_logic_analyser_status_q },
+
+    // Oscilloscope commands
+    { "DSO:CONFigure:CHANnel", scpi_cmd_configure_dso_channel },
+    { "DSO:CONFigure:CHANnel?", scpi_cmd_configure_dso_channel_q },
+    { "DSO:CONFigure:GPIO?", scpi_cmd_configure_dso_gpio_q },
+    { "DSO:CONFigure:SAMPles", scpi_cmd_configure_dso_samples },
+    { "DSO:CONFigure:SAMPles?", scpi_cmd_configure_dso_samples_q },
+    { "DSO:CONFigure:RATE", scpi_cmd_configure_dso_rate },
+    { "DSO:CONFigure:RATE?", scpi_cmd_configure_dso_rate_q },
+    { "DSO:CONFigure:TRIGger:LEVel", scpi_cmd_configure_dso_trigger_level },
+    { "DSO:CONFigure:TRIGger:LEVel?", scpi_cmd_configure_dso_trigger_level_q },
+    { "DSO:CONFigure:TRIGger:MODE", scpi_cmd_configure_dso_trigger_mode },
+    { "DSO:CONFigure:TRIGger:MODE?", scpi_cmd_configure_dso_trigger_mode_q },
+    { "DSO:CONFigure:TRIGger:SLOPe", scpi_cmd_configure_dso_trigger_slope },
+    { "DSO:CONFigure:TRIGger:SLOPe?", scpi_cmd_configure_dso_trigger_slope_q },
+    { "DSO:INITiate", scpi_cmd_initiate_dso },
+    { "DSO:FETCh[:DATa]?", scpi_cmd_fetch_dso_data_q },
+    { "DSO:READ?", scpi_cmd_read_dso_q },
+    { "DSO:STATus?", scpi_cmd_status_dso_q },
+    { "DSO:STREAM:STARt", scpi_cmd_stream_dso_start },
+    { "DSO:STREAM:STOP", scpi_cmd_stream_dso_stop },
+    { "DSO:STREAM:STATus?", scpi_cmd_stream_dso_status_q },
 
     // Built-in test signal commands
     { "TEST:SQUare", scpi_cmd_test_square },
@@ -223,6 +269,25 @@ void protocol_task(void)
                 frame_header,
                 sizeof(frame_header),
                 "LA:STREAM:FRAME %lu %lu\n",
+                (unsigned long)sequence,
+                (unsigned long)len
+            );
+            usb_cdc_write((uint8_t const *)frame_header, strlen(frame_header));
+            SCPI_ResultArbitraryBlock(&g_scpi_context, data, len);
+            usb_cdc_write((uint8_t const *)"\n", 1);
+        }
+    }
+
+    if (dso_commands_stream_is_enabled()) {
+        uint8_t const *data;
+        size_t len;
+        uint32_t sequence;
+        if (dso_commands_stream_next_frame(&data, &len, &sequence)) {
+            char frame_header[48];
+            snprintf(
+                frame_header,
+                sizeof(frame_header),
+                "DSO:STREAM:FRAME %lu %lu\n",
                 (unsigned long)sequence,
                 (unsigned long)len
             );
