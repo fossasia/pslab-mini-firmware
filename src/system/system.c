@@ -11,18 +11,20 @@
 #include <stdint.h>
 
 #include "platform/platform.h"
+#include "platform/status_led.h"
+#include "platform/test_signal.h"
 #include "platform/uart_ll.h"
+#include "platform/usb_cdc.h"
 #include "util/error.h"
 #include "util/logging.h"
 #include "util/si_prefix.h"
 #include "util/util.h"
 
 #include "bus/uart.h"
-#include "led.h"
 #include "system.h"
 
 // Global variables for logging
-static UART_Handle *g_logging_uart_handle = nullptr;
+static UART_Handle *g_logging_uart_handle = NULL;
 static uint8_t g_log_buf[1024];
 static uint8_t g_log_rx_buf[1];
 static CircularBuffer g_log_cb;
@@ -37,14 +39,16 @@ void SYSTEM_init(void)
     // Set up log output
     circular_buffer_init(&g_log_cb, g_log_buf, sizeof(g_log_buf));
     circular_buffer_init(&g_log_rx_cb, g_log_rx_buf, sizeof(g_log_rx_buf));
-    uint8_t log_bus = 2;
+    uint8_t log_bus = 0;
     g_logging_uart_handle = UART_init(log_bus, &g_log_rx_cb, &g_log_cb);
     extern void syscalls_init(UART_Handle * handle);
     syscalls_init(g_logging_uart_handle);
     // Buffered log messages can now be output with LOG_task
     LOG_task(0xFF);
 
-    LED_init();
+    status_led_init();
+    test_signal_init();
+    usb_cdc_init();
 }
 
 uint32_t SYSTEM_get_tick(void) { return PLATFORM_get_tick(); }

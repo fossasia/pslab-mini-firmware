@@ -89,6 +89,20 @@ specific UART backend lives in `src/platform/uart_ll.*`; it exposes the same
 low-level API expected by the system UART layer while using RP2040/RP2350 UART
 interrupts internally.
 
+## System Init And Newlib Syscalls
+
+- `src/system/system.c`
+- `src/system/system.h`
+- `src/system/syscalls.c`
+
+`SYSTEM_init()` is called before protocol initialization. It initializes the
+platform layer, utility logging, UART-backed stdout/stderr syscalls, status LED,
+test signal generation, and USB CDC. The protocol layer then owns only SCPI
+context setup and command processing.
+
+Newlib writes to `stdout` and `stderr` are routed to the hardware UART transport.
+USB CDC remains dedicated to SCPI commands and binary instrument data.
+
 ## SCPI Command Interface
 
 - `src/application/protocol/common.c`: SCPI context, transport callbacks, and
