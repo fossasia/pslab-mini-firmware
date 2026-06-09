@@ -74,6 +74,21 @@ still writes through the C library output path; the later UART logging
 transport/system-init branch will route that output to hardware UART so USB CDC
 can stay dedicated to SCPI commands and binary instrument data.
 
+## UART Logging Transport
+
+- `src/system/bus/uart.c`
+- `src/system/bus/uart.h`
+- `src/platform/uart_ll.c`
+- `src/platform/uart_ll.h`
+- `src/platform/platform.c`
+- `src/platform/platform.h`
+
+The retained `src/system/bus/uart.*` layer stays hardware-independent and uses
+the same circular-buffer and callback style as the STM32 firmware. The Pico
+specific UART backend lives in `src/platform/uart_ll.*`; it exposes the same
+low-level API expected by the system UART layer while using RP2040/RP2350 UART
+interrupts internally.
+
 ## SCPI Command Interface
 
 - `src/application/protocol/common.c`: SCPI context, transport callbacks, and
