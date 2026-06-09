@@ -28,6 +28,8 @@ target_sources(pslab_pico PRIVATE
         src/platform/test_signal.c
         src/system/bus/uart.c
         src/system/logic_analyser.c
+        src/system/syscalls.c
+        src/system/system.c
         src/util/circular_buffer.c
         src/util/error.c
         src/util/fixed_point.c
