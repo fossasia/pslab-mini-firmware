@@ -21,6 +21,10 @@ target for RP2350 boards.
 - Root `CMakeLists.txt` using the Pico SDK.
 - `pico_sdk_import.cmake` for Pico SDK discovery.
 - Minimal `src/application/main.c` entrypoint.
+- `src/platform/usb_cdc.c`
+- `src/platform/usb_cdc.h`
+- `src/platform/usb_descriptors.c`
+- `src/platform/tusb_config.h`
 
 ## Build
 
