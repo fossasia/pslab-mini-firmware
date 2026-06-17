@@ -50,7 +50,7 @@ struct UART_Handle {
 };
 
 /* Global array to keep track of active UART handles */
-static UART_Handle *g_active_handles[UART_BUS_COUNT] = { nullptr };
+static UART_Handle *g_active_handles[UART_BUS_COUNT] = { NULL };
 
 /**
  * @brief Get the number of available UART bus instances.
@@ -68,7 +68,7 @@ size_t UART_get_bus_count(void) { return UART_BUS_COUNT; }
 static UART_Handle *get_handle_from_bus(UART_Bus bus)
 {
     if (bus >= UART_BUS_COUNT) {
-        return nullptr;
+        return NULL;
     }
     return g_active_handles[bus];
 }
@@ -248,7 +248,7 @@ UART_Handle *UART_init(
     UART_Bus bus_id = (UART_Bus)bus;
 
     /* Check if bus is already initialized */
-    if (g_active_handles[bus_id] != nullptr) {
+    if (g_active_handles[bus_id] != NULL) {
         THROW(ERROR_RESOURCE_BUSY);
     }
 
@@ -262,12 +262,12 @@ UART_Handle *UART_init(
     handle->bus_id = bus_id;
     handle->rx_buffer = rx_buffer;
     handle->tx_buffer = tx_buffer;
-    handle->original_tx_buffer = nullptr;
+    handle->original_tx_buffer = NULL;
     handle->rx_dma_head = 0;
-    handle->rx_callback = nullptr;
+    handle->rx_callback = NULL;
     handle->rx_threshold = 0;
     handle->initialized = false;
-    handle->passthrough_target = nullptr;
+    handle->passthrough_target = NULL;
 
     /* Initialize hardware layer */
     UART_LL_init(bus_id, rx_buffer->buffer, rx_buffer->size);
@@ -302,12 +302,12 @@ void UART_deinit(UART_Handle *handle)
     UART_LL_deinit(handle->bus_id);
 
     /* Clear callbacks */
-    UART_LL_set_idle_callback(handle->bus_id, nullptr);
-    UART_LL_set_rx_complete_callback(handle->bus_id, nullptr);
-    UART_LL_set_tx_complete_callback(handle->bus_id, nullptr);
+    UART_LL_set_idle_callback(handle->bus_id, NULL);
+    UART_LL_set_rx_complete_callback(handle->bus_id, NULL);
+    UART_LL_set_tx_complete_callback(handle->bus_id, NULL);
 
     /* Remove from active handles */
-    g_active_handles[handle->bus_id] = nullptr;
+    g_active_handles[handle->bus_id] = NULL;
 
     /* Mark as uninitialized */
     handle->initialized = false;
@@ -334,7 +334,7 @@ uint32_t UART_write(
     uint32_t const sz
 )
 {
-    if (!handle || !handle->initialized || txbuf == nullptr || sz == 0) {
+    if (!handle || !handle->initialized || txbuf == NULL || sz == 0) {
         return 0;
     }
 
@@ -362,7 +362,7 @@ uint32_t UART_write(
  */
 uint32_t UART_read(UART_Handle *handle, uint8_t *const rxbuf, uint32_t const sz)
 {
-    if (!handle || !handle->initialized || rxbuf == nullptr || sz == 0) {
+    if (!handle || !handle->initialized || rxbuf == NULL || sz == 0) {
         return 0;
     }
 
@@ -543,16 +543,16 @@ void UART_disable_passthrough(UART_Handle *handle1, UART_Handle *handle2)
     }
 
     /* Disable passthrough callbacks */
-    UART_set_rx_callback(handle1, nullptr, 0);
-    UART_set_rx_callback(handle2, nullptr, 0);
+    UART_set_rx_callback(handle1, NULL, 0);
+    UART_set_rx_callback(handle2, NULL, 0);
 
     /* Restore original TX buffers */
     handle1->tx_buffer = handle1->original_tx_buffer;
     handle2->tx_buffer = handle2->original_tx_buffer;
-    handle1->original_tx_buffer = nullptr;
-    handle2->original_tx_buffer = nullptr;
+    handle1->original_tx_buffer = NULL;
+    handle2->original_tx_buffer = NULL;
 
     /* Clear passthrough targets */
-    handle1->passthrough_target = nullptr;
-    handle2->passthrough_target = nullptr;
+    handle1->passthrough_target = NULL;
+    handle2->passthrough_target = NULL;
 }

@@ -20,10 +20,13 @@ target_sources(pslab_pico PRIVATE
         src/application/dso_commands.c
         src/system/instrument/dso.c
         src/platform/adc_capture.c
+        src/platform/platform.c
+        src/platform/uart_ll.c
         src/platform/usb_cdc.c
         src/platform/usb_descriptors.c
         src/platform/status_led.c
         src/platform/test_signal.c
+        src/system/bus/uart.c
         src/system/logic_analyser.c
         src/util/circular_buffer.c
         src/util/error.c
@@ -60,6 +63,7 @@ target_link_libraries(pslab_pico PRIVATE
         hardware_dma
         hardware_adc
         hardware_pwm
+        hardware_uart
         hardware_clocks
         tinyusb_device
         tinyusb_board
