@@ -58,6 +58,22 @@ Default oscilloscope configuration:
 - Trigger level: `2048`
 - Trigger slope: `RISE`
 
+## Utility, Error, And Logging Support
+
+- `src/util/error.h`: STM32 firmware error API wrapper around CException.
+- `src/util/error.c`: Pico default uncaught exception halt handler.
+- `src/util/logging.c`
+- `src/util/logging.h`
+- `src/util/circular_buffer.c`
+- `src/util/fixed_point.c`
+- `src/util/fixed_point.h`
+- `lib/CException-1.3.4`: CException library used by the retained error API.
+
+This branch wires the retained utility layer into the Pico build. `LOG_task`
+still writes through the C library output path; the later UART logging
+transport/system-init branch will route that output to hardware UART so USB CDC
+can stay dedicated to SCPI commands and binary instrument data.
+
 ## SCPI Command Interface
 
 - `src/application/protocol/common.c`: SCPI context, transport callbacks, and
