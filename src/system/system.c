@@ -16,6 +16,7 @@
 #include "platform/test_signal.h"
 #include "platform/uart_ll.h"
 #include "platform/usb_cdc.h"
+#include "system/transport.h"
 #include "util/error.h"
 #include "util/logging.h"
 #include "util/si_prefix.h"
@@ -50,6 +51,7 @@ void SYSTEM_init(void)
     status_led_init();
     test_signal_init();
     usb_cdc_init();
+    transport_init();
 }
 
 uint32_t SYSTEM_get_tick(void) { return PLATFORM_get_tick(); }

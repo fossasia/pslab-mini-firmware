@@ -16,10 +16,12 @@
 #include "scpi/error.h"
 #include "scpi/scpi.h"
 
+#include "application/communication_commands.h"
 #include "application/dso_commands.h"
 #include "application/logic_analyser_commands.h"
 #include "platform/status_led.h"
 #include "platform/usb_cdc.h"
+#include "system/transport.h"
 #include "util/logging.h"
 
 // Buffer sizes for USB communication (internal to this module)
@@ -140,6 +142,11 @@ static scpi_command_t const g_SCPI_COMMANDS[] = {
     { "SYSTem:ERRor:COUNt?", SCPI_SystemErrorCountQ },
     { "SYSTem:VERSion?", SCPI_SystemVersionQ },
 
+    // Communication transport commands
+    { "COMM:TRANsport", scpi_cmd_comm_transport },
+    { "COMM:TRANsport?", scpi_cmd_comm_transport_q },
+    { "COMM:WIFI:STATus?", scpi_cmd_comm_wifi_status_q },
+
     // Logic analyser commands
     { "LA:CONFigure:PINBase", scpi_cmd_configure_logic_analyser_pinbase },
     { "LA:CONFigure:PINBase?", scpi_cmd_configure_logic_analyser_pinbase_q },
@@ -242,6 +249,83 @@ void protocol_deinit(void)
     LOG_DEBUG("SCPI protocol deinitialized");
 }
 
+static void write_usb_stream_frame(
+    char const *prefix,
+    uint32_t sequence,
+    uint8_t const *data,
+    size_t len
+)
+{
+    char frame_header[48];
+    snprintf(
+        frame_header,
+        sizeof(frame_header),
+        "%s %lu %lu\n",
+        prefix,
+        (unsigned long)sequence,
+        (unsigned long)len
+    );
+    usb_cdc_write((uint8_t const *)frame_header, strlen(frame_header));
+    SCPI_ResultArbitraryBlock(&g_scpi_context, data, len);
+    usb_cdc_write((uint8_t const *)"\n", 1);
+}
+
+static void write_logic_analyser_stream_frame(
+    uint32_t sequence,
+    uint8_t const *data,
+    size_t len
+)
+{
+    if (transport_wifi_is_effective()) {
+        TransportCaptureMeta meta = {
+            .sample_rate_hz = 150000000u / la_get_divider(),
+            .sample_count = la_get_samples(),
+            .channel_count = la_get_pin_count(),
+            .pin_base_or_channel = la_get_pin_base(),
+            .trigger_mode = la_get_trigger_mode_edge() ? 1u : 2u,
+            .data_format = TRANSPORT_DATA_FORMAT_LA_U32_PACKED,
+        };
+        (void)transport_send_capture(
+            TRANSPORT_INSTRUMENT_LA,
+            sequence,
+            &meta,
+            data,
+            len
+        );
+        return;
+    }
+
+    write_usb_stream_frame("LA:STREAM:FRAME", sequence, data, len);
+}
+
+static void write_dso_stream_frame(
+    uint32_t sequence,
+    uint8_t const *data,
+    size_t len
+)
+{
+    if (transport_wifi_is_effective()) {
+        TransportCaptureMeta meta = {
+            .sample_rate_hz = dso_commands_get_sample_rate(),
+            .sample_count = dso_commands_get_samples(),
+            .channel_count = 1,
+            .pin_base_or_channel = dso_commands_get_channel(),
+            .trigger_mode = 0,
+            .data_format = TRANSPORT_DATA_FORMAT_DSO_U16_LE,
+        };
+        (void)transport_send_capture(
+            TRANSPORT_INSTRUMENT_DSO,
+            sequence,
+            &meta,
+            data,
+            len
+        );
+        return;
+    }
+
+    write_usb_stream_frame("DSO:STREAM:FRAME", sequence, data, len);
+}
+
 /**
  * @brief Main protocol task - processes USB data and SCPI commands
  */
@@ -266,17 +350,7 @@ void protocol_task(void)
         size_t len;
         uint32_t sequence;
         if (la_stream_next_frame(&data, &len, &sequence)) {
-            char frame_header[48];
-            snprintf(
-                frame_header,
-                sizeof(frame_header),
-                "LA:STREAM:FRAME %lu %lu\n",
-                (unsigned long)sequence,
-                (unsigned long)len
-            );
-            usb_cdc_write((uint8_t const *)frame_header, strlen(frame_header));
-            SCPI_ResultArbitraryBlock(&g_scpi_context, data, len);
-            usb_cdc_write((uint8_t const *)"\n", 1);
+            write_logic_analyser_stream_frame(sequence, data, len);
         }
     }
 
@@ -285,17 +359,7 @@ void protocol_task(void)
         size_t len;
         uint32_t sequence;
         if (dso_commands_stream_next_frame(&data, &len, &sequence)) {
-            char frame_header[48];
-            snprintf(
-                frame_header,
-                sizeof(frame_header),
-                "DSO:STREAM:FRAME %lu %lu\n",
-                (unsigned long)sequence,
-                (unsigned long)len
-            );
-            usb_cdc_write((uint8_t const *)frame_header, strlen(frame_header));
-            SCPI_ResultArbitraryBlock(&g_scpi_context, data, len);
-            usb_cdc_write((uint8_t const *)"\n", 1);
+            write_dso_stream_frame(sequence, data, len);
         }
     }
 }

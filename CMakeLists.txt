@@ -16,11 +16,13 @@ target_sources(pslab_pico PRIVATE
         src/application/protocol/common.c
         src/application/protocol/la.c
         src/application/protocol/dso.c
+        src/application/communication_commands.c
         src/application/logic_analyser_commands.c
         src/application/dso_commands.c
         src/system/instrument/dso.c
         src/platform/adc_capture.c
         src/platform/platform.c
+        src/platform/esp_spi_bridge.c
         src/platform/uart_ll.c
         src/platform/usb_cdc.c
         src/platform/usb_descriptors.c
@@ -28,6 +30,7 @@ target_sources(pslab_pico PRIVATE
         src/platform/test_signal.c
         src/system/bus/uart.c
         src/system/logic_analyser.c
+        src/system/transport.c
         src/system/syscalls.c
         src/system/system.c
         src/util/circular_buffer.c
@@ -65,6 +68,7 @@ target_link_libraries(pslab_pico PRIVATE
         hardware_dma
         hardware_adc
         hardware_pwm
+        hardware_spi
         hardware_uart
         hardware_clocks
         tinyusb_device
