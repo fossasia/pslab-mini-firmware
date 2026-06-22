@@ -1,0 +1,47 @@
+menu "PSLab ESP SPI UDP bridge"
+
+config ESP_BRIDGE_STA_SSID
+    string "Station SSID"
+    default "PSLAB_WIFI_SSID"
+
+config ESP_BRIDGE_STA_PASSWORD
+    string "Station password"
+    default "PSLAB_WIFI_PASSWORD"
+
+config ESP_BRIDGE_DEST_IP
+    string "Initial UDP destination IP"
+    default "255.255.255.255"
+
+config ESP_BRIDGE_DEST_PORT
+    int "UDP destination port"
+    default 5005
+
+config ESP_BRIDGE_LOCAL_PORT
+    int "UDP local port"
+    default 5006
+
+config ESP_BRIDGE_PIN_SCLK
+    int "SPI SCLK GPIO"
+    default 4
+
+config ESP_BRIDGE_PIN_MOSI
+    int "SPI MOSI input GPIO"
+    default 5
+
+config ESP_BRIDGE_PIN_MISO
+    int "SPI MISO output GPIO"
+    default 6
+
+config ESP_BRIDGE_PIN_CS
+    int "SPI CS GPIO"
+    default 7
+
+config ESP_BRIDGE_PIN_READY
+    int "READY output GPIO"
+    default 10
+
+config ESP_BRIDGE_REPORT_INTERVAL_MS
+    int "Serial report interval in milliseconds"
+    default 1000
+
+endmenu
