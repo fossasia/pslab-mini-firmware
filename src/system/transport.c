@@ -16,6 +16,7 @@ enum {
 
 static TransportMode g_mode = TRANSPORT_MODE_USB;
 static uint32_t g_frame_sequence;
+static TransportYieldCallback g_yield_callback;
 
 static void put_u16_le(uint8_t *data, uint16_t value)
 {
@@ -68,6 +69,19 @@ void transport_init(void)
 {
     g_mode = TRANSPORT_MODE_USB;
     g_frame_sequence = 0;
+    g_yield_callback = NULL;
+}
+
+void transport_set_yield_callback(TransportYieldCallback callback)
+{
+    g_yield_callback = callback;
+}
+
+static void transport_yield(void)
+{
+    if (g_yield_callback) {
+        g_yield_callback();
+    }
 }
 
 void transport_set_mode(TransportMode mode)
@@ -142,6 +156,7 @@ bool transport_send_capture(
     if (!esp_spi_bridge_send_payload(g_frame_sequence++, payload, ESP_SPI_BRIDGE_PAYLOAD_LEN)) {
         return false;
     }
+    transport_yield();
 
     uint16_t chunk_count = (uint16_t)((len + PSLAB_DATA_BYTES_PER_FRAME - 1u) /
                                       PSLAB_DATA_BYTES_PER_FRAME);
@@ -176,6 +191,7 @@ bool transport_send_capture(
             )) {
             return false;
         }
+        transport_yield();
     }
 
     return true;

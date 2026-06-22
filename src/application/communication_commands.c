@@ -25,7 +25,7 @@ scpi_result_t scpi_cmd_comm_transport(scpi_t *context)
     };
     int32_t choice = -1;
 
-    if (!SCPI_ParamChoice(context, choices, &choice, true)) {
+    if (!SCPI_ParamChoice(context, choices, &choice, TRUE)) {
         SCPI_ErrorPush(context, SCPI_ERROR_MISSING_PARAMETER);
         return SCPI_RES_ERR;
     }

@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "hardware/clocks.h"
+
 #include "scpi/error.h"
 #include "scpi/scpi.h"
 
@@ -90,6 +92,11 @@ static scpi_error_t g_scpi_error_queue_data[SCPI_ERROR_QUEUE_SIZE];
 
 // Protocol state (internal to common.c)
 static bool g_protocol_initialized = false;
+
+static void protocol_transport_yield(void)
+{
+    usb_cdc_task();
+}
 
 /**
  * @brief SCPI write function - sends data via USB
@@ -212,6 +219,7 @@ bool protocol_init(void)
     }
 
     LOG_INIT("SCPI protocol");
+    transport_set_yield_callback(protocol_transport_yield);
 
     // Initialize SCPI context
     SCPI_Init(
@@ -278,7 +286,7 @@ static void write_logic_analyser_stream_frame(
 {
     if (transport_wifi_is_effective()) {
         TransportCaptureMeta meta = {
-            .sample_rate_hz = 150000000u / la_get_divider(),
+            .sample_rate_hz = clock_get_hz(clk_sys) / la_get_divider(),
             .sample_count = la_get_samples(),
             .channel_count = la_get_pin_count(),
             .pin_base_or_channel = la_get_pin_base(),

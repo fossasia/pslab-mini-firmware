@@ -35,7 +35,10 @@ typedef struct {
     uint32_t data_format;
 } TransportCaptureMeta;
 
+typedef void (*TransportYieldCallback)(void);
+
 void transport_init(void);
+void transport_set_yield_callback(TransportYieldCallback callback);
 void transport_set_mode(TransportMode mode);
 TransportMode transport_get_mode(void);
 char const *transport_get_mode_name(void);
