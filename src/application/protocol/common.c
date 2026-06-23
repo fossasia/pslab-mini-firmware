@@ -8,6 +8,7 @@
 
 #include "application/protocol.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -238,7 +239,7 @@ void protocol_deinit(void)
     LOG_DEINIT("SCPI protocol");
     protocol_reset((scpi_t *)0);
     g_protocol_initialized = false;
-    LOG_INFO("SCPI protocol deinitialized");
+    LOG_DEBUG("SCPI protocol deinitialized");
 }
 
 /**

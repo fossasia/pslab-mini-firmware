@@ -1,5 +1,7 @@
 #include "application/dso_commands.h"
 
+#include <stdbool.h>
+
 #include "system/instrument/dso.h"
 
 void dso_commands_reset(void) { dso_reset_state(); }

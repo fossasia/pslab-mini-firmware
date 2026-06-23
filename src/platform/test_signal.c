@@ -1,5 +1,7 @@
 #include "platform/test_signal.h"
 
+#include <stdbool.h>
+
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "hardware/pwm.h"

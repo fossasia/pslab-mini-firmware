@@ -2,6 +2,8 @@
 #include "system/system.h"
 #include "util/logging.h"
 
+#include <stdbool.h>
+
 int main(void)
 {
     SYSTEM_init();

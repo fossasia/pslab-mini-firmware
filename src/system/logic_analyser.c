@@ -1,5 +1,7 @@
 #include "system/logic_analyser.h"
 
+#include <stdbool.h>
+
 #include "hardware/dma.h"
 #include "hardware/gpio.h"
 #include "hardware/structs/bus_ctrl.h"

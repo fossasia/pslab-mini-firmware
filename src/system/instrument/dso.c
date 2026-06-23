@@ -13,6 +13,7 @@
 
 #include "system/instrument/dso.h"
 
+#include <stdbool.h>
 #include <string.h>
 
 #include "pico/stdlib.h"
