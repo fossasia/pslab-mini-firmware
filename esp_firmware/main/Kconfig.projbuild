@@ -1,4 +1,4 @@
-menu "PSLab ESP SPI UDP bridge"
+menu "PSLab ESP SPI bridge"
 
 config ESP_BRIDGE_STA_SSID
     string "Station SSID"
@@ -17,7 +17,7 @@ config ESP_BRIDGE_DEST_PORT
     default 5005
 
 config ESP_BRIDGE_LOCAL_PORT
-    int "UDP local port"
+    int "SCPI TCP and registration UDP port"
     default 5006
 
 config ESP_BRIDGE_PIN_SCLK

@@ -45,8 +45,8 @@ idf.py build
 Set the Wi-Fi SSID and password from:
 
 ```text
-PSLab ESP SPI UDP bridge -> Station SSID
-PSLab ESP SPI UDP bridge -> Station password
+PSLab ESP SPI bridge -> Station SSID
+PSLab ESP SPI bridge -> Station password
 ```
 
 ## Flash

@@ -28,10 +28,12 @@
 #define FRAME_MAGIC 0xa5
 #define FRAME_TYPE_POLL 0x00
 #define FRAME_TYPE_DATA 0x02
+#define FRAME_TYPE_SCPI 0x03
 #define SLOT_COUNT 12
 #define SPI_QUEUED_TRANSFERS 4
 #define UDP_BATCH_FRAMES 2
 #define UDP_PACKET_LEN (FRAME_LEN * UDP_BATCH_FRAMES)
+#define SCPI_QUEUE_DEPTH 8
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT BIT1
 
@@ -44,9 +46,16 @@ typedef struct {
     uint32_t sequence;
 } bridge_slot_t;
 
+typedef struct {
+    uint16_t len;
+    uint8_t data[MAX_PAYLOAD_LEN];
+} bridge_message_t;
+
 static EventGroupHandle_t wifi_event_group;
 static QueueHandle_t free_queue;
 static QueueHandle_t full_queue;
+static QueueHandle_t scpi_rx_queue;
+static QueueHandle_t scpi_tx_queue;
 static bridge_slot_t slots[SLOT_COUNT];
 static int sta_retry_count;
 
@@ -72,6 +81,13 @@ static uint32_t get_u32_le(uint8_t const *data)
            ((uint32_t)data[3] << 24);
 }
 
+typedef struct {
+    uint32_t magic;
+    uint32_t type;
+    uint32_t length;
+    uint32_t checksum;
+} frame_error_stats_t;
+
 static void put_u16_le(uint8_t *data, uint16_t value)
 {
     data[0] = (uint8_t)value;
@@ -86,35 +102,70 @@ static void put_u32_le(uint8_t *data, uint32_t value)
     data[3] = (uint8_t)(value >> 24);
 }
 
-static void prepare_poll_frame(uint8_t *frame, uint32_t seq)
+static void prepare_frame(
+    uint8_t *frame,
+    uint8_t frame_type,
+    uint32_t seq,
+    uint8_t const *payload,
+    uint16_t payload_len
+)
 {
     memset(frame, 0, FRAME_LEN);
     frame[0] = FRAME_MAGIC;
-    frame[1] = FRAME_TYPE_POLL;
+    frame[1] = frame_type;
     put_u32_le(&frame[2], seq);
-    put_u16_le(&frame[6], 0);
+    put_u16_le(&frame[6], payload_len);
     frame[8] = checksum8(frame, 8);
+    if (payload && payload_len > 0) {
+        memcpy(&frame[HEADER_LEN], payload, payload_len);
+    }
 }
 
-static uint32_t validate_data_frame(uint8_t const *frame, uint32_t *seq_out)
+static void prepare_poll_frame(uint8_t *frame, uint32_t seq)
+{
+    prepare_frame(frame, FRAME_TYPE_POLL, seq, NULL, 0);
+}
+
+static uint32_t validate_rx_frame(
+    uint8_t const *frame,
+    uint8_t *type_out,
+    uint32_t *seq_out,
+    uint16_t *len_out,
+    frame_error_stats_t *stats
+)
 {
     uint32_t errors = 0;
     if (frame[0] != FRAME_MAGIC) {
         ++errors;
+        if (stats) {
+            ++stats->magic;
+        }
     }
-    if (frame[1] != FRAME_TYPE_DATA) {
+    if (frame[1] != FRAME_TYPE_DATA && frame[1] != FRAME_TYPE_SCPI &&
+        frame[1] != FRAME_TYPE_POLL) {
         ++errors;
+        if (stats) {
+            ++stats->type;
+        }
     }
     uint16_t len = get_u16_le(&frame[6]);
     if (len > MAX_PAYLOAD_LEN) {
         ++errors;
+        if (stats) {
+            ++stats->length;
+        }
         len = 0;
     }
     if (frame[8] != checksum8(frame, 8)) {
         ++errors;
+        if (stats) {
+            ++stats->checksum;
+        }
     }
 
+    *type_out = frame[1];
     *seq_out = get_u32_le(&frame[2]);
+    *len_out = len;
     return errors;
 }
 
@@ -216,7 +267,10 @@ static void init_slots(void)
 {
     free_queue = xQueueCreate(SLOT_COUNT, sizeof(uint32_t));
     full_queue = xQueueCreate(SLOT_COUNT, sizeof(uint32_t));
-    ESP_ERROR_CHECK((free_queue && full_queue) ? ESP_OK : ESP_ERR_NO_MEM);
+    scpi_rx_queue = xQueueCreate(SCPI_QUEUE_DEPTH, sizeof(bridge_message_t));
+    scpi_tx_queue = xQueueCreate(SCPI_QUEUE_DEPTH, sizeof(bridge_message_t));
+    ESP_ERROR_CHECK((free_queue && full_queue && scpi_rx_queue && scpi_tx_queue) ?
+        ESP_OK : ESP_ERR_NO_MEM);
 
     for (uint32_t i = 0; i < SLOT_COUNT; ++i) {
         slots[i].tx = heap_caps_malloc(FRAME_LEN, MALLOC_CAP_DMA);
@@ -235,7 +289,18 @@ static void init_slots(void)
 
 static void queue_slot(uint32_t slot_index, uint32_t poll_seq)
 {
-    prepare_poll_frame(slots[slot_index].tx, poll_seq);
+    bridge_message_t scpi_msg;
+    if (xQueueReceive(scpi_rx_queue, &scpi_msg, 0) == pdTRUE) {
+        prepare_frame(
+            slots[slot_index].tx,
+            FRAME_TYPE_SCPI,
+            poll_seq,
+            scpi_msg.data,
+            scpi_msg.len
+        );
+    } else {
+        prepare_poll_frame(slots[slot_index].tx, poll_seq);
+    }
     memset(slots[slot_index].rx, 0, FRAME_LEN);
     ESP_ERROR_CHECK(spi_slave_queue_trans(SPI2_HOST, &slots[slot_index].trans, pdMS_TO_TICKS(1000)));
 }
@@ -257,6 +322,13 @@ static void refill_spi_queue(uint32_t *queued, uint32_t *poll_seq)
 static bool udp_endpoint_changed(struct sockaddr_in const *a, struct sockaddr_in const *b)
 {
     return a->sin_addr.s_addr != b->sin_addr.s_addr || a->sin_port != b->sin_port;
+}
+
+static void log_udp_endpoint(char const *label, struct sockaddr_in const *addr)
+{
+    char host_ip[16];
+    inet_ntoa_r(addr->sin_addr, host_ip, sizeof(host_ip));
+    ESP_LOGI(TAG, "%s %s:%u", label, host_ip, ntohs(addr->sin_port));
 }
 
 static int send_udp_with_retry(
@@ -290,6 +362,36 @@ static int send_udp_with_retry(
     return -1;
 }
 
+static bool line_is_query(uint8_t const *line, size_t len)
+{
+    for (size_t i = 0; i < len; ++i) {
+        if (line[i] == '?') {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool queue_scpi_line(uint8_t const *line, size_t len)
+{
+    if (!line || len == 0) {
+        return false;
+    }
+
+    bridge_message_t scpi_msg = {
+        .len = (uint16_t)len,
+    };
+    if (scpi_msg.len > MAX_PAYLOAD_LEN) {
+        scpi_msg.len = MAX_PAYLOAD_LEN;
+    }
+    memcpy(scpi_msg.data, line, scpi_msg.len);
+    if (scpi_msg.len < MAX_PAYLOAD_LEN &&
+        scpi_msg.data[scpi_msg.len - 1] != '\n') {
+        scpi_msg.data[scpi_msg.len++] = '\n';
+    }
+    return xQueueSend(scpi_rx_queue, &scpi_msg, pdMS_TO_TICKS(250)) == pdTRUE;
+}
+
 static void spi_task(void *arg)
 {
     (void)arg;
@@ -298,7 +400,9 @@ static void spi_task(void *arg)
     uint32_t spi_frames = 0;
     uint32_t spi_errors = 0;
     uint32_t queue_drops = 0;
+    uint32_t scpi_frames = 0;
     uint32_t last_seq = 0;
+    frame_error_stats_t error_stats = {0};
     int64_t report_start = esp_timer_get_time();
 
     for (uint32_t i = 0; i < SPI_QUEUED_TRANSFERS; ++i) {
@@ -325,18 +429,39 @@ static void spi_task(void *arg)
         }
 
         uint32_t slot_index = (uint32_t)(uintptr_t)completed->user;
+        uint8_t frame_type = FRAME_TYPE_POLL;
         uint32_t seq = 0;
-        uint32_t frame_errors = validate_data_frame(slots[slot_index].rx, &seq);
+        uint16_t frame_len = 0;
+        uint32_t frame_errors = validate_rx_frame(
+            slots[slot_index].rx,
+            &frame_type,
+            &seq,
+            &frame_len,
+            &error_stats
+        );
         spi_errors += frame_errors;
         last_seq = seq;
         ++spi_frames;
 
-        if (frame_errors == 0) {
+        if (frame_errors == 0 && frame_type == FRAME_TYPE_DATA) {
             slots[slot_index].sequence = seq;
             if (xQueueSend(full_queue, &slot_index, 0) != pdTRUE) {
                 ++queue_drops;
                 xQueueSend(free_queue, &slot_index, 0);
             }
+        } else if (frame_errors == 0 && frame_type == FRAME_TYPE_SCPI) {
+            bridge_message_t scpi_msg = {
+                .len = frame_len,
+            };
+            if (frame_len > 0) {
+                memcpy(scpi_msg.data, &slots[slot_index].rx[HEADER_LEN], frame_len);
+            }
+            if (xQueueSend(scpi_tx_queue, &scpi_msg, 0) != pdTRUE) {
+                ++queue_drops;
+            } else {
+                ++scpi_frames;
+            }
+            xQueueSend(free_queue, &slot_index, 0);
         } else {
             xQueueSend(free_queue, &slot_index, 0);
         }
@@ -345,15 +470,22 @@ static void spi_task(void *arg)
 
         int64_t now = esp_timer_get_time();
         if (now - report_start >= (int64_t)CONFIG_ESP_BRIDGE_REPORT_INTERVAL_MS * 1000) {
-            printf("spi_frames=%" PRIu32 ",queued=%" PRIu32 ",spi_errors=%" PRIu32 ",queue_drops=%" PRIu32 ",last_seq=%" PRIu32 "\n",
+            printf("spi_frames=%" PRIu32 ",queued=%" PRIu32 ",spi_errors=%" PRIu32 ",magic=%" PRIu32 ",type=%" PRIu32 ",len=%" PRIu32 ",chk=%" PRIu32 ",queue_drops=%" PRIu32 ",scpi_frames=%" PRIu32 ",last_seq=%" PRIu32 "\n",
                    spi_frames,
                    queued,
                    spi_errors,
+                   error_stats.magic,
+                   error_stats.type,
+                   error_stats.length,
+                   error_stats.checksum,
                    queue_drops,
+                   scpi_frames,
                    last_seq);
             spi_frames = 0;
             spi_errors = 0;
             queue_drops = 0;
+            scpi_frames = 0;
+            error_stats = (frame_error_stats_t){0};
             report_start = now;
         }
     }
@@ -384,13 +516,13 @@ static void udp_task(void *arg)
         ESP_LOGW(TAG, "bind failed errno=%d", errno);
     }
 
-    struct sockaddr_in dest_addr = {
+    struct sockaddr_in wave_dest_addr = {
         .sin_family = AF_INET,
         .sin_port = htons(CONFIG_ESP_BRIDGE_DEST_PORT),
     };
-    inet_aton(CONFIG_ESP_BRIDGE_DEST_IP, &dest_addr.sin_addr);
+    inet_aton(CONFIG_ESP_BRIDGE_DEST_IP, &wave_dest_addr.sin_addr);
 
-    bool using_unicast = false;
+    bool using_wave_unicast = false;
     uint32_t udp_packets = 0;
     uint32_t udp_frames = 0;
     uint32_t udp_errors = 0;
@@ -405,7 +537,7 @@ static void udp_task(void *arg)
     ESP_LOGI(TAG, "UDP initial destination %s:%d", CONFIG_ESP_BRIDGE_DEST_IP, CONFIG_ESP_BRIDGE_DEST_PORT);
 
     while (true) {
-        uint8_t control_buffer[32];
+        uint8_t control_buffer[MAX_PAYLOAD_LEN];
         struct sockaddr_in control_addr = {0};
         socklen_t control_addr_len = sizeof(control_addr);
         int control_len = recvfrom(
@@ -417,13 +549,15 @@ static void udp_task(void *arg)
             &control_addr_len
         );
         if (control_len > 0) {
-            bool changed = !using_unicast || udp_endpoint_changed(&dest_addr, &control_addr);
-            dest_addr = control_addr;
-            using_unicast = true;
-            if (changed) {
-                char host_ip[16];
-                inet_ntoa_r(control_addr.sin_addr, host_ip, sizeof(host_ip));
-                ESP_LOGI(TAG, "registered UDP host %s:%u", host_ip, ntohs(control_addr.sin_port));
+            if (control_len == 18 &&
+                memcmp(control_buffer, "PSLAB_UDP_REGISTER", 18) == 0) {
+                bool changed = !using_wave_unicast ||
+                               udp_endpoint_changed(&wave_dest_addr, &control_addr);
+                wave_dest_addr = control_addr;
+                using_wave_unicast = true;
+                if (changed) {
+                    log_udp_endpoint("registered waveform host", &wave_dest_addr);
+                }
             }
         }
 
@@ -450,7 +584,7 @@ static void udp_task(void *arg)
             sock,
             udp_packet,
             batch_count * FRAME_LEN,
-            &dest_addr,
+            &wave_dest_addr,
             &udp_retries,
             &last_errno
         );
@@ -481,7 +615,7 @@ static void udp_task(void *arg)
                    udp_errors,
                    udp_retries,
                    last_errno,
-                   using_unicast ? "unicast" : "broadcast",
+                   using_wave_unicast ? "unicast" : "broadcast",
                    last_seq);
             udp_packets = 0;
             udp_frames = 0;
@@ -491,6 +625,96 @@ static void udp_task(void *arg)
             last_errno = 0;
             report_start = now;
         }
+    }
+}
+
+static void tcp_scpi_task(void *arg)
+{
+    (void)arg;
+
+    int listen_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    if (listen_sock < 0) {
+        ESP_LOGE(TAG, "TCP SCPI socket failed errno=%d", errno);
+        vTaskDelete(NULL);
+    }
+
+    int reuse = 1;
+    setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+
+    struct sockaddr_in listen_addr = {
+        .sin_family = AF_INET,
+        .sin_port = htons(CONFIG_ESP_BRIDGE_LOCAL_PORT),
+        .sin_addr.s_addr = htonl(INADDR_ANY),
+    };
+    if (bind(listen_sock, (struct sockaddr *)&listen_addr, sizeof(listen_addr)) < 0) {
+        ESP_LOGE(TAG, "TCP SCPI bind failed errno=%d", errno);
+        close(listen_sock);
+        vTaskDelete(NULL);
+    }
+    if (listen(listen_sock, 1) < 0) {
+        ESP_LOGE(TAG, "TCP SCPI listen failed errno=%d", errno);
+        close(listen_sock);
+        vTaskDelete(NULL);
+    }
+
+    ESP_LOGI(TAG, "TCP SCPI listening on port %d", CONFIG_ESP_BRIDGE_LOCAL_PORT);
+
+    uint8_t line[MAX_PAYLOAD_LEN];
+    while (true) {
+        struct sockaddr_in client_addr = {0};
+        socklen_t client_len = sizeof(client_addr);
+        int client = accept(listen_sock, (struct sockaddr *)&client_addr, &client_len);
+        if (client < 0) {
+            ESP_LOGW(TAG, "TCP SCPI accept failed errno=%d", errno);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            continue;
+        }
+
+        log_udp_endpoint("registered TCP SCPI host", &client_addr);
+        size_t line_len = 0;
+        while (true) {
+            uint8_t buffer[128];
+            int received = recv(client, buffer, sizeof(buffer), 0);
+            if (received <= 0) {
+                break;
+            }
+
+            for (int i = 0; i < received; ++i) {
+                if (line_len < sizeof(line)) {
+                    line[line_len++] = buffer[i];
+                }
+                if (buffer[i] != '\n' && buffer[i] != '\r') {
+                    continue;
+                }
+
+                bool query = line_is_query(line, line_len);
+                if (!queue_scpi_line(line, line_len)) {
+                    static char const err[] = "-200,\"SCPI bridge queue full\"\n";
+                    send(client, err, strlen(err), 0);
+                    line_len = 0;
+                    continue;
+                }
+
+                if (query) {
+                    bridge_message_t response;
+                    if (xQueueReceive(
+                            scpi_tx_queue,
+                            &response,
+                            pdMS_TO_TICKS(2000)
+                        ) == pdTRUE) {
+                        send(client, response.data, response.len, 0);
+                    } else {
+                        static char const err[] = "-200,\"SCPI bridge timeout\"\n";
+                        send(client, err, strlen(err), 0);
+                    }
+                }
+
+                line_len = 0;
+            }
+        }
+
+        close(client);
+        ESP_LOGI(TAG, "TCP SCPI client disconnected");
     }
 }
 
@@ -516,4 +740,5 @@ void app_main(void)
 
     xTaskCreate(spi_task, "spi_task", 4096, NULL, 6, NULL);
     xTaskCreate(udp_task, "udp_task", 4096, NULL, 5, NULL);
+    xTaskCreate(tcp_scpi_task, "tcp_scpi_task", 4096, NULL, 4, NULL);
 }
