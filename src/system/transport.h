@@ -20,12 +20,6 @@ typedef enum {
     TRANSPORT_INSTRUMENT_DSO = 2,
 } TransportInstrument;
 
-typedef enum {
-    TRANSPORT_DATA_FORMAT_DEFAULT = 0,
-    TRANSPORT_DATA_FORMAT_LA_U32_PACKED = 1,
-    TRANSPORT_DATA_FORMAT_DSO_U16_LE = 2,
-} TransportDataFormat;
-
 typedef struct {
     uint32_t sample_rate_hz;
     uint32_t sample_count;
@@ -35,14 +29,13 @@ typedef struct {
     uint32_t data_format;
 } TransportCaptureMeta;
 
-typedef void (*TransportYieldCallback)(void);
-
 void transport_init(void);
-void transport_set_yield_callback(TransportYieldCallback callback);
 void transport_set_mode(TransportMode mode);
 TransportMode transport_get_mode(void);
 char const *transport_get_mode_name(void);
 bool transport_wifi_is_effective(void);
+bool transport_poll_scpi_command(uint8_t *buffer, size_t buffer_size, size_t *len);
+size_t transport_send_scpi_response(uint8_t const *data, size_t len);
 bool transport_send_capture(
     TransportInstrument instrument,
     uint32_t capture_sequence,

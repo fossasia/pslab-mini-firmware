@@ -13,10 +13,9 @@ enum {
     ESP_SPI_BRIDGE_PIN_RX = 4,
     ESP_SPI_BRIDGE_PIN_CSN = 5,
     ESP_SPI_BRIDGE_PIN_READY = 6,
-    ESP_SPI_BRIDGE_BAUDRATE_HZ = 20000000u,
+    ESP_SPI_BRIDGE_BAUDRATE_HZ = 1000000u,
     ESP_SPI_BRIDGE_READY_TIMEOUT_US = 1000,
     ESP_SPI_BRIDGE_MAGIC = 0xa5,
-    ESP_SPI_BRIDGE_FRAME_TYPE_DATA = 0x02,
 };
 
 static bool g_initialized;
@@ -49,6 +48,11 @@ static void put_u32_le(uint8_t *data, uint32_t value)
     data[1] = (uint8_t)(value >> 8);
     data[2] = (uint8_t)(value >> 16);
     data[3] = (uint8_t)(value >> 24);
+}
+
+static uint16_t get_u16_le(uint8_t const *data)
+{
+    return (uint16_t)data[0] | ((uint16_t)data[1] << 8);
 }
 
 static bool wait_ready_high(uint32_t timeout_us)
@@ -135,14 +139,6 @@ bool esp_spi_bridge_init(void)
     g_tx_dma = dma_claim_unused_channel(false);
     g_rx_dma = dma_claim_unused_channel(false);
     if (g_tx_dma < 0 || g_rx_dma < 0) {
-        if (g_tx_dma >= 0) {
-            dma_channel_unclaim((uint)g_tx_dma);
-            g_tx_dma = -1;
-        }
-        if (g_rx_dma >= 0) {
-            dma_channel_unclaim((uint)g_rx_dma);
-            g_rx_dma = -1;
-        }
         return false;
     }
 
@@ -155,10 +151,15 @@ bool esp_spi_bridge_is_ready(void)
     return g_initialized && gpio_get(ESP_SPI_BRIDGE_PIN_READY);
 }
 
-bool esp_spi_bridge_send_payload(
+bool esp_spi_bridge_exchange(
+    EspSpiBridgeFrameType tx_type,
     uint32_t sequence,
-    uint8_t const *payload,
-    size_t payload_len
+    uint8_t const *tx_payload,
+    size_t tx_payload_len,
+    EspSpiBridgeFrameType *rx_type,
+    uint8_t *rx_payload,
+    size_t rx_payload_size,
+    size_t *rx_payload_len
 )
 {
     if (!g_initialized && !esp_spi_bridge_init()) {
@@ -166,7 +167,8 @@ bool esp_spi_bridge_send_payload(
         return false;
     }
 
-    if (!payload || payload_len > ESP_SPI_BRIDGE_PAYLOAD_LEN) {
+    if ((!tx_payload && tx_payload_len > 0) ||
+        tx_payload_len > ESP_SPI_BRIDGE_PAYLOAD_LEN) {
         ++g_dropped_frames;
         return false;
     }
@@ -180,15 +182,67 @@ bool esp_spi_bridge_send_payload(
     memset(g_tx_frame, 0, sizeof(g_tx_frame));
     memset(g_rx_frame, 0, sizeof(g_rx_frame));
     g_tx_frame[0] = ESP_SPI_BRIDGE_MAGIC;
-    g_tx_frame[1] = ESP_SPI_BRIDGE_FRAME_TYPE_DATA;
+    g_tx_frame[1] = (uint8_t)tx_type;
     put_u32_le(&g_tx_frame[2], sequence);
-    put_u16_le(&g_tx_frame[6], (uint16_t)payload_len);
+    put_u16_le(&g_tx_frame[6], (uint16_t)tx_payload_len);
     g_tx_frame[8] = checksum8(g_tx_frame, 8);
-    memcpy(&g_tx_frame[ESP_SPI_BRIDGE_HEADER_LEN], payload, payload_len);
+    if (tx_payload_len > 0) {
+        memcpy(&g_tx_frame[ESP_SPI_BRIDGE_HEADER_LEN], tx_payload, tx_payload_len);
+    }
 
     transfer_frame_dma();
     ++g_sent_frames;
+
+    if (rx_payload_len) {
+        *rx_payload_len = 0;
+    }
+    if (rx_type) {
+        *rx_type = ESP_SPI_BRIDGE_FRAME_POLL;
+    }
+
+    if (g_rx_frame[0] != ESP_SPI_BRIDGE_MAGIC ||
+        g_rx_frame[8] != checksum8(g_rx_frame, 8)) {
+        return true;
+    }
+
+    uint16_t payload_len = get_u16_le(&g_rx_frame[6]);
+    if (payload_len > ESP_SPI_BRIDGE_PAYLOAD_LEN) {
+        return true;
+    }
+
+    if (rx_type) {
+        *rx_type = (EspSpiBridgeFrameType)g_rx_frame[1];
+    }
+    if (rx_payload && rx_payload_len) {
+        size_t copy_len = payload_len;
+        if (copy_len > rx_payload_size) {
+            copy_len = rx_payload_size;
+        }
+        if (copy_len > 0) {
+            memcpy(rx_payload, &g_rx_frame[ESP_SPI_BRIDGE_HEADER_LEN], copy_len);
+        }
+        *rx_payload_len = copy_len;
+    }
+
     return true;
+}
+
+bool esp_spi_bridge_send_payload(
+    uint32_t sequence,
+    uint8_t const *payload,
+    size_t payload_len
+)
+{
+    return esp_spi_bridge_exchange(
+        ESP_SPI_BRIDGE_FRAME_DATA,
+        sequence,
+        payload,
+        payload_len,
+        NULL,
+        NULL,
+        0,
+        NULL
+    );
 }
 
 uint32_t esp_spi_bridge_get_sent_frames(void) { return g_sent_frames; }
