@@ -9,13 +9,10 @@
 
 #include <stdint.h>
 
-#include "pico/stdlib.h"
-
 __attribute__((weak, noreturn)) void EXCEPTION_halt(uint32_t id)
 {
     (void)id;
 
     for (;;) {
-        tight_loop_contents();
     }
 }

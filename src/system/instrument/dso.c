@@ -16,9 +16,8 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "pico/stdlib.h"
-
 #include "platform/adc_capture.h"
+#include "platform/platform.h"
 #include "platform/status_led.h"
 
 enum {
@@ -229,7 +228,7 @@ static bool wait_for_trigger_timeout(uint32_t timeout_us)
             if (!adc_capture_read_once(&sample)) {
                 return false;
             }
-            tight_loop_contents();
+            PLATFORM_idle();
         } while (!sample_matches_level(sample));
         return true;
     }
@@ -249,7 +248,7 @@ static bool wait_for_trigger_timeout(uint32_t timeout_us)
         } else if (matched) {
             return true;
         }
-        tight_loop_contents();
+        PLATFORM_idle();
     }
 }
 

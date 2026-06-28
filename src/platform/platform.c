@@ -33,6 +33,11 @@ uint32_t PLATFORM_get_peripheral_clock_speed(PLATFORM_PeripheralClock clock)
     return clock_get_hz(clk_sys);
 }
 
+void PLATFORM_idle(void)
+{
+    tight_loop_contents();
+}
+
 __attribute__((noreturn)) void PLATFORM_reset(void)
 {
     watchdog_reboot(0, 0, 0);

@@ -78,6 +78,11 @@ typedef enum {
 uint32_t PLATFORM_get_peripheral_clock_speed(PLATFORM_PeripheralClock clock);
 
 /**
+ * @brief Run a platform-specific idle hint while waiting in a busy loop
+ */
+void PLATFORM_idle(void);
+
+/**
  * @brief Reset the platform/system
  *
  * This function performs a software reset of the entire system. It triggers
