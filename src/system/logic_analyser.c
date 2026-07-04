@@ -160,7 +160,7 @@ bool logic_analyser_capture(
             capture_buf,
             sample_count,
             info,
-            true
+            trigger_mode != LOGIC_ANALYSER_TRIGGER_AUTO
         )) {
         return false;
     }

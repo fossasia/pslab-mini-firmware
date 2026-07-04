@@ -28,6 +28,7 @@ typedef struct {
 typedef struct LogicAnalyser LogicAnalyser;
 
 typedef enum {
+    LOGIC_ANALYSER_TRIGGER_AUTO,
     LOGIC_ANALYSER_TRIGGER_LEVEL,
     LOGIC_ANALYSER_TRIGGER_EDGE,
 } LogicAnalyserTriggerMode;

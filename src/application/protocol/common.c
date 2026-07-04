@@ -43,6 +43,7 @@ extern scpi_result_t scpi_cmd_configure_logic_analyser_samples(scpi_t *context);
 extern scpi_result_t scpi_cmd_configure_logic_analyser_samples_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_configure_logic_analyser_divider(scpi_t *context);
 extern scpi_result_t scpi_cmd_configure_logic_analyser_divider_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_logic_analyser_rate_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_configure_logic_analyser_trigger_pin(scpi_t *context);
 extern scpi_result_t scpi_cmd_configure_logic_analyser_trigger_pin_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_configure_logic_analyser_trigger_level(scpi_t *context);
@@ -53,6 +54,7 @@ extern scpi_result_t scpi_cmd_initiate_logic_analyser(scpi_t *context);
 extern scpi_result_t scpi_cmd_fetch_logic_analyser_data_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_read_logic_analyser_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_status_logic_analyser_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_metadata_logic_analyser_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_stream_logic_analyser_start(scpi_t *context);
 extern scpi_result_t scpi_cmd_stream_logic_analyser_stop(scpi_t *context);
 extern scpi_result_t scpi_cmd_stream_logic_analyser_status_q(scpi_t *context);
@@ -254,6 +256,7 @@ static scpi_command_t const g_SCPI_COMMANDS[] = {
     { "LA:CONFigure:SAMPles?", scpi_cmd_configure_logic_analyser_samples_q },
     { "LA:CONFigure:DIVider", scpi_cmd_configure_logic_analyser_divider },
     { "LA:CONFigure:DIVider?", scpi_cmd_configure_logic_analyser_divider_q },
+    { "LA:CONFigure:RATE?", scpi_cmd_configure_logic_analyser_rate_q },
     { "LA:CONFigure:TRIGger:PIN", scpi_cmd_configure_logic_analyser_trigger_pin },
     { "LA:CONFigure:TRIGger:PIN?", scpi_cmd_configure_logic_analyser_trigger_pin_q },
     { "LA:CONFigure:TRIGger:LEVel", scpi_cmd_configure_logic_analyser_trigger_level },
@@ -264,6 +267,7 @@ static scpi_command_t const g_SCPI_COMMANDS[] = {
     { "LA:FETCh[:DATa]?", scpi_cmd_fetch_logic_analyser_data_q },
     { "LA:READ?", scpi_cmd_read_logic_analyser_q },
     { "LA:STATus?", scpi_cmd_status_logic_analyser_q },
+    { "LA:METadata?", scpi_cmd_metadata_logic_analyser_q },
     { "LA:STREAM:STARt", scpi_cmd_stream_logic_analyser_start },
     { "LA:STREAM:STOP", scpi_cmd_stream_logic_analyser_stop },
     { "LA:STREAM:STATus?", scpi_cmd_stream_logic_analyser_status_q },
@@ -418,7 +422,7 @@ static void write_stream_frame(
                 .sample_count = la_get_samples(),
                 .channel_count = la_get_pin_count(),
                 .pin_base_or_channel = la_get_pin_base(),
-                .trigger_mode = la_get_trigger_mode_edge() ? 1u : 2u,
+                .trigger_mode = (uint32_t)la_get_trigger_mode(),
                 .data_format = 1,
             };
         } else {
@@ -456,7 +460,7 @@ static scpi_result_t scpi_cmd_la_wifi_read_q(scpi_t *context)
         .sample_count = la_get_samples(),
         .channel_count = la_get_pin_count(),
         .pin_base_or_channel = la_get_pin_base(),
-        .trigger_mode = la_get_trigger_mode_edge() ? 1u : 2u,
+        .trigger_mode = (uint32_t)la_get_trigger_mode(),
         .data_format = 1,
     };
     if (!transport_send_capture(

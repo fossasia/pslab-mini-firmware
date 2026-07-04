@@ -3,8 +3,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "system/logic_analyser.h"
+#include "platform/platform.h"
 #include "platform/status_led.h"
+#include "system/logic_analyser.h"
 
 enum {
     LA_DEFAULT_PIN_BASE = 16,
@@ -12,7 +13,8 @@ enum {
     LA_DEFAULT_SAMPLES = 96,
     LA_DEFAULT_DIVIDER = 1,
     LA_MAX_PIN_COUNT = 8,
-    LA_MAX_SAMPLES = 4096,
+    LA_MAX_SAMPLES = 65536,
+    LA_STREAM_MAX_SAMPLES = 4096,
     LA_MAX_DIVIDER = 16777215,
 };
 
@@ -23,7 +25,7 @@ static LogicAnalyserCaptureInfo last_capture;
 static bool capture_valid;
 static bool stream_enabled;
 static bool stream_capturing;
-static uint32_t stream_buffers[2][LA_MAX_SAMPLES];
+static uint32_t stream_buffers[2][LA_STREAM_MAX_SAMPLES];
 static LogicAnalyserCaptureInfo stream_info[2];
 static uint32_t stream_capture_index;
 static uint32_t stream_sequence;
@@ -44,7 +46,7 @@ static struct {
     .divider = LA_DEFAULT_DIVIDER,
     .trigger_pin = LA_DEFAULT_PIN_BASE,
     .trigger_level = true,
-    .trigger_mode = LOGIC_ANALYSER_TRIGGER_EDGE,
+    .trigger_mode = LOGIC_ANALYSER_TRIGGER_AUTO,
 };
 
 static bool config_is_valid(void)
@@ -119,7 +121,7 @@ void la_reset_state(void)
     state.divider = LA_DEFAULT_DIVIDER;
     state.trigger_pin = LA_DEFAULT_PIN_BASE;
     state.trigger_level = true;
-    state.trigger_mode = LOGIC_ANALYSER_TRIGGER_EDGE;
+    state.trigger_mode = LOGIC_ANALYSER_TRIGGER_AUTO;
 }
 
 bool la_set_pin_base(uint32_t value)
@@ -171,6 +173,22 @@ bool la_set_trigger_mode_edge(bool edge_mode)
     return true;
 }
 
+bool la_set_trigger_mode_auto(void)
+{
+    state.trigger_mode = LOGIC_ANALYSER_TRIGGER_AUTO;
+    capture_valid = false;
+    la_stream_stop();
+    return true;
+}
+
+bool la_set_trigger_mode_level(void)
+{
+    state.trigger_mode = LOGIC_ANALYSER_TRIGGER_LEVEL;
+    capture_valid = false;
+    la_stream_stop();
+    return true;
+}
+
 uint32_t la_get_pin_base(void) { return state.pin_base; }
 
 uint32_t la_get_pin_count(void) { return state.pin_count; }
@@ -186,6 +204,28 @@ bool la_get_trigger_level(void) { return state.trigger_level; }
 bool la_get_trigger_mode_edge(void)
 {
     return state.trigger_mode == LOGIC_ANALYSER_TRIGGER_EDGE;
+}
+
+LogicAnalyserTriggerMode la_get_trigger_mode(void) { return state.trigger_mode; }
+
+uint32_t la_get_sample_rate_hz(void)
+{
+    uint32_t divider = la_get_divider();
+    if (divider == 0) {
+        return 0;
+    }
+
+    return PLATFORM_get_peripheral_clock_speed(PLATFORM_CLOCK_SYS) / divider;
+}
+
+uint32_t la_get_word_count(void)
+{
+    return logic_analyser_capture_word_count(state.pin_count, state.samples);
+}
+
+uint32_t la_get_bits_per_word(void)
+{
+    return logic_analyser_bits_packed_per_word(state.pin_count);
 }
 
 bool la_initiate(void)
@@ -275,14 +315,14 @@ bool la_stream_start(void)
     status_led_capture_started();
     if (!logic_analyser_capture_start(
             &la,
-            state.trigger_pin,
-            state.trigger_level,
-            state.trigger_mode,
-            stream_buffers[stream_capture_index],
-            state.samples,
-            &stream_info[stream_capture_index],
-            true
-        )) {
+        state.trigger_pin,
+        state.trigger_level,
+        state.trigger_mode,
+        stream_buffers[stream_capture_index],
+        state.samples,
+        &stream_info[stream_capture_index],
+        state.trigger_mode != LOGIC_ANALYSER_TRIGGER_AUTO
+    )) {
         la_stream_stop();
         ++stream_overruns;
         return false;
