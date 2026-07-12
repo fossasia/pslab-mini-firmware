@@ -161,6 +161,40 @@ The repo includes an out-of-tree `libsigrok` hardware driver package in
 unpacks `LA:READ?` binary blocks into sigrok logic samples, so PulseView can use
 its normal protocol decoders for UART, I2C, SPI, and other digital buses.
 
+## SCPI Bus Gateway
+
+The bus gateway exposes UART1 through SCPI so a host can talk
+to external serial sensors or peripherals through the PSLab Pico.
+
+Initial UART gateway uses the platform defaults:
+
+- UART1 TX: GPIO4
+- UART1 RX: GPIO5
+- Format: 8N1
+
+UART0 is reserved by the firmware logging so the gateway currently allows UART1 only.
+
+Available commands:
+
+- `BUS:UART:CONFigure:BUS <1>`
+- `BUS:UART:CONFigure:BUS?`
+- `BUS:UART:CONFigure:BAUD <baud>`
+- `BUS:UART:CONFigure:BAUD?`
+- `BUS:UART:CONFigure:TIMEout <ms>`
+- `BUS:UART:CONFigure:TIMEout?`
+- `BUS:UART:OPEN`
+- `BUS:UART:OPEN?`
+- `BUS:UART:CLOSe`
+- `BUS:UART:WRITe <arbitrary_block>`
+- `BUS:UART:READ? [max_bytes]`
+- `BUS:UART:AVAILable?`
+- `BUS:UART:CLEar`
+- `BUS:UART:FLUSh`
+- `BUS:UART:TRANsact? <arbitrary_block>`
+
+`WRITe`, `READ?`, and `TRANsact?` use SCPI arbitrary blocks so binary payloads
+are safe. The current implementation caps each transfer at 512 bytes.
+
 ## Build
 
 Configure from the project root:

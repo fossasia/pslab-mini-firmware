@@ -38,6 +38,24 @@ enum { UART_DEFAULT_BAUDRATE = 115200 };
 void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz);
 
 /**
+ * @brief Initialize the UART peripheral with an explicit baud rate.
+ *
+ * The first gateway milestone keeps the existing 8N1 format and default pins
+ * while allowing SCPI to choose the baud rate.
+ *
+ * @param bus UART bus instance to initialize
+ * @param rx_buf Pointer to the reception buffer
+ * @param sz Size of the reception buffer in bytes
+ * @param baudrate UART baud rate in bits per second
+ */
+void UART_LL_init_baud(
+    UART_Bus bus,
+    uint8_t *rx_buf,
+    uint32_t sz,
+    uint32_t baudrate
+);
+
+/**
  * @brief Deinitialize the UART peripheral.
  *
  * @param bus UART bus instance to deinitialize

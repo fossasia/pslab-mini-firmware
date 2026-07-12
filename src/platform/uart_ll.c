@@ -130,13 +130,18 @@ static void uart1_irq_handler(void) { uart_irq_handler(UART_BUS_1); }
  * This function configures the UART hardware, including baud rate, data bits,
  * stop bits, and parity, to prepare it for serial communication.
  */
-void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz)
+void UART_LL_init_baud(
+    UART_Bus bus,
+    uint8_t *rx_buf,
+    uint32_t sz,
+    uint32_t baudrate
+)
 {
     if (bus >= UART_BUS_COUNT) {
         THROW(ERROR_INVALID_ARGUMENT);
     }
 
-    if (!rx_buf || sz == 0) {
+    if (!rx_buf || sz == 0 || baudrate == 0) {
         THROW(ERROR_INVALID_ARGUMENT);
     }
 
@@ -146,7 +151,7 @@ void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz)
 
     UARTInstance *instance = &g_uart_instances[bus];
 
-    uart_init(instance->uart, UART_DEFAULT_BAUDRATE);
+    uart_init(instance->uart, baudrate);
     gpio_set_function(instance->tx_gpio, GPIO_FUNC_UART);
     gpio_set_function(instance->rx_gpio, GPIO_FUNC_UART);
     uart_set_format(instance->uart, 8, 1, UART_PARITY_NONE);
@@ -167,6 +172,11 @@ void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz)
     );
     irq_set_enabled(instance->irq, true);
     uart_set_irq_enables(instance->uart, true, false);
+}
+
+void UART_LL_init(UART_Bus bus, uint8_t *rx_buf, uint32_t sz)
+{
+    UART_LL_init_baud(bus, rx_buf, sz, UART_DEFAULT_BAUDRATE);
 }
 
 /**
