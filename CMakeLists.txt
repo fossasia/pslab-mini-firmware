@@ -35,6 +35,7 @@ target_sources(pslab_pico PRIVATE
         src/platform/usb_descriptors.c
         src/platform/status_led.c
         src/platform/test_signal.c
+        src/system/bus/i2c.c
         src/system/bus/uart.c
         src/system/logic_analyser.c
         src/system/transport.c
