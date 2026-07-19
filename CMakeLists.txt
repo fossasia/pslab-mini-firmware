@@ -14,11 +14,13 @@ add_executable(pslab_pico)
 target_sources(pslab_pico PRIVATE
         src/application/main.c
         src/application/protocol/common.c
+        src/application/protocol/bus/i2c.c
         src/application/protocol/bus/uart.c
         src/application/protocol/la.c
         src/application/protocol/dso.c
         src/application/protocol/mso.c
         src/application/communication_commands.c
+        src/application/gateway/i2c_commands.c
         src/application/gateway/uart_commands.c
         src/application/logic_analyser_commands.c
         src/application/dso_commands.c
