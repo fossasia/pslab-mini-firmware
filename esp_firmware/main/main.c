@@ -392,6 +392,13 @@ static bool queue_scpi_line(uint8_t const *line, size_t len)
     return xQueueSend(scpi_rx_queue, &scpi_msg, pdMS_TO_TICKS(250)) == pdTRUE;
 }
 
+static void flush_scpi_tx_queue(void)
+{
+    bridge_message_t discarded;
+    while (xQueueReceive(scpi_tx_queue, &discarded, 0) == pdTRUE) {
+    }
+}
+
 static void spi_task(void *arg)
 {
     (void)arg;
@@ -688,6 +695,10 @@ static void tcp_scpi_task(void *arg)
                 }
 
                 bool query = line_is_query(line, line_len);
+                if (query) {
+                    flush_scpi_tx_queue();
+                }
+
                 if (!queue_scpi_line(line, line_len)) {
                     static char const err[] = "-200,\"SCPI bridge queue full\"\n";
                     send(client, err, strlen(err), 0);
@@ -704,6 +715,7 @@ static void tcp_scpi_task(void *arg)
                         ) == pdTRUE) {
                         send(client, response.data, response.len, 0);
                     } else {
+                        flush_scpi_tx_queue();
                         static char const err[] = "-200,\"SCPI bridge timeout\"\n";
                         send(client, err, strlen(err), 0);
                     }
