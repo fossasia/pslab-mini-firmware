@@ -158,6 +158,11 @@ bool transport_poll_scpi_command(uint8_t *buffer, size_t buffer_size, size_t *le
         return false;
     }
 
+    if (!transport_wifi_is_effective()) {
+        *len = 0;
+        return false;
+    }
+
     if (g_pending_scpi_len == 0 && esp_spi_bridge_init() &&
         esp_spi_bridge_is_ready()) {
         (void)exchange_and_store_scpi(ESP_SPI_BRIDGE_FRAME_POLL, NULL, 0);
