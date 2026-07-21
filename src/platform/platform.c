@@ -24,6 +24,11 @@ uint32_t PLATFORM_get_tick(void)
     return to_ms_since_boot(get_absolute_time());
 }
 
+uint64_t PLATFORM_get_time_us(void)
+{
+    return to_us_since_boot(get_absolute_time());
+}
+
 uint32_t PLATFORM_get_peripheral_clock_speed(PLATFORM_PeripheralClock clock)
 {
     if (clock == PLATFORM_CLOCK_INVALID) {

@@ -47,6 +47,13 @@ void PLATFORM_init(void);
  */
 uint32_t PLATFORM_get_tick(void);
 
+/**
+ * @brief Get the current platform time in microseconds
+ *
+ * @return Monotonic time in microseconds since platform start
+ */
+uint64_t PLATFORM_get_time_us(void);
+
 typedef enum {
     PLATFORM_CLOCK_SYS = 0,
     PLATFORM_CLOCK_ADC1 = 1,

@@ -202,10 +202,9 @@ static bool sample_matches_level(uint16_t sample)
     return sample >= state.trigger_level;
 }
 
-static bool trigger_wait_timed_out(bool use_timeout, absolute_time_t deadline)
+static bool trigger_wait_timed_out(bool use_timeout, uint64_t deadline_us)
 {
-    return use_timeout &&
-           absolute_time_diff_us(get_absolute_time(), deadline) <= 0;
+    return use_timeout && PLATFORM_get_time_us() >= deadline_us;
 }
 
 static bool wait_for_trigger_timeout(uint32_t timeout_us)
@@ -215,14 +214,14 @@ static bool wait_for_trigger_timeout(uint32_t timeout_us)
     }
 
     bool use_timeout = timeout_us > 0;
-    absolute_time_t deadline = use_timeout ?
-        make_timeout_time_us(timeout_us) :
-        nil_time;
+    uint64_t deadline_us = use_timeout ?
+        PLATFORM_get_time_us() + timeout_us :
+        0;
 
     uint16_t sample;
     if (state.trigger_mode == DSO_TRIGGER_LEVEL) {
         do {
-            if (trigger_wait_timed_out(use_timeout, deadline)) {
+            if (trigger_wait_timed_out(use_timeout, deadline_us)) {
                 return false;
             }
             if (!adc_capture_read_once(&sample)) {
@@ -235,7 +234,7 @@ static bool wait_for_trigger_timeout(uint32_t timeout_us)
 
     bool armed = false;
     while (true) {
-        if (trigger_wait_timed_out(use_timeout, deadline)) {
+        if (trigger_wait_timed_out(use_timeout, deadline_us)) {
             return false;
         }
         if (!adc_capture_read_once(&sample)) {
