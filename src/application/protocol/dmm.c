@@ -6,6 +6,7 @@
  * functionality, including voltage measurement configuration and reading.
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 

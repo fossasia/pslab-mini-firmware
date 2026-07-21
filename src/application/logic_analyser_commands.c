@@ -1,5 +1,6 @@
 #include "application/logic_analyser_commands.h"
 
+#include <stdbool.h>
 #include <string.h>
 
 #include "hardware/pio.h"

@@ -13,6 +13,7 @@
 
 #include "system/instrument/dso.h"
 
+#include <stdbool.h>
 #include <string.h>
 
 #include "pico/stdlib.h"
@@ -25,6 +26,7 @@ enum {
     DSO_DEFAULT_SAMPLE_RATE_HZ = 100000,
     DSO_DEFAULT_SAMPLES = 1024,
     DSO_DEFAULT_TRIGGER_LEVEL = 2048,
+    DSO_STREAM_TRIGGER_TIMEOUT_US = 10000,
 };
 
 static uint16_t capture_buffer[DSO_MAX_SAMPLES];
@@ -201,15 +203,29 @@ static bool sample_matches_level(uint16_t sample)
     return sample >= state.trigger_level;
 }
 
-static bool wait_for_trigger(void)
+static bool trigger_wait_timed_out(bool use_timeout, absolute_time_t deadline)
+{
+    return use_timeout &&
+           absolute_time_diff_us(get_absolute_time(), deadline) <= 0;
+}
+
+static bool wait_for_trigger_timeout(uint32_t timeout_us)
 {
     if (state.trigger_mode == DSO_TRIGGER_OFF) {
         return true;
     }
 
+    bool use_timeout = timeout_us > 0;
+    absolute_time_t deadline = use_timeout ?
+        make_timeout_time_us(timeout_us) :
+        nil_time;
+
     uint16_t sample;
     if (state.trigger_mode == DSO_TRIGGER_LEVEL) {
         do {
+            if (trigger_wait_timed_out(use_timeout, deadline)) {
+                return false;
+            }
             if (!adc_capture_read_once(&sample)) {
                 return false;
             }
@@ -220,6 +236,9 @@ static bool wait_for_trigger(void)
 
     bool armed = false;
     while (true) {
+        if (trigger_wait_timed_out(use_timeout, deadline)) {
+            return false;
+        }
         if (!adc_capture_read_once(&sample)) {
             return false;
         }
@@ -232,6 +251,11 @@ static bool wait_for_trigger(void)
         }
         tight_loop_contents();
     }
+}
+
+static bool wait_for_trigger(void)
+{
+    return wait_for_trigger_timeout(0);
 }
 
 bool dso_initiate(void)
@@ -322,7 +346,7 @@ bool dso_stream_next_frame(uint8_t const **data, size_t *len, uint32_t *sequence
     }
 
     AdcCaptureInfo info;
-    bool captured = wait_for_trigger() &&
+    bool captured = wait_for_trigger_timeout(DSO_STREAM_TRIGGER_TIMEOUT_US) &&
                     adc_capture_run(capture_buffer, state.samples, &info);
     if (!captured) {
         ++stream_overruns;

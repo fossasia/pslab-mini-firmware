@@ -8,6 +8,7 @@
 
 #include "application/protocol.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -19,6 +20,7 @@
 #include "application/logic_analyser_commands.h"
 #include "platform/status_led.h"
 #include "platform/usb_cdc.h"
+#include "util/logging.h"
 
 // Buffer sizes for USB communication (internal to this module)
 enum {
@@ -202,6 +204,8 @@ bool protocol_init(void)
         return true;
     }
 
+    LOG_INIT("SCPI protocol");
+
     // Initialize SCPI context
     SCPI_Init(
         &g_scpi_context,
@@ -219,6 +223,7 @@ bool protocol_init(void)
     );
 
     g_protocol_initialized = true;
+    LOG_INFO("SCPI protocol initialized");
     return true;
 }
 
@@ -231,8 +236,10 @@ void protocol_deinit(void)
         return;
     }
 
+    LOG_DEINIT("SCPI protocol");
     protocol_reset((scpi_t *)0);
     g_protocol_initialized = false;
+    LOG_DEBUG("SCPI protocol deinitialized");
 }
 
 /**

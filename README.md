@@ -103,6 +103,17 @@ context setup and command processing.
 Newlib writes to `stdout` and `stderr` are routed to the hardware UART transport.
 USB CDC remains dedicated to SCPI commands and binary instrument data.
 
+## Application Logging
+
+The application layer uses the retained logging API for internal firmware
+events. Main startup and SCPI protocol init/deinit are logged through
+`util/logging.h`, and the main loop drains pending log entries with `LOG_task`.
+
+SCPI parser errors remain separate from internal firmware errors. `SYST:ERR?`
+continues to report command/protocol errors from the SCPI error queue only.
+Internal logs are written through the UART-backed stdout/stderr path, not USB
+CDC.
+
 ## SCPI Command Interface
 
 - `src/application/protocol/common.c`: SCPI context, transport callbacks, and

@@ -9,6 +9,7 @@
  * @date 2025-07-07
  */
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 

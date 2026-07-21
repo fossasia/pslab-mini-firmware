@@ -1,5 +1,7 @@
 #include "platform/adc_capture.h"
 
+#include <stdbool.h>
+
 #include "hardware/adc.h"
 #include "hardware/dma.h"
 

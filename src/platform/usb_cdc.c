@@ -1,5 +1,7 @@
 #include "platform/usb_cdc.h"
 
+#include <stdbool.h>
+
 #include "bsp/board_api.h"
 #include "pico/time.h"
 #include "tusb.h"
