@@ -18,7 +18,6 @@
 #include "application/dso_commands.h"
 #include "application/logic_analyser_commands.h"
 #include "platform/status_led.h"
-#include "platform/test_signal.h"
 #include "platform/usb_cdc.h"
 
 // Buffer sizes for USB communication (internal to this module)
@@ -202,10 +201,6 @@ bool protocol_init(void)
     if (g_protocol_initialized) {
         return true;
     }
-
-    usb_cdc_init();
-    status_led_init();
-    test_signal_init();
 
     // Initialize SCPI context
     SCPI_Init(

@@ -25,6 +25,8 @@
 
 #include <errno.h>
 #include <reent.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -36,11 +38,11 @@
 #include "system/bus/uart.h"
 
 // Static handle for UART I/O
-static UART_Handle *g_uart_handle = nullptr;
+static UART_Handle *g_uart_handle = NULL;
 
 static int check_args(struct _reent *r, void const *buf, size_t cnt)
 {
-    if (buf == nullptr) {
+    if (buf == NULL) {
         r->_errno = EFAULT;
         return -1;
     }
@@ -61,7 +63,7 @@ static int check_args(struct _reent *r, void const *buf, size_t cnt)
  */
 void syscalls_init(UART_Handle *handle)
 {
-    if (g_uart_handle != nullptr) {
+    if (g_uart_handle != NULL) {
         THROW(ERROR_RESOURCE_BUSY);
     }
     g_uart_handle = handle;
@@ -80,12 +82,12 @@ void syscalls_deinit(UART_Handle *handle)
     if (g_uart_handle != handle) {
         THROW(ERROR_INVALID_ARGUMENT);
     }
-    g_uart_handle = nullptr;
+    g_uart_handle = NULL;
 }
 
 bool syscalls_uart_flush(uint32_t timeout)
 {
-    if (g_uart_handle == nullptr) {
+    if (g_uart_handle == NULL) {
         return false;
     }
 
@@ -110,7 +112,7 @@ _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t cnt)
     }
 
     // Check for null buffer
-    if (buf == nullptr) {
+    if (buf == NULL) {
         r->_errno = EFAULT;
         return -1;
     }
@@ -134,7 +136,7 @@ _ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t cnt)
     }
 
     if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
-        if (g_uart_handle == nullptr) {
+        if (g_uart_handle == NULL) {
             r->_errno = EIO;
             return -1;
         }
@@ -164,7 +166,7 @@ _ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t cnt)
  */
 int _fstat_r(struct _reent *r, int fd, struct stat *st)
 {
-    if (st == nullptr) {
+    if (st == NULL) {
         r->_errno = EFAULT;
         return -1;
     }
