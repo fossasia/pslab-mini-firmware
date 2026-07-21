@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "hardware/pio.h"
 #include "system/logic_analyser.h"
 #include "platform/status_led.h"
 
@@ -63,8 +62,6 @@ static bool apply_config(void)
     }
 
     LogicAnalyserConfig config = {
-        .pio = pio0,
-        .sm = 0,
         .pin_base = state.pin_base,
         .pin_count = state.pin_count,
         .clk_div = (float)state.divider,

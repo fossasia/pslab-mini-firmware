@@ -13,14 +13,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "hardware/clocks.h"
-
 #include "scpi/error.h"
 #include "scpi/scpi.h"
 
 #include "application/communication_commands.h"
 #include "application/dso_commands.h"
 #include "application/logic_analyser_commands.h"
+#include "platform/platform.h"
 #include "platform/status_led.h"
 #include "platform/usb_cdc.h"
 #include "system/transport.h"
@@ -107,6 +106,16 @@ static uint8_t g_wifi_scpi_response[512];
 static size_t g_wifi_scpi_response_len;
 static uint32_t g_la_wifi_capture_sequence;
 static uint32_t g_dso_wifi_capture_sequence;
+
+static uint32_t logic_analyser_sample_rate_hz(void)
+{
+    uint32_t divider = la_get_divider();
+    if (divider == 0) {
+        return 0;
+    }
+
+    return PLATFORM_get_peripheral_clock_speed(PLATFORM_CLOCK_SYS) / divider;
+}
 
 static size_t protocol_flush_wifi_response(void)
 {
@@ -338,7 +347,7 @@ static void write_stream_frame(
         TransportCaptureMeta meta = {0};
         if (instrument == TRANSPORT_INSTRUMENT_LA) {
             meta = (TransportCaptureMeta){
-                .sample_rate_hz = clock_get_hz(clk_sys) / la_get_divider(),
+                .sample_rate_hz = logic_analyser_sample_rate_hz(),
                 .sample_count = la_get_samples(),
                 .channel_count = la_get_pin_count(),
                 .pin_base_or_channel = la_get_pin_base(),
@@ -376,7 +385,7 @@ static scpi_result_t scpi_cmd_la_wifi_read_q(scpi_t *context)
     }
 
     TransportCaptureMeta meta = {
-        .sample_rate_hz = clock_get_hz(clk_sys) / la_get_divider(),
+        .sample_rate_hz = logic_analyser_sample_rate_hz(),
         .sample_count = la_get_samples(),
         .channel_count = la_get_pin_count(),
         .pin_base_or_channel = la_get_pin_base(),

@@ -47,19 +47,27 @@ void PLATFORM_init(void);
  */
 uint32_t PLATFORM_get_tick(void);
 
+/**
+ * @brief Get the current platform time in microseconds
+ *
+ * @return Monotonic time in microseconds since platform start
+ */
+uint64_t PLATFORM_get_time_us(void);
+
 typedef enum {
-    PLATFORM_CLOCK_ADC1 = 0,
-    PLATFORM_CLOCK_ADC2 = 1,
-    PLATFORM_CLOCK_TIMER1 = 2,
-    PLATFORM_CLOCK_TIMER2 = 3,
-    PLATFORM_CLOCK_TIMER3 = 4,
-    PLATFORM_CLOCK_TIMER4 = 5,
-    PLATFORM_CLOCK_TIMER5 = 6,
-    PLATFORM_CLOCK_TIMER6 = 7,
-    PLATFORM_CLOCK_TIMER7 = 8,
-    PLATFORM_CLOCK_TIMER8 = 9,
-    PLATFORM_CLOCK_TIMER16 = 10,
-    PLATFORM_CLOCK_TIMER17 = 11,
+    PLATFORM_CLOCK_SYS = 0,
+    PLATFORM_CLOCK_ADC1 = 1,
+    PLATFORM_CLOCK_ADC2 = 2,
+    PLATFORM_CLOCK_TIMER1 = 3,
+    PLATFORM_CLOCK_TIMER2 = 4,
+    PLATFORM_CLOCK_TIMER3 = 5,
+    PLATFORM_CLOCK_TIMER4 = 6,
+    PLATFORM_CLOCK_TIMER5 = 7,
+    PLATFORM_CLOCK_TIMER6 = 8,
+    PLATFORM_CLOCK_TIMER7 = 9,
+    PLATFORM_CLOCK_TIMER8 = 10,
+    PLATFORM_CLOCK_TIMER16 = 11,
+    PLATFORM_CLOCK_TIMER17 = 12,
     PLATFORM_CLOCK_INVALID = 0xFFFF
 } PLATFORM_PeripheralClock;
 
@@ -76,6 +84,11 @@ typedef enum {
  *         or 0 if an invalid type is provided.
  */
 uint32_t PLATFORM_get_peripheral_clock_speed(PLATFORM_PeripheralClock clock);
+
+/**
+ * @brief Run a platform-specific idle hint while waiting in a busy loop
+ */
+void PLATFORM_idle(void);
 
 /**
  * @brief Reset the platform/system
