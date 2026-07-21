@@ -2,17 +2,12 @@
 #include "system/system.h"
 #include "util/logging.h"
 
-#include <stdbool.h>
-
 int main(void)
 {
     SYSTEM_init();
     LOG_INIT("Main application");
 
-    if (!protocol_init()) {
-        LOG_ERROR("Failed to initialize protocol");
-        return -1;
-    }
+    protocol_init();
 
     while (true) {
         protocol_task();
