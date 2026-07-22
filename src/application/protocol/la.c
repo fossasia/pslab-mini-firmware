@@ -263,3 +263,71 @@ scpi_result_t scpi_cmd_test_square_frequency_q(scpi_t *context)
     SCPI_ResultUInt32(context, test_signal_get_frequency_hz());
     return SCPI_RES_OK;
 }
+
+scpi_result_t scpi_cmd_test_analog(scpi_t *context)
+{
+    scpi_bool_t enable = FALSE;
+    if (!SCPI_ParamBool(context, &enable, TRUE)) {
+        SCPI_ErrorPush(context, SCPI_ERROR_MISSING_PARAMETER);
+        return SCPI_RES_ERR;
+    }
+
+    if (enable == TRUE) {
+        return test_signal_analog_start(
+                   TEST_SIGNAL_ANALOG_DEFAULT_PIN,
+                   TEST_SIGNAL_ANALOG_DEFAULT_FREQUENCY_HZ,
+                   TEST_SIGNAL_ANALOG_DEFAULT_DUTY_PERMILLE
+               )
+                   ? result_ok()
+                   : result_execution_error(context);
+    }
+
+    test_signal_analog_stop();
+    return SCPI_RES_OK;
+}
+
+scpi_result_t scpi_cmd_test_analog_q(scpi_t *context)
+{
+    SCPI_ResultBool(context, test_signal_analog_is_enabled() ? TRUE : FALSE);
+    return SCPI_RES_OK;
+}
+
+scpi_result_t scpi_cmd_test_analog_configure(scpi_t *context)
+{
+    uint32_t pin = 0;
+    uint32_t frequency = 0;
+    uint32_t duty_permille = 0;
+
+    if (!SCPI_ParamUInt32(context, &pin, TRUE) ||
+        !SCPI_ParamUInt32(context, &frequency, TRUE) ||
+        !SCPI_ParamUInt32(context, &duty_permille, TRUE)) {
+        SCPI_ErrorPush(context, SCPI_ERROR_MISSING_PARAMETER);
+        return SCPI_RES_ERR;
+    }
+
+    if (pin > 29 || frequency == 0 || duty_permille > 1000) {
+        return result_illegal_parameter(context);
+    }
+
+    return test_signal_analog_start(pin, frequency, duty_permille)
+               ? result_ok()
+               : result_execution_error(context);
+}
+
+scpi_result_t scpi_cmd_test_analog_pin_q(scpi_t *context)
+{
+    SCPI_ResultUInt32(context, test_signal_analog_get_pin());
+    return SCPI_RES_OK;
+}
+
+scpi_result_t scpi_cmd_test_analog_frequency_q(scpi_t *context)
+{
+    SCPI_ResultUInt32(context, test_signal_analog_get_frequency_hz());
+    return SCPI_RES_OK;
+}
+
+scpi_result_t scpi_cmd_test_analog_duty_q(scpi_t *context)
+{
+    SCPI_ResultUInt32(context, test_signal_analog_get_duty_permille());
+    return SCPI_RES_OK;
+}

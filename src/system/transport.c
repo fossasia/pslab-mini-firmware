@@ -240,8 +240,10 @@ bool transport_send_capture(
     put_u32_le(
         &payload[PSLAB_PAYLOAD_HEADER_LEN + 20],
         meta->data_format != 0 ? meta->data_format :
-            (instrument == TRANSPORT_INSTRUMENT_DSO ? PSLAB_FORMAT_DSO_U16_LE
-                                                    : PSLAB_FORMAT_LA_U32_PACKED)
+            (instrument == TRANSPORT_INSTRUMENT_DSO ||
+             instrument == TRANSPORT_INSTRUMENT_MSO_ANALOG
+                 ? PSLAB_FORMAT_DSO_U16_LE
+                 : PSLAB_FORMAT_LA_U32_PACKED)
     );
 
     if (!exchange_and_store_scpi(

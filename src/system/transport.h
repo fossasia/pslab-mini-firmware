@@ -18,6 +18,8 @@ typedef enum {
 typedef enum {
     TRANSPORT_INSTRUMENT_LA = 1,
     TRANSPORT_INSTRUMENT_DSO = 2,
+    TRANSPORT_INSTRUMENT_MSO_DIGITAL = 3,
+    TRANSPORT_INSTRUMENT_MSO_ANALOG = 4,
 } TransportInstrument;
 
 typedef struct {
