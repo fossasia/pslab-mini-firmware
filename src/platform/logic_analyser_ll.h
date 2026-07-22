@@ -57,6 +57,24 @@ bool logic_analyser_ll_capture_start(
     LogicAnalyserLLCaptureInfo *info,
     bool wait_for_trigger
 );
+bool logic_analyser_ll_capture_arm(
+    LogicAnalyserLL *la,
+    uint32_t trigger_pin,
+    bool trigger_level,
+    bool edge_trigger,
+    uint32_t *capture_buf,
+    uint32_t sample_count,
+    uint32_t word_count,
+    uint32_t bits_per_word,
+    LogicAnalyserLLCaptureInfo *info,
+    bool wait_for_trigger
+);
+bool logic_analyser_ll_capture_start_armed(LogicAnalyserLL *la);
+void logic_analyser_ll_wait_for_trigger(
+    uint32_t trigger_pin,
+    bool trigger_level,
+    bool edge_trigger
+);
 bool logic_analyser_ll_capture_complete(LogicAnalyserLL *la);
 void logic_analyser_ll_capture_wait(LogicAnalyserLL *la);
 void logic_analyser_ll_capture_abort(LogicAnalyserLL *la);

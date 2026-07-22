@@ -11,9 +11,12 @@ enum {
 };
 
 static AdcCaptureConfig active_config;
+static AdcCaptureInfo armed_info;
 static int dma_chan = -1;
 static bool initialized;
 static bool busy;
+static bool armed;
+static bool running;
 
 uint32_t adc_capture_channel_to_gpio(uint32_t channel)
 {
@@ -75,6 +78,8 @@ void adc_capture_deinit(void)
     dma_chan = -1;
     initialized = false;
     busy = false;
+    armed = false;
+    running = false;
 }
 
 bool adc_capture_configure(AdcCaptureConfig const *config)
@@ -103,6 +108,24 @@ bool adc_capture_run(
     AdcCaptureInfo *info
 )
 {
+    if (!adc_capture_arm(buffer, sample_count, info)) {
+        return false;
+    }
+
+    if (!adc_capture_start()) {
+        adc_capture_abort();
+        return false;
+    }
+
+    return adc_capture_wait();
+}
+
+bool adc_capture_arm(
+    uint16_t *buffer,
+    uint32_t sample_count,
+    AdcCaptureInfo *info
+)
+{
     if (!initialized || busy || !buffer || sample_count == 0) {
         return false;
     }
@@ -120,31 +143,71 @@ bool adc_capture_run(
     channel_config_set_dreq(&dma_config, DREQ_ADC);
 
     busy = true;
+    armed = true;
+    running = false;
     dma_channel_configure(
         (uint)dma_chan,
         &dma_config,
         buffer,
         &adc_hw->fifo,
         sample_count,
-        true
+        false
     );
 
+    armed_info = (AdcCaptureInfo){
+        .channel = active_config.channel,
+        .gpio = adc_capture_channel_to_gpio(active_config.channel),
+        .sample_rate_hz = active_config.sample_rate_hz,
+        .sample_count = sample_count,
+    };
+
+    if (info) {
+        *info = armed_info;
+    }
+
+    return true;
+}
+
+bool adc_capture_start(void)
+{
+    if (!initialized || !busy || !armed || running || dma_chan < 0) {
+        return false;
+    }
+
+    dma_channel_start((uint)dma_chan);
     adc_run(true);
+    running = true;
+    armed = false;
+    return true;
+}
+
+bool adc_capture_wait(void)
+{
+    if (!initialized || !busy || !running || dma_chan < 0) {
+        return false;
+    }
+
     dma_channel_wait_for_finish_blocking((uint)dma_chan);
     adc_run(false);
     adc_fifo_drain();
     busy = false;
-
-    if (info) {
-        *info = (AdcCaptureInfo){
-            .channel = active_config.channel,
-            .gpio = adc_capture_channel_to_gpio(active_config.channel),
-            .sample_rate_hz = active_config.sample_rate_hz,
-            .sample_count = sample_count,
-        };
-    }
+    running = false;
 
     return true;
+}
+
+void adc_capture_abort(void)
+{
+    if (!initialized || dma_chan < 0) {
+        return;
+    }
+
+    adc_run(false);
+    dma_channel_abort((uint)dma_chan);
+    adc_fifo_drain();
+    busy = false;
+    armed = false;
+    running = false;
 }
 
 bool adc_capture_read_once(uint16_t *sample)

@@ -113,6 +113,19 @@ bool logic_analyser_is_busy(LogicAnalyser const *la)
            logic_analyser_ll_is_busy(&la->platform);
 }
 
+void logic_analyser_wait_for_trigger(
+    uint32_t trigger_pin,
+    bool trigger_level,
+    LogicAnalyserTriggerMode trigger_mode
+)
+{
+    logic_analyser_ll_wait_for_trigger(
+        trigger_pin,
+        trigger_level,
+        trigger_mode == LOGIC_ANALYSER_TRIGGER_EDGE
+    );
+}
+
 bool logic_analyser_capture(
     LogicAnalyser *la,
     uint32_t trigger_pin,
@@ -151,6 +164,33 @@ bool logic_analyser_capture_start(
     bool wait_for_trigger
 )
 {
+    if (!logic_analyser_capture_arm(
+            la,
+            trigger_pin,
+            trigger_level,
+            trigger_mode,
+            capture_buf,
+            sample_count,
+            info,
+            wait_for_trigger
+        )) {
+        return false;
+    }
+
+    return logic_analyser_capture_start_armed(la);
+}
+
+bool logic_analyser_capture_arm(
+    LogicAnalyser *la,
+    uint32_t trigger_pin,
+    bool trigger_level,
+    LogicAnalyserTriggerMode trigger_mode,
+    uint32_t *capture_buf,
+    uint32_t sample_count,
+    LogicAnalyserCaptureInfo *info,
+    bool wait_for_trigger
+)
+{
     if (!la || !la->initialized || !capture_buf || sample_count == 0 ||
         logic_analyser_is_busy(la)) {
         return false;
@@ -167,7 +207,7 @@ bool logic_analyser_capture_start(
     }
 
     LogicAnalyserLLCaptureInfo ll_info;
-    bool started = logic_analyser_ll_capture_start(
+    bool armed = logic_analyser_ll_capture_arm(
         &la->platform,
         trigger_pin,
         trigger_level,
@@ -179,12 +219,30 @@ bool logic_analyser_capture_start(
         &ll_info,
         wait_for_trigger
     );
-    if (!started) {
+    if (!armed) {
         return false;
     }
 
     copy_capture_info(info, &ll_info);
     return true;
+}
+
+bool logic_analyser_capture_start_armed(LogicAnalyser *la)
+{
+    if (!la || !la->initialized) {
+        return false;
+    }
+
+    return logic_analyser_ll_capture_start_armed(&la->platform);
+}
+
+void logic_analyser_capture_wait(LogicAnalyser *la)
+{
+    if (!la || !la->initialized) {
+        return;
+    }
+
+    logic_analyser_ll_capture_wait(&la->platform);
 }
 
 bool logic_analyser_capture_complete(LogicAnalyser *la)
