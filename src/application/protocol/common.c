@@ -406,6 +406,19 @@ static void write_usb_stream_frame(
     usb_cdc_write((uint8_t const *)"\n", 1);
 }
 
+static uint32_t logic_analyser_trigger_mode_metadata(void)
+{
+    switch (la_get_trigger_mode()) {
+    case LOGIC_ANALYSER_TRIGGER_EDGE:
+        return 1u;
+    case LOGIC_ANALYSER_TRIGGER_LEVEL:
+        return 2u;
+    case LOGIC_ANALYSER_TRIGGER_AUTO:
+    default:
+        return 0u;
+    }
+}
+
 static void write_stream_frame(
     TransportInstrument instrument,
     char const *prefix,
@@ -422,7 +435,7 @@ static void write_stream_frame(
                 .sample_count = la_get_samples(),
                 .channel_count = la_get_pin_count(),
                 .pin_base_or_channel = la_get_pin_base(),
-                .trigger_mode = (uint32_t)la_get_trigger_mode(),
+                .trigger_mode = logic_analyser_trigger_mode_metadata(),
                 .data_format = 1,
             };
         } else {
@@ -460,7 +473,7 @@ static scpi_result_t scpi_cmd_la_wifi_read_q(scpi_t *context)
         .sample_count = la_get_samples(),
         .channel_count = la_get_pin_count(),
         .pin_base_or_channel = la_get_pin_base(),
-        .trigger_mode = (uint32_t)la_get_trigger_mode(),
+        .trigger_mode = logic_analyser_trigger_mode_metadata(),
         .data_format = 1,
     };
     if (!transport_send_capture(

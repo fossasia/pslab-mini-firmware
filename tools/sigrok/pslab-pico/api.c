@@ -316,13 +316,14 @@ static int config_set(
     }
 
     switch (key) {
-    case SR_CONF_LIMIT_SAMPLES:
-        devc->sample_count = (uint32_t)g_variant_get_uint64(data);
-        if (devc->sample_count == 0 ||
-            devc->sample_count > PSLAB_PICO_MAX_SAMPLES) {
+    case SR_CONF_LIMIT_SAMPLES: {
+        uint64_t sample_count = g_variant_get_uint64(data);
+        if (sample_count == 0 || sample_count > PSLAB_PICO_MAX_SAMPLES) {
             return SR_ERR_ARG;
         }
+        devc->sample_count = (uint32_t)sample_count;
         break;
+    }
     case SR_CONF_SAMPLERATE:
         devc->samplerate_hz = (uint32_t)g_variant_get_uint64(data);
         if (devc->samplerate_hz == 0 ||
