@@ -133,9 +133,10 @@ bool test_signal_analog_start(
         return false;
     }
 
-    uint32_t level = ((wrap + 1) * requested_duty_permille) / 1000;
-    if (level > wrap + 1) {
-        level = wrap + 1;
+    uint32_t level = ((wrap + 1u) * requested_duty_permille) / 1000u;
+    uint32_t max_level = (wrap >= 65535u) ? wrap : (wrap + 1u);
+    if (level > max_level) {
+        level = max_level;
     }
 
     gpio_set_function((uint)gpio, GPIO_FUNC_PWM);
