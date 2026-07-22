@@ -7,6 +7,7 @@
  * captured by the ADC engine, and both use one shared trigger and sample rate.
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
