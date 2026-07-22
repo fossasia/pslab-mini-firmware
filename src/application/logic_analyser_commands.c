@@ -15,17 +15,19 @@ enum {
     LA_MAX_PIN_COUNT = 8,
     LA_MAX_SAMPLES = 65536,
     LA_STREAM_MAX_SAMPLES = 4096,
+    LA_CAPTURE_BUFFER_WORDS = LA_MAX_SAMPLES / (32 / LA_MAX_PIN_COUNT),
+    LA_STREAM_BUFFER_WORDS = LA_STREAM_MAX_SAMPLES / (32 / LA_MAX_PIN_COUNT),
     LA_MAX_DIVIDER = 16777215,
 };
 
 static LogicAnalyser la;
 static bool la_initialized;
-static uint32_t capture_buffer[LA_MAX_SAMPLES];
+static uint32_t capture_buffer[LA_CAPTURE_BUFFER_WORDS];
 static LogicAnalyserCaptureInfo last_capture;
 static bool capture_valid;
 static bool stream_enabled;
 static bool stream_capturing;
-static uint32_t stream_buffers[2][LA_STREAM_MAX_SAMPLES];
+static uint32_t stream_buffers[2][LA_STREAM_BUFFER_WORDS];
 static LogicAnalyserCaptureInfo stream_info[2];
 static uint32_t stream_capture_index;
 static uint32_t stream_sequence;

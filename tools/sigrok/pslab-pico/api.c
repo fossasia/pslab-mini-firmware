@@ -324,13 +324,14 @@ static int config_set(
         devc->sample_count = (uint32_t)sample_count;
         break;
     }
-    case SR_CONF_SAMPLERATE:
-        devc->samplerate_hz = (uint32_t)g_variant_get_uint64(data);
-        if (devc->samplerate_hz == 0 ||
-            devc->samplerate_hz > devc->sysclk_hz) {
+    case SR_CONF_SAMPLERATE: {
+        uint64_t samplerate_hz = g_variant_get_uint64(data);
+        if (samplerate_hz == 0 || samplerate_hz > devc->sysclk_hz) {
             return SR_ERR_ARG;
         }
+        devc->samplerate_hz = (uint32_t)samplerate_hz;
         break;
+    }
     default:
         return SR_ERR_NA;
     }

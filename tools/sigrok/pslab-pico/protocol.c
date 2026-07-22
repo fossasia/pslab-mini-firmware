@@ -301,7 +301,8 @@ static int read_scpi_block(PslabPicoDevice *dev, uint8_t **payload, size_t *len)
     len_text[digits] = '\0';
     char *end = NULL;
     unsigned long payload_len = strtoul(len_text, &end, 10);
-    if (!end || *end != '\0' || payload_len == 0) {
+    if (!end || *end != '\0' || payload_len == 0 ||
+        payload_len > PSLAB_PICO_MAX_BLOCK_BYTES) {
         return -EPROTO;
     }
 
