@@ -119,10 +119,26 @@ void logic_analyser_wait_for_trigger(
     LogicAnalyserTriggerMode trigger_mode
 )
 {
-    logic_analyser_ll_wait_for_trigger(
+    (void)logic_analyser_wait_for_trigger_timeout(
         trigger_pin,
         trigger_level,
-        trigger_mode == LOGIC_ANALYSER_TRIGGER_EDGE
+        trigger_mode,
+        0
+    );
+}
+
+bool logic_analyser_wait_for_trigger_timeout(
+    uint32_t trigger_pin,
+    bool trigger_level,
+    LogicAnalyserTriggerMode trigger_mode,
+    uint32_t timeout_us
+)
+{
+    return logic_analyser_ll_wait_for_trigger_timeout(
+        trigger_pin,
+        trigger_level,
+        trigger_mode == LOGIC_ANALYSER_TRIGGER_EDGE,
+        timeout_us
     );
 }
 

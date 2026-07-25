@@ -15,6 +15,12 @@ enum {
     MIXED_SIGNAL_MAX_SAMPLES = 4096,
 };
 
+typedef enum {
+    MIXED_SIGNAL_STATUS_IDLE = 0,
+    MIXED_SIGNAL_STATUS_READY = 1,
+    MIXED_SIGNAL_STATUS_BUSY = 2,
+} MixedSignalStatus;
+
 typedef struct {
     uint32_t sample_rate_hz;
     uint32_t sample_count;
@@ -55,7 +61,7 @@ MixedSignalCaptureInfo const *mixed_signal_get_last_info(void);
 bool mixed_signal_initiate(void);
 bool mixed_signal_fetch_digital(uint8_t const **data, size_t *len);
 bool mixed_signal_fetch_analog(uint8_t const **data, size_t *len);
-uint32_t mixed_signal_status(void);
+MixedSignalStatus mixed_signal_status(void);
 
 #ifdef __cplusplus
 }

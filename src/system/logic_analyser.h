@@ -74,6 +74,12 @@ void logic_analyser_wait_for_trigger(
     bool trigger_level,
     LogicAnalyserTriggerMode trigger_mode
 );
+bool logic_analyser_wait_for_trigger_timeout(
+    uint32_t trigger_pin,
+    bool trigger_level,
+    LogicAnalyserTriggerMode trigger_mode,
+    uint32_t timeout_us
+);
 uint32_t logic_analyser_capture_word_count(
     uint32_t pin_count,
     uint32_t sample_count

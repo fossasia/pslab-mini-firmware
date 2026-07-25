@@ -162,11 +162,26 @@ static void prepare_trigger_pin(uint32_t trigger_pin, bool trigger_level)
     gpio_set_input_enabled(trigger_pin, true);
 }
 
-static void wait_for_trigger_rearm(uint32_t trigger_pin, bool trigger_level)
+static bool trigger_wait_timed_out(bool use_timeout, uint64_t deadline_us)
+{
+    return use_timeout && time_us_64() >= deadline_us;
+}
+
+static bool wait_for_trigger_rearm(
+    uint32_t trigger_pin,
+    bool trigger_level,
+    bool use_timeout,
+    uint64_t deadline_us
+)
 {
     while (gpio_get(trigger_pin) == trigger_level) {
+        if (trigger_wait_timed_out(use_timeout, deadline_us)) {
+            return false;
+        }
         tight_loop_contents();
     }
+
+    return true;
 }
 
 void logic_analyser_ll_wait_for_trigger(
@@ -175,14 +190,44 @@ void logic_analyser_ll_wait_for_trigger(
     bool edge_trigger
 )
 {
+    (void)logic_analyser_ll_wait_for_trigger_timeout(
+        trigger_pin,
+        trigger_level,
+        edge_trigger,
+        0
+    );
+}
+
+bool logic_analyser_ll_wait_for_trigger_timeout(
+    uint32_t trigger_pin,
+    bool trigger_level,
+    bool edge_trigger,
+    uint32_t timeout_us
+)
+{
     prepare_trigger_pin(trigger_pin, trigger_level);
+    bool use_timeout = timeout_us > 0;
+    uint64_t deadline_us = use_timeout ? time_us_64() + timeout_us : 0;
+
     if (edge_trigger) {
-        wait_for_trigger_rearm(trigger_pin, trigger_level);
+        if (!wait_for_trigger_rearm(
+                trigger_pin,
+                trigger_level,
+                use_timeout,
+                deadline_us
+            )) {
+            return false;
+        }
     }
 
     while (gpio_get(trigger_pin) != trigger_level) {
+        if (trigger_wait_timed_out(use_timeout, deadline_us)) {
+            return false;
+        }
         tight_loop_contents();
     }
+
+    return true;
 }
 
 bool logic_analyser_ll_capture_start(
@@ -239,7 +284,7 @@ bool logic_analyser_ll_capture_arm(
         prepare_trigger_pin(trigger_pin, trigger_level);
     }
     if (wait_for_trigger && edge_trigger) {
-        wait_for_trigger_rearm(trigger_pin, trigger_level);
+        (void)wait_for_trigger_rearm(trigger_pin, trigger_level, false, 0);
     }
 
     PIO pio = config_pio(&la->config);

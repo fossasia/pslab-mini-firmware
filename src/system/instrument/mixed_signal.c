@@ -16,6 +16,7 @@ enum {
     MIXED_SIGNAL_DEFAULT_TRIGGER_PIN = 16,
     MIXED_SIGNAL_MAX_DIGITAL_PIN_COUNT = 8,
     MIXED_SIGNAL_MAX_GPIO_PIN = 29,
+    MIXED_SIGNAL_TRIGGER_TIMEOUT_US = 1000000,
 };
 
 static LogicAnalyser logic_analyser;
@@ -317,11 +318,19 @@ bool mixed_signal_initiate(void)
     }
 
     status_led_capture_started();
-    logic_analyser_wait_for_trigger(
+    bool triggered = logic_analyser_wait_for_trigger_timeout(
         state.trigger_pin,
         state.trigger_level,
-        state.trigger_mode
+        state.trigger_mode,
+        MIXED_SIGNAL_TRIGGER_TIMEOUT_US
     );
+    if (!triggered) {
+        adc_capture_abort();
+        logic_analyser_capture_abort(&logic_analyser);
+        status_led_capture_finished();
+        capture_valid = false;
+        return false;
+    }
 
     bool adc_started = adc_capture_start();
     bool logic_started = logic_analyser_capture_start_armed(&logic_analyser);
@@ -383,11 +392,11 @@ bool mixed_signal_fetch_analog(uint8_t const **data, size_t *len)
     return true;
 }
 
-uint32_t mixed_signal_status(void)
+MixedSignalStatus mixed_signal_status(void)
 {
     if (logic_analyser_is_busy(&logic_analyser) || adc_capture_is_busy()) {
-        return 2;
+        return MIXED_SIGNAL_STATUS_BUSY;
     }
 
-    return capture_valid ? 1 : 0;
+    return capture_valid ? MIXED_SIGNAL_STATUS_READY : MIXED_SIGNAL_STATUS_IDLE;
 }
