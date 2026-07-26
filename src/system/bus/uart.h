@@ -100,6 +100,24 @@ UART_Handle *UART_init(
 );
 
 /**
+ * @brief Initialize the UART peripheral with an explicit baud rate.
+ *
+ * This keeps the current 8N1 format and platform default pins.
+ *
+ * @param bus UART bus instance to initialize (0-based index)
+ * @param rx_buffer Pointer to pre-allocated RX circular buffer
+ * @param tx_buffer Pointer to pre-allocated TX circular buffer
+ * @param baudrate UART baud rate in bits per second
+ * @return Pointer to UART handle on success
+ */
+UART_Handle *UART_init_with_baud(
+    size_t bus,
+    CircularBuffer *rx_buffer,
+    CircularBuffer *tx_buffer,
+    uint32_t baudrate
+);
+
+/**
  * @brief Deinitialize the UART peripheral.
  *
  * @note Bus cannot be deinitialized while passthrough mode is active.

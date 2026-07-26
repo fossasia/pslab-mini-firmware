@@ -20,6 +20,7 @@
 #include "application/dso_commands.h"
 #include "application/logic_analyser_commands.h"
 #include "application/mixed_signal_commands.h"
+#include "application/protocol/bus/uart.h"
 #include "platform/platform.h"
 #include "platform/status_led.h"
 #include "platform/usb_cdc.h"
@@ -30,7 +31,7 @@
 enum {
     USB_RX_CHUNK_SIZE = 64,
     WIFI_RX_CHUNK_SIZE = 256,
-    SCPI_INPUT_BUFFER_SIZE = 256,
+    SCPI_INPUT_BUFFER_SIZE = 1024,
     SCPI_ERROR_QUEUE_SIZE = 16
 };
 
@@ -246,6 +247,23 @@ static scpi_command_t const g_SCPI_COMMANDS[] = {
     { "COMM:TRANsport", scpi_cmd_comm_transport },
     { "COMM:TRANsport?", scpi_cmd_comm_transport_q },
     { "COMM:WIFI:STATus?", scpi_cmd_comm_wifi_status_q },
+
+    // External bus gateway commands
+    { "BUS:UART:OPEN", scpi_cmd_bus_uart_open },
+    { "BUS:UART:OPEN?", scpi_cmd_bus_uart_open_q },
+    { "BUS:UART:CLOSe", scpi_cmd_bus_uart_close },
+    { "BUS:UART:CONFigure:BUS", scpi_cmd_bus_uart_configure_bus },
+    { "BUS:UART:CONFigure:BUS?", scpi_cmd_bus_uart_configure_bus_q },
+    { "BUS:UART:CONFigure:BAUD", scpi_cmd_bus_uart_configure_baud },
+    { "BUS:UART:CONFigure:BAUD?", scpi_cmd_bus_uart_configure_baud_q },
+    { "BUS:UART:CONFigure:TIMEout", scpi_cmd_bus_uart_configure_timeout },
+    { "BUS:UART:CONFigure:TIMEout?", scpi_cmd_bus_uart_configure_timeout_q },
+    { "BUS:UART:WRITe", scpi_cmd_bus_uart_write },
+    { "BUS:UART:READ?", scpi_cmd_bus_uart_read_q },
+    { "BUS:UART:AVAILable?", scpi_cmd_bus_uart_available_q },
+    { "BUS:UART:CLEar", scpi_cmd_bus_uart_clear },
+    { "BUS:UART:FLUSh", scpi_cmd_bus_uart_flush },
+    { "BUS:UART:TRANsact?", scpi_cmd_bus_uart_transact_q },
 
     // Logic analyser commands
     { "LA:CONFigure:PINBase", scpi_cmd_configure_logic_analyser_pinbase },

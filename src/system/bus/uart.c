@@ -241,7 +241,22 @@ UART_Handle *UART_init(
     CircularBuffer *tx_buffer
 )
 {
-    if (!rx_buffer || !tx_buffer || bus >= UART_BUS_COUNT) {
+    return UART_init_with_baud(
+        bus,
+        rx_buffer,
+        tx_buffer,
+        UART_DEFAULT_BAUDRATE
+    );
+}
+
+UART_Handle *UART_init_with_baud(
+    size_t bus,
+    CircularBuffer *rx_buffer,
+    CircularBuffer *tx_buffer,
+    uint32_t baudrate
+)
+{
+    if (!rx_buffer || !tx_buffer || bus >= UART_BUS_COUNT || baudrate == 0) {
         THROW(ERROR_INVALID_ARGUMENT);
     }
 
@@ -270,7 +285,7 @@ UART_Handle *UART_init(
     handle->passthrough_target = NULL;
 
     /* Initialize hardware layer */
-    UART_LL_init(bus_id, rx_buffer->buffer, rx_buffer->size);
+    UART_LL_init_baud(bus_id, rx_buffer->buffer, rx_buffer->size, baudrate);
     UART_LL_set_idle_callback(bus_id, idle_callback);
     UART_LL_set_rx_complete_callback(bus_id, rx_complete_callback);
     UART_LL_set_tx_complete_callback(bus_id, tx_complete_callback);
