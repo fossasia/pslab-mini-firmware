@@ -53,8 +53,7 @@ bool I2C_default_config(uint32_t bus, I2C_Config *config)
 I2C_Handle *I2C_init(I2C_Config const *config)
 {
     if (!config || !valid_bus(config->bus) || config->rate_hz == 0 ||
-        config->timeout_us == 0 || config->sda_gpio > 29 ||
-        config->scl_gpio > 29 || config->sda_gpio == config->scl_gpio ||
+        config->timeout_us == 0 || config->sda_gpio == config->scl_gpio ||
         active_handles[config->bus]) {
         return NULL;
     }

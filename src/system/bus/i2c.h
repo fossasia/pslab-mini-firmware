@@ -45,6 +45,12 @@ uint32_t I2C_get_bus(I2C_Handle const *handle);
 uint32_t I2C_get_rate(I2C_Handle const *handle);
 uint32_t I2C_get_timeout(I2C_Handle const *handle);
 
+/**
+ * @brief Write bytes to a 7-bit I2C address.
+ *
+ * @return Number of bytes written on success, or a negative value on error
+ *         such as timeout, invalid parameters, or address/data NACK.
+ */
 int32_t I2C_write(
     I2C_Handle *handle,
     uint8_t address,
@@ -53,6 +59,12 @@ int32_t I2C_write(
     bool nostop
 );
 
+/**
+ * @brief Read bytes from a 7-bit I2C address.
+ *
+ * @return Number of bytes read on success, or a negative value on error such
+ *         as timeout, invalid parameters, or address NACK.
+ */
 int32_t I2C_read(
     I2C_Handle *handle,
     uint8_t address,
