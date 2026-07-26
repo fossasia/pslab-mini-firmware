@@ -54,9 +54,32 @@ bool logic_analyser_capture_start(
     LogicAnalyserCaptureInfo *info,
     bool wait_for_trigger
 );
+bool logic_analyser_capture_arm(
+    LogicAnalyser *la,
+    uint32_t trigger_pin,
+    bool trigger_level,
+    LogicAnalyserTriggerMode trigger_mode,
+    uint32_t *capture_buf,
+    uint32_t sample_count,
+    LogicAnalyserCaptureInfo *info,
+    bool wait_for_trigger
+);
+bool logic_analyser_capture_start_armed(LogicAnalyser *la);
+void logic_analyser_capture_wait(LogicAnalyser *la);
 bool logic_analyser_capture_complete(LogicAnalyser *la);
 void logic_analyser_capture_abort(LogicAnalyser *la);
 bool logic_analyser_is_busy(LogicAnalyser const *la);
+void logic_analyser_wait_for_trigger(
+    uint32_t trigger_pin,
+    bool trigger_level,
+    LogicAnalyserTriggerMode trigger_mode
+);
+bool logic_analyser_wait_for_trigger_timeout(
+    uint32_t trigger_pin,
+    bool trigger_level,
+    LogicAnalyserTriggerMode trigger_mode,
+    uint32_t timeout_us
+);
 uint32_t logic_analyser_capture_word_count(
     uint32_t pin_count,
     uint32_t sample_count

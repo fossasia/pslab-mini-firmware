@@ -20,6 +20,7 @@ target_sources(pslab_pico PRIVATE
         src/application/logic_analyser_commands.c
         src/application/dso_commands.c
         src/system/instrument/dso.c
+        src/system/instrument/mixed_signal.c
         src/platform/adc_capture.c
         src/platform/logic_analyser_ll.c
         src/platform/platform.c

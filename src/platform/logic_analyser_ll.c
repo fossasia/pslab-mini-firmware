@@ -162,14 +162,106 @@ static void prepare_trigger_pin(uint32_t trigger_pin, bool trigger_level)
     gpio_set_input_enabled(trigger_pin, true);
 }
 
-static void wait_for_trigger_rearm(uint32_t trigger_pin, bool trigger_level)
+static bool trigger_wait_timed_out(bool use_timeout, uint64_t deadline_us)
+{
+    return use_timeout && time_us_64() >= deadline_us;
+}
+
+static bool wait_for_trigger_rearm(
+    uint32_t trigger_pin,
+    bool trigger_level,
+    bool use_timeout,
+    uint64_t deadline_us
+)
 {
     while (gpio_get(trigger_pin) == trigger_level) {
+        if (trigger_wait_timed_out(use_timeout, deadline_us)) {
+            return false;
+        }
         tight_loop_contents();
     }
+
+    return true;
+}
+
+void logic_analyser_ll_wait_for_trigger(
+    uint32_t trigger_pin,
+    bool trigger_level,
+    bool edge_trigger
+)
+{
+    (void)logic_analyser_ll_wait_for_trigger_timeout(
+        trigger_pin,
+        trigger_level,
+        edge_trigger,
+        0
+    );
+}
+
+bool logic_analyser_ll_wait_for_trigger_timeout(
+    uint32_t trigger_pin,
+    bool trigger_level,
+    bool edge_trigger,
+    uint32_t timeout_us
+)
+{
+    prepare_trigger_pin(trigger_pin, trigger_level);
+    bool use_timeout = timeout_us > 0;
+    uint64_t deadline_us = use_timeout ? time_us_64() + timeout_us : 0;
+
+    if (edge_trigger) {
+        if (!wait_for_trigger_rearm(
+                trigger_pin,
+                trigger_level,
+                use_timeout,
+                deadline_us
+            )) {
+            return false;
+        }
+    }
+
+    while (gpio_get(trigger_pin) != trigger_level) {
+        if (trigger_wait_timed_out(use_timeout, deadline_us)) {
+            return false;
+        }
+        tight_loop_contents();
+    }
+
+    return true;
 }
 
 bool logic_analyser_ll_capture_start(
+    LogicAnalyserLL *la,
+    uint32_t trigger_pin,
+    bool trigger_level,
+    bool edge_trigger,
+    uint32_t *capture_buf,
+    uint32_t sample_count,
+    uint32_t word_count,
+    uint32_t bits_per_word,
+    LogicAnalyserLLCaptureInfo *info,
+    bool wait_for_trigger
+)
+{
+    if (!logic_analyser_ll_capture_arm(
+            la,
+            trigger_pin,
+            trigger_level,
+            edge_trigger,
+            capture_buf,
+            sample_count,
+            word_count,
+            bits_per_word,
+            info,
+            wait_for_trigger
+        )) {
+        return false;
+    }
+
+    return logic_analyser_ll_capture_start_armed(la);
+}
+
+bool logic_analyser_ll_capture_arm(
     LogicAnalyserLL *la,
     uint32_t trigger_pin,
     bool trigger_level,
@@ -192,7 +284,7 @@ bool logic_analyser_ll_capture_start(
         prepare_trigger_pin(trigger_pin, trigger_level);
     }
     if (wait_for_trigger && edge_trigger) {
-        wait_for_trigger_rearm(trigger_pin, trigger_level);
+        (void)wait_for_trigger_rearm(trigger_pin, trigger_level, false, 0);
     }
 
     PIO pio = config_pio(&la->config);
@@ -212,7 +304,7 @@ bool logic_analyser_ll_capture_start(
         capture_buf,
         &pio->rxf[la->config.sm],
         word_count,
-        true
+        false
     );
 
     if (wait_for_trigger) {
@@ -222,8 +314,6 @@ bool logic_analyser_ll_capture_start(
             pio_encode_wait_gpio(trigger_level, trigger_pin)
         );
     }
-    pio_sm_set_enabled(pio, la->config.sm, true);
-
     if (info) {
         *info = (LogicAnalyserLLCaptureInfo){
             .pin_base = la->config.pin_base,
@@ -234,6 +324,19 @@ bool logic_analyser_ll_capture_start(
         };
     }
 
+    return true;
+}
+
+bool logic_analyser_ll_capture_start_armed(LogicAnalyserLL *la)
+{
+    if (!la || !la->initialized || la->dma_chan < 0 ||
+        dma_channel_is_busy((uint)la->dma_chan)) {
+        return false;
+    }
+
+    PIO pio = config_pio(&la->config);
+    dma_channel_start((uint)la->dma_chan);
+    pio_sm_set_enabled(pio, la->config.sm, true);
     return true;
 }
 

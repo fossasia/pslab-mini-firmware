@@ -35,6 +35,14 @@ bool adc_capture_run(
     uint32_t sample_count,
     AdcCaptureInfo *info
 );
+bool adc_capture_arm(
+    uint16_t *buffer,
+    uint32_t sample_count,
+    AdcCaptureInfo *info
+);
+bool adc_capture_start(void);
+bool adc_capture_wait(void);
+void adc_capture_abort(void);
 bool adc_capture_read_once(uint16_t *sample);
 bool adc_capture_is_busy(void);
 uint32_t adc_capture_channel_to_gpio(uint32_t channel);
