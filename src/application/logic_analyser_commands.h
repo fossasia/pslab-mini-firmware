@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "system/logic_analyser.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,6 +20,8 @@ bool la_set_divider(uint32_t value);
 bool la_set_trigger_pin(uint32_t value);
 void la_set_trigger_level(bool value);
 bool la_set_trigger_mode_edge(bool edge_mode);
+bool la_set_trigger_mode_auto(void);
+bool la_set_trigger_mode_level(void);
 
 uint32_t la_get_pin_base(void);
 uint32_t la_get_pin_count(void);
@@ -26,6 +30,10 @@ uint32_t la_get_divider(void);
 uint32_t la_get_trigger_pin(void);
 bool la_get_trigger_level(void);
 bool la_get_trigger_mode_edge(void);
+LogicAnalyserTriggerMode la_get_trigger_mode(void);
+uint32_t la_get_sample_rate_hz(void);
+uint32_t la_get_word_count(void);
+uint32_t la_get_bits_per_word(void);
 
 bool la_initiate(void);
 bool la_fetch(uint8_t const **data, size_t *len);

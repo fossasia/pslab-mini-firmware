@@ -1,4 +1,4 @@
-# PSLab Mini Firmware
+# PSLab Pico Firmware
 
 This repository is being prepared for the Raspberry Pi Pico based PSLab
 firmware port.
@@ -131,6 +131,8 @@ Common commands include:
 - `LA:CONF:PINS <first_gpio> <pin_count>`
 - `LA:CONF:DIV <divider>`
 - `LA:CONF:SAMPLES <sample_count>`
+- `LA:CONF:RATE?`
+- `LA:METADATA?`
 - `LA:TRIG:MODE <AUTO|LEVEL|EDGE>`
 - `LA:TRIG:PIN <gpio>`
 - `LA:TRIG:LEVEL <0|1>`
@@ -151,6 +153,13 @@ Common commands include:
 - `TEST:SQUARE:CONF <gpio> <frequency_hz>`
 - `TEST:SQUARE:START`
 - `TEST:SQUARE:STOP`
+
+## PulseView And sigrok
+
+The repo includes an out-of-tree `libsigrok` hardware driver package in
+`tools/sigrok/pslab-pico`. It uses the existing USB CDC SCPI interface and
+unpacks `LA:READ?` binary blocks into sigrok logic samples, so PulseView can use
+its normal protocol decoders for UART, I2C, SPI, and other digital buses.
 
 ## Build
 
