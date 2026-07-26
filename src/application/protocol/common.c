@@ -19,6 +19,7 @@
 #include "application/communication_commands.h"
 #include "application/dso_commands.h"
 #include "application/logic_analyser_commands.h"
+#include "application/mixed_signal_commands.h"
 #include "platform/platform.h"
 #include "platform/status_led.h"
 #include "platform/usb_cdc.h"
@@ -42,6 +43,7 @@ extern scpi_result_t scpi_cmd_configure_logic_analyser_samples(scpi_t *context);
 extern scpi_result_t scpi_cmd_configure_logic_analyser_samples_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_configure_logic_analyser_divider(scpi_t *context);
 extern scpi_result_t scpi_cmd_configure_logic_analyser_divider_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_logic_analyser_rate_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_configure_logic_analyser_trigger_pin(scpi_t *context);
 extern scpi_result_t scpi_cmd_configure_logic_analyser_trigger_pin_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_configure_logic_analyser_trigger_level(scpi_t *context);
@@ -52,6 +54,7 @@ extern scpi_result_t scpi_cmd_initiate_logic_analyser(scpi_t *context);
 extern scpi_result_t scpi_cmd_fetch_logic_analyser_data_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_read_logic_analyser_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_status_logic_analyser_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_metadata_logic_analyser_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_stream_logic_analyser_start(scpi_t *context);
 extern scpi_result_t scpi_cmd_stream_logic_analyser_stop(scpi_t *context);
 extern scpi_result_t scpi_cmd_stream_logic_analyser_status_q(scpi_t *context);
@@ -78,8 +81,34 @@ extern scpi_result_t scpi_cmd_stream_dso_start(scpi_t *context);
 extern scpi_result_t scpi_cmd_stream_dso_stop(scpi_t *context);
 extern scpi_result_t scpi_cmd_stream_dso_status_q(scpi_t *context);
 
+// Forward declarations of mixed-signal functions needed by common
+extern scpi_result_t scpi_cmd_configure_mso_digital_pinbase(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_digital_pinbase_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_digital_pincount(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_digital_pincount_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_analog_channel(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_analog_channel_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_samples(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_samples_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_rate(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_rate_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_trigger_pin(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_trigger_pin_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_trigger_level(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_trigger_level_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_trigger_mode(scpi_t *context);
+extern scpi_result_t scpi_cmd_configure_mso_trigger_mode_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_initiate_mso(scpi_t *context);
+extern scpi_result_t scpi_cmd_fetch_mso_digital_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_fetch_mso_analog_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_read_mso_digital_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_read_mso_analog_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_status_mso_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_metadata_mso_q(scpi_t *context);
+
 static scpi_result_t scpi_cmd_la_wifi_read_q(scpi_t *context);
 static scpi_result_t scpi_cmd_dso_wifi_read_q(scpi_t *context);
+static scpi_result_t scpi_cmd_mso_wifi_read_q(scpi_t *context);
 
 // Forward declarations of test signal functions needed by common
 extern scpi_result_t scpi_cmd_test_square(scpi_t *context);
@@ -87,6 +116,12 @@ extern scpi_result_t scpi_cmd_test_square_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_test_square_configure(scpi_t *context);
 extern scpi_result_t scpi_cmd_test_square_pin_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_test_square_frequency_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_test_analog(scpi_t *context);
+extern scpi_result_t scpi_cmd_test_analog_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_test_analog_configure(scpi_t *context);
+extern scpi_result_t scpi_cmd_test_analog_pin_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_test_analog_frequency_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_test_analog_duty_q(scpi_t *context);
 
 // SCPI context and buffers (internal to protocol module)
 static scpi_t g_scpi_context;
@@ -106,6 +141,7 @@ static uint8_t g_wifi_scpi_response[512];
 static size_t g_wifi_scpi_response_len;
 static uint32_t g_la_wifi_capture_sequence;
 static uint32_t g_dso_wifi_capture_sequence;
+static uint32_t g_mso_wifi_capture_sequence;
 
 static uint32_t logic_analyser_sample_rate_hz(void)
 {
@@ -171,6 +207,7 @@ static scpi_result_t protocol_reset(scpi_t *context)
     (void)context; // Unused parameter
     la_reset_state();
     dso_commands_reset();
+    mso_commands_reset();
     return SCPI_RES_OK;
 }
 
@@ -219,6 +256,7 @@ static scpi_command_t const g_SCPI_COMMANDS[] = {
     { "LA:CONFigure:SAMPles?", scpi_cmd_configure_logic_analyser_samples_q },
     { "LA:CONFigure:DIVider", scpi_cmd_configure_logic_analyser_divider },
     { "LA:CONFigure:DIVider?", scpi_cmd_configure_logic_analyser_divider_q },
+    { "LA:CONFigure:RATE?", scpi_cmd_configure_logic_analyser_rate_q },
     { "LA:CONFigure:TRIGger:PIN", scpi_cmd_configure_logic_analyser_trigger_pin },
     { "LA:CONFigure:TRIGger:PIN?", scpi_cmd_configure_logic_analyser_trigger_pin_q },
     { "LA:CONFigure:TRIGger:LEVel", scpi_cmd_configure_logic_analyser_trigger_level },
@@ -229,6 +267,7 @@ static scpi_command_t const g_SCPI_COMMANDS[] = {
     { "LA:FETCh[:DATa]?", scpi_cmd_fetch_logic_analyser_data_q },
     { "LA:READ?", scpi_cmd_read_logic_analyser_q },
     { "LA:STATus?", scpi_cmd_status_logic_analyser_q },
+    { "LA:METadata?", scpi_cmd_metadata_logic_analyser_q },
     { "LA:STREAM:STARt", scpi_cmd_stream_logic_analyser_start },
     { "LA:STREAM:STOP", scpi_cmd_stream_logic_analyser_stop },
     { "LA:STREAM:STATus?", scpi_cmd_stream_logic_analyser_status_q },
@@ -257,12 +296,44 @@ static scpi_command_t const g_SCPI_COMMANDS[] = {
     { "DSO:STREAM:STATus?", scpi_cmd_stream_dso_status_q },
     { "DSO:WIFI:READ?", scpi_cmd_dso_wifi_read_q },
 
+    // Mixed-signal commands
+    { "MSO:CONFigure:DIGital:PINBase", scpi_cmd_configure_mso_digital_pinbase },
+    { "MSO:CONFigure:DIGital:PINBase?", scpi_cmd_configure_mso_digital_pinbase_q },
+    { "MSO:CONFigure:DIGital:PINCount", scpi_cmd_configure_mso_digital_pincount },
+    { "MSO:CONFigure:DIGital:PINCount?", scpi_cmd_configure_mso_digital_pincount_q },
+    { "MSO:CONFigure:ANALog:CHANnel", scpi_cmd_configure_mso_analog_channel },
+    { "MSO:CONFigure:ANALog:CHANnel?", scpi_cmd_configure_mso_analog_channel_q },
+    { "MSO:CONFigure:SAMPles", scpi_cmd_configure_mso_samples },
+    { "MSO:CONFigure:SAMPles?", scpi_cmd_configure_mso_samples_q },
+    { "MSO:CONFigure:RATE", scpi_cmd_configure_mso_rate },
+    { "MSO:CONFigure:RATE?", scpi_cmd_configure_mso_rate_q },
+    { "MSO:CONFigure:TRIGger:PIN", scpi_cmd_configure_mso_trigger_pin },
+    { "MSO:CONFigure:TRIGger:PIN?", scpi_cmd_configure_mso_trigger_pin_q },
+    { "MSO:CONFigure:TRIGger:LEVel", scpi_cmd_configure_mso_trigger_level },
+    { "MSO:CONFigure:TRIGger:LEVel?", scpi_cmd_configure_mso_trigger_level_q },
+    { "MSO:CONFigure:TRIGger:MODE", scpi_cmd_configure_mso_trigger_mode },
+    { "MSO:CONFigure:TRIGger:MODE?", scpi_cmd_configure_mso_trigger_mode_q },
+    { "MSO:INITiate", scpi_cmd_initiate_mso },
+    { "MSO:FETCh:DIGital?", scpi_cmd_fetch_mso_digital_q },
+    { "MSO:FETCh:ANALog?", scpi_cmd_fetch_mso_analog_q },
+    { "MSO:READ:DIGital?", scpi_cmd_read_mso_digital_q },
+    { "MSO:READ:ANALog?", scpi_cmd_read_mso_analog_q },
+    { "MSO:STATus?", scpi_cmd_status_mso_q },
+    { "MSO:METadata?", scpi_cmd_metadata_mso_q },
+    { "MSO:WIFI:READ?", scpi_cmd_mso_wifi_read_q },
+
     // Built-in test signal commands
     { "TEST:SQUare", scpi_cmd_test_square },
     { "TEST:SQUare?", scpi_cmd_test_square_q },
     { "TEST:SQUare:CONFigure", scpi_cmd_test_square_configure },
     { "TEST:SQUare:PIN?", scpi_cmd_test_square_pin_q },
     { "TEST:SQUare:FREQuency?", scpi_cmd_test_square_frequency_q },
+    { "TEST:ANALog", scpi_cmd_test_analog },
+    { "TEST:ANALog?", scpi_cmd_test_analog_q },
+    { "TEST:ANALog:CONFigure", scpi_cmd_test_analog_configure },
+    { "TEST:ANALog:PIN?", scpi_cmd_test_analog_pin_q },
+    { "TEST:ANALog:FREQuency?", scpi_cmd_test_analog_frequency_q },
+    { "TEST:ANALog:DUTY?", scpi_cmd_test_analog_duty_q },
 
     SCPI_CMD_LIST_END
 };
@@ -335,6 +406,19 @@ static void write_usb_stream_frame(
     usb_cdc_write((uint8_t const *)"\n", 1);
 }
 
+static uint32_t logic_analyser_trigger_mode_metadata(void)
+{
+    switch (la_get_trigger_mode()) {
+    case LOGIC_ANALYSER_TRIGGER_EDGE:
+        return 1u;
+    case LOGIC_ANALYSER_TRIGGER_LEVEL:
+        return 2u;
+    case LOGIC_ANALYSER_TRIGGER_AUTO:
+    default:
+        return 0u;
+    }
+}
+
 static void write_stream_frame(
     TransportInstrument instrument,
     char const *prefix,
@@ -351,7 +435,7 @@ static void write_stream_frame(
                 .sample_count = la_get_samples(),
                 .channel_count = la_get_pin_count(),
                 .pin_base_or_channel = la_get_pin_base(),
-                .trigger_mode = la_get_trigger_mode_edge() ? 1u : 2u,
+                .trigger_mode = logic_analyser_trigger_mode_metadata(),
                 .data_format = 1,
             };
         } else {
@@ -389,7 +473,7 @@ static scpi_result_t scpi_cmd_la_wifi_read_q(scpi_t *context)
         .sample_count = la_get_samples(),
         .channel_count = la_get_pin_count(),
         .pin_base_or_channel = la_get_pin_base(),
-        .trigger_mode = la_get_trigger_mode_edge() ? 1u : 2u,
+        .trigger_mode = logic_analyser_trigger_mode_metadata(),
         .data_format = 1,
     };
     if (!transport_send_capture(
@@ -433,6 +517,69 @@ static scpi_result_t scpi_cmd_dso_wifi_read_q(scpi_t *context)
             &meta,
             data,
             len
+        )) {
+        SCPI_ErrorPush(context, SCPI_ERROR_EXECUTION_ERROR);
+        return SCPI_RES_ERR;
+    }
+
+    SCPI_ResultUInt32(context, sequence);
+    return SCPI_RES_OK;
+}
+
+static scpi_result_t scpi_cmd_mso_wifi_read_q(scpi_t *context)
+{
+    uint8_t const *digital_data = NULL;
+    uint8_t const *analog_data = NULL;
+    size_t digital_len = 0;
+    size_t analog_len = 0;
+    uint32_t sequence = g_mso_wifi_capture_sequence++;
+
+    transport_set_mode(TRANSPORT_MODE_WIFI);
+    if (!mso_commands_initiate() ||
+        !mso_commands_fetch_digital(&digital_data, &digital_len) ||
+        !mso_commands_fetch_analog(&analog_data, &analog_len)) {
+        SCPI_ErrorPush(context, SCPI_ERROR_EXECUTION_ERROR);
+        return SCPI_RES_ERR;
+    }
+
+    MixedSignalCaptureInfo const *info = mso_commands_get_last_info();
+    if (!info) {
+        SCPI_ErrorPush(context, SCPI_ERROR_EXECUTION_ERROR);
+        return SCPI_RES_ERR;
+    }
+
+    TransportCaptureMeta digital_meta = {
+        .sample_rate_hz = info->sample_rate_hz,
+        .sample_count = info->sample_count,
+        .channel_count = info->digital_pin_count,
+        .pin_base_or_channel = info->digital_pin_base,
+        .trigger_mode =
+            info->trigger_mode == LOGIC_ANALYSER_TRIGGER_EDGE ? 1u : 2u,
+        .data_format = 1,
+    };
+    TransportCaptureMeta analog_meta = {
+        .sample_rate_hz = info->sample_rate_hz,
+        .sample_count = info->sample_count,
+        .channel_count = 1,
+        .pin_base_or_channel = info->analog_channel,
+        .trigger_mode =
+            info->trigger_mode == LOGIC_ANALYSER_TRIGGER_EDGE ? 1u : 2u,
+        .data_format = 2,
+    };
+
+    if (!transport_send_capture(
+            TRANSPORT_INSTRUMENT_MSO_DIGITAL,
+            sequence,
+            &digital_meta,
+            digital_data,
+            digital_len
+        ) ||
+        !transport_send_capture(
+            TRANSPORT_INSTRUMENT_MSO_ANALOG,
+            sequence,
+            &analog_meta,
+            analog_data,
+            analog_len
         )) {
         SCPI_ErrorPush(context, SCPI_ERROR_EXECUTION_ERROR);
         return SCPI_RES_ERR;

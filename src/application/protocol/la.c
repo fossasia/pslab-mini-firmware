@@ -90,6 +90,12 @@ scpi_result_t scpi_cmd_configure_logic_analyser_divider_q(scpi_t *context)
     return SCPI_RES_OK;
 }
 
+scpi_result_t scpi_cmd_configure_logic_analyser_rate_q(scpi_t *context)
+{
+    SCPI_ResultUInt32(context, la_get_sample_rate_hz());
+    return SCPI_RES_OK;
+}
+
 scpi_result_t scpi_cmd_configure_logic_analyser_trigger_pin(scpi_t *context)
 {
     return configure_uint32(context, la_set_trigger_pin);
@@ -121,8 +127,9 @@ scpi_result_t scpi_cmd_configure_logic_analyser_trigger_level_q(scpi_t *context)
 
 scpi_result_t scpi_cmd_configure_logic_analyser_trigger_mode(scpi_t *context)
 {
-    enum { TRIGGER_MODE_EDGE, TRIGGER_MODE_LEVEL };
+    enum { TRIGGER_MODE_AUTO, TRIGGER_MODE_EDGE, TRIGGER_MODE_LEVEL };
     scpi_choice_def_t const trigger_mode_choices[] = {
+        { "AUTO", TRIGGER_MODE_AUTO },
         { "EDGE", TRIGGER_MODE_EDGE },
         { "LEVEL", TRIGGER_MODE_LEVEL },
         SCPI_CHOICE_LIST_END
@@ -134,14 +141,34 @@ scpi_result_t scpi_cmd_configure_logic_analyser_trigger_mode(scpi_t *context)
         return SCPI_RES_ERR;
     }
 
-    return la_set_trigger_mode_edge(choice == TRIGGER_MODE_EDGE)
-               ? result_ok()
-               : result_illegal_parameter(context);
+    if (choice == TRIGGER_MODE_AUTO) {
+        return la_set_trigger_mode_auto() ? result_ok()
+                                          : result_illegal_parameter(context);
+    }
+
+    if (choice == TRIGGER_MODE_LEVEL) {
+        return la_set_trigger_mode_level() ? result_ok()
+                                           : result_illegal_parameter(context);
+    }
+
+    return la_set_trigger_mode_edge(true) ? result_ok()
+                                          : result_illegal_parameter(context);
 }
 
 scpi_result_t scpi_cmd_configure_logic_analyser_trigger_mode_q(scpi_t *context)
 {
-    SCPI_ResultText(context, la_get_trigger_mode_edge() ? "EDGE" : "LEVEL");
+    switch (la_get_trigger_mode()) {
+    case LOGIC_ANALYSER_TRIGGER_AUTO:
+        SCPI_ResultText(context, "AUTO");
+        break;
+    case LOGIC_ANALYSER_TRIGGER_EDGE:
+        SCPI_ResultText(context, "EDGE");
+        break;
+    case LOGIC_ANALYSER_TRIGGER_LEVEL:
+    default:
+        SCPI_ResultText(context, "LEVEL");
+        break;
+    }
     return SCPI_RES_OK;
 }
 
@@ -175,6 +202,26 @@ scpi_result_t scpi_cmd_read_logic_analyser_q(scpi_t *context)
 scpi_result_t scpi_cmd_status_logic_analyser_q(scpi_t *context)
 {
     SCPI_ResultUInt32(context, la_status());
+    return SCPI_RES_OK;
+}
+
+scpi_result_t scpi_cmd_metadata_logic_analyser_q(scpi_t *context)
+{
+    char metadata[96];
+
+    snprintf(
+        metadata,
+        sizeof(metadata),
+        "%lu,%lu,%lu,%lu,%lu,%lu",
+        (unsigned long)la_get_sample_rate_hz(),
+        (unsigned long)la_get_pin_base(),
+        (unsigned long)la_get_pin_count(),
+        (unsigned long)la_get_samples(),
+        (unsigned long)la_get_word_count(),
+        (unsigned long)la_get_bits_per_word()
+    );
+
+    SCPI_ResultText(context, metadata);
     return SCPI_RES_OK;
 }
 
@@ -261,5 +308,73 @@ scpi_result_t scpi_cmd_test_square_pin_q(scpi_t *context)
 scpi_result_t scpi_cmd_test_square_frequency_q(scpi_t *context)
 {
     SCPI_ResultUInt32(context, test_signal_get_frequency_hz());
+    return SCPI_RES_OK;
+}
+
+scpi_result_t scpi_cmd_test_analog(scpi_t *context)
+{
+    scpi_bool_t enable = FALSE;
+    if (!SCPI_ParamBool(context, &enable, TRUE)) {
+        SCPI_ErrorPush(context, SCPI_ERROR_MISSING_PARAMETER);
+        return SCPI_RES_ERR;
+    }
+
+    if (enable == TRUE) {
+        return test_signal_analog_start(
+                   TEST_SIGNAL_ANALOG_DEFAULT_PIN,
+                   TEST_SIGNAL_ANALOG_DEFAULT_FREQUENCY_HZ,
+                   TEST_SIGNAL_ANALOG_DEFAULT_DUTY_PERMILLE
+               )
+                   ? result_ok()
+                   : result_execution_error(context);
+    }
+
+    test_signal_analog_stop();
+    return SCPI_RES_OK;
+}
+
+scpi_result_t scpi_cmd_test_analog_q(scpi_t *context)
+{
+    SCPI_ResultBool(context, test_signal_analog_is_enabled() ? TRUE : FALSE);
+    return SCPI_RES_OK;
+}
+
+scpi_result_t scpi_cmd_test_analog_configure(scpi_t *context)
+{
+    uint32_t pin = 0;
+    uint32_t frequency = 0;
+    uint32_t duty_permille = 0;
+
+    if (!SCPI_ParamUInt32(context, &pin, TRUE) ||
+        !SCPI_ParamUInt32(context, &frequency, TRUE) ||
+        !SCPI_ParamUInt32(context, &duty_permille, TRUE)) {
+        SCPI_ErrorPush(context, SCPI_ERROR_MISSING_PARAMETER);
+        return SCPI_RES_ERR;
+    }
+
+    if (pin > 29 || frequency == 0 || duty_permille > 1000) {
+        return result_illegal_parameter(context);
+    }
+
+    return test_signal_analog_start(pin, frequency, duty_permille)
+               ? result_ok()
+               : result_execution_error(context);
+}
+
+scpi_result_t scpi_cmd_test_analog_pin_q(scpi_t *context)
+{
+    SCPI_ResultUInt32(context, test_signal_analog_get_pin());
+    return SCPI_RES_OK;
+}
+
+scpi_result_t scpi_cmd_test_analog_frequency_q(scpi_t *context)
+{
+    SCPI_ResultUInt32(context, test_signal_analog_get_frequency_hz());
+    return SCPI_RES_OK;
+}
+
+scpi_result_t scpi_cmd_test_analog_duty_q(scpi_t *context)
+{
+    SCPI_ResultUInt32(context, test_signal_analog_get_duty_permille());
     return SCPI_RES_OK;
 }
