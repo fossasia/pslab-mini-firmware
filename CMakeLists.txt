@@ -26,6 +26,7 @@ target_sources(pslab_pico PRIVATE
         src/system/instrument/dso.c
         src/system/instrument/mixed_signal.c
         src/platform/adc_capture.c
+        src/platform/i2c_ll.c
         src/platform/logic_analyser_ll.c
         src/platform/platform.c
         src/platform/esp_spi_bridge.c
@@ -34,6 +35,7 @@ target_sources(pslab_pico PRIVATE
         src/platform/usb_descriptors.c
         src/platform/status_led.c
         src/platform/test_signal.c
+        src/system/bus/i2c.c
         src/system/bus/uart.c
         src/system/logic_analyser.c
         src/system/transport.c
@@ -73,6 +75,7 @@ target_link_libraries(pslab_pico PRIVATE
         hardware_pio
         hardware_dma
         hardware_adc
+        hardware_i2c
         hardware_pwm
         hardware_spi
         hardware_uart
