@@ -12,6 +12,8 @@ enum {
     PATTERN_OUTPUT_INSTRUCTIONS_PER_SAMPLE = 2,
 };
 
+static float const PATTERN_OUTPUT_MAX_CLKDIV = 65536.0f;
+
 static PIO config_pio(PatternOutputLLConfig const *config)
 {
     return config && config->pio ? (PIO)config->pio : pio0;
@@ -122,7 +124,7 @@ bool pattern_output_ll_configure(
     }
 
     float clk_div = rate_to_clkdiv(config->rate_hz);
-    if (clk_div < 1.0f) {
+    if (clk_div < 1.0f || clk_div > PATTERN_OUTPUT_MAX_CLKDIV) {
         return false;
     }
 
@@ -138,15 +140,15 @@ bool pattern_output_ll_configure(
 
     pg->config = *config;
     PIO pio = config_pio(&pg->config);
-    for (uint32_t pin = 0; pin < config->pin_count; ++pin) {
-        pio_gpio_init(pio, config->pin_base + pin);
-    }
-
     if (!load_program(pg)) {
         pg->initialized = false;
         pg->program_loaded = false;
         pg->loop_enabled = false;
         return false;
+    }
+
+    for (uint32_t pin = 0; pin < config->pin_count; ++pin) {
+        pio_gpio_init(pio, config->pin_base + pin);
     }
 
     pio_sm_config sm_config = pio_get_default_sm_config();
