@@ -20,6 +20,7 @@
 #include "application/dso_commands.h"
 #include "application/logic_analyser_commands.h"
 #include "application/mixed_signal_commands.h"
+#include "application/pattern_generator_commands.h"
 #include "application/protocol/bus/i2c.h"
 #include "application/protocol/bus/uart.h"
 #include "platform/platform.h"
@@ -107,6 +108,18 @@ extern scpi_result_t scpi_cmd_read_mso_digital_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_read_mso_analog_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_status_mso_q(scpi_t *context);
 extern scpi_result_t scpi_cmd_metadata_mso_q(scpi_t *context);
+
+// Forward declarations of pattern generator functions needed by common
+extern scpi_result_t scpi_cmd_pattern_generator_pins(scpi_t *context);
+extern scpi_result_t scpi_cmd_pattern_generator_pins_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_pattern_generator_rate(scpi_t *context);
+extern scpi_result_t scpi_cmd_pattern_generator_rate_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_pattern_generator_mode(scpi_t *context);
+extern scpi_result_t scpi_cmd_pattern_generator_mode_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_pattern_generator_data(scpi_t *context);
+extern scpi_result_t scpi_cmd_pattern_generator_start(scpi_t *context);
+extern scpi_result_t scpi_cmd_pattern_generator_stop(scpi_t *context);
+extern scpi_result_t scpi_cmd_pattern_generator_status_q(scpi_t *context);
 
 static scpi_result_t scpi_cmd_la_wifi_read_q(scpi_t *context);
 static scpi_result_t scpi_cmd_dso_wifi_read_q(scpi_t *context);
@@ -210,6 +223,7 @@ static scpi_result_t protocol_reset(scpi_t *context)
     la_reset_state();
     dso_commands_reset();
     mso_commands_reset();
+    pg_reset_state();
     return SCPI_RES_OK;
 }
 
@@ -355,6 +369,18 @@ static scpi_command_t const g_SCPI_COMMANDS[] = {
     { "MSO:STATus?", scpi_cmd_status_mso_q },
     { "MSO:METadata?", scpi_cmd_metadata_mso_q },
     { "MSO:WIFI:READ?", scpi_cmd_mso_wifi_read_q },
+
+    // Digital pattern generator commands
+    { "PG:CONFigure:PINS", scpi_cmd_pattern_generator_pins },
+    { "PG:CONFigure:PINS?", scpi_cmd_pattern_generator_pins_q },
+    { "PG:CONFigure:RATE", scpi_cmd_pattern_generator_rate },
+    { "PG:CONFigure:RATE?", scpi_cmd_pattern_generator_rate_q },
+    { "PG:CONFigure:MODE", scpi_cmd_pattern_generator_mode },
+    { "PG:CONFigure:MODE?", scpi_cmd_pattern_generator_mode_q },
+    { "PG:DATA", scpi_cmd_pattern_generator_data },
+    { "PG:STARt", scpi_cmd_pattern_generator_start },
+    { "PG:STOP", scpi_cmd_pattern_generator_stop },
+    { "PG:STATus?", scpi_cmd_pattern_generator_status_q },
 
     // Built-in test signal commands
     { "TEST:SQUare", scpi_cmd_test_square },
@@ -631,6 +657,8 @@ void protocol_task(void)
     if (!g_protocol_initialized) {
         return;
     }
+
+    pg_task();
 
     // Step USB task
     usb_cdc_task();
