@@ -20,6 +20,7 @@
 #include "application/dso_commands.h"
 #include "application/logic_analyser_commands.h"
 #include "application/mixed_signal_commands.h"
+#include "application/protocol/bus/i2c.h"
 #include "application/protocol/bus/uart.h"
 #include "platform/platform.h"
 #include "platform/status_led.h"
@@ -264,6 +265,21 @@ static scpi_command_t const g_SCPI_COMMANDS[] = {
     { "BUS:UART:CLEar", scpi_cmd_bus_uart_clear },
     { "BUS:UART:FLUSh", scpi_cmd_bus_uart_flush },
     { "BUS:UART:TRANsact?", scpi_cmd_bus_uart_transact_q },
+    { "BUS:I2C:OPEN", scpi_cmd_bus_i2c_open },
+    { "BUS:I2C:OPEN?", scpi_cmd_bus_i2c_open_q },
+    { "BUS:I2C:CLOSe", scpi_cmd_bus_i2c_close },
+    { "BUS:I2C:CONFigure:BUS", scpi_cmd_bus_i2c_configure_bus },
+    { "BUS:I2C:CONFigure:BUS?", scpi_cmd_bus_i2c_configure_bus_q },
+    { "BUS:I2C:CONFigure:RATE", scpi_cmd_bus_i2c_configure_rate },
+    { "BUS:I2C:CONFigure:RATE?", scpi_cmd_bus_i2c_configure_rate_q },
+    { "BUS:I2C:CONFigure:ADDRess", scpi_cmd_bus_i2c_configure_address },
+    { "BUS:I2C:CONFigure:ADDRess?", scpi_cmd_bus_i2c_configure_address_q },
+    { "BUS:I2C:CONFigure:TIMEout", scpi_cmd_bus_i2c_configure_timeout },
+    { "BUS:I2C:CONFigure:TIMEout?", scpi_cmd_bus_i2c_configure_timeout_q },
+    { "BUS:I2C:SCAN?", scpi_cmd_bus_i2c_scan_q },
+    { "BUS:I2C:WRITe", scpi_cmd_bus_i2c_write },
+    { "BUS:I2C:READ?", scpi_cmd_bus_i2c_read_q },
+    { "BUS:I2C:TRANsact?", scpi_cmd_bus_i2c_transact_q },
 
     // Logic analyser commands
     { "LA:CONFigure:PINBase", scpi_cmd_configure_logic_analyser_pinbase },

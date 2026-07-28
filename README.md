@@ -195,6 +195,41 @@ Available commands:
 `WRITe`, `READ?`, and `TRANsact?` use SCPI arbitrary blocks so binary payloads
 are safe. The current implementation caps each transfer at 512 bytes.
 
+The I2C gateway exposes the Pico I2C controller as a SCPI master bus for
+external sensors and peripherals. It defaults to I2C0 on GPIO0/GPIO1 at
+100 kHz.
+
+I2C defaults:
+
+- I2C0 SDA: GPIO0
+- I2C0 SCL: GPIO1
+- I2C1 SDA: GPIO6
+- I2C1 SCL: GPIO7
+- Addressing: 7 bit master mode
+
+Available commands:
+
+- `BUS:I2C:CONFigure:BUS <0|1>`
+- `BUS:I2C:CONFigure:BUS?`
+- `BUS:I2C:CONFigure:RATE <hz>`
+- `BUS:I2C:CONFigure:RATE?`
+- `BUS:I2C:CONFigure:ADDRess <address>`
+- `BUS:I2C:CONFigure:ADDRess?`
+- `BUS:I2C:CONFigure:TIMEout <ms>`
+- `BUS:I2C:CONFigure:TIMEout?`
+- `BUS:I2C:OPEN`
+- `BUS:I2C:OPEN?`
+- `BUS:I2C:CLOSe`
+- `BUS:I2C:SCAN?`
+- `BUS:I2C:WRITe <arbitrary_block>`
+- `BUS:I2C:READ? <byte_count>`
+- `BUS:I2C:TRANsact? <arbitrary_block>,<read_byte_count>`
+
+`SCAN?` returns comma separated hexadecimal 7 bit addresses. `WRITe`,
+`READ?`, and `TRANsact?` use SCPI arbitrary blocks and are capped at 512
+bytes per transfer. `TRANsact?` sends the write block followed by a repeated
+start read, which is the common register read pattern for I2C sensors.
+
 ## Build
 
 Configure from the project root:
