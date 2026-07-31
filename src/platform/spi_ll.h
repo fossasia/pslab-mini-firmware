@@ -76,7 +76,8 @@ int32_t SPI_LL_transfer(
     SPI_LL_Bus bus,
     uint8_t const *tx_data,
     uint8_t *rx_data,
-    size_t len
+    size_t len,
+    uint8_t dummy_byte
 );
 
 #ifdef __cplusplus

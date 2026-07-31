@@ -257,7 +257,8 @@ int32_t SPI_LL_transfer(
     SPI_LL_Bus bus,
     uint8_t const *tx_data,
     uint8_t *rx_data,
-    size_t len
+    size_t len,
+    uint8_t dummy_byte
 )
 {
     if (!SPI_LL_is_initialized(bus) || len == 0 ||
@@ -278,5 +279,5 @@ int32_t SPI_LL_transfer(
         return spi_write_blocking(instances[bus].instance, tx_data, len);
     }
 
-    return spi_read_blocking(instances[bus].instance, 0xff, rx_data, len);
+    return spi_read_blocking(instances[bus].instance, dummy_byte, rx_data, len);
 }
