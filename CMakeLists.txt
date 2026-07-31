@@ -34,6 +34,7 @@ target_sources(pslab_pico PRIVATE
         src/platform/pattern_output_ll.c
         src/platform/platform.c
         src/platform/esp_spi_bridge.c
+        src/platform/spi_ll.c
         src/platform/uart_ll.c
         src/platform/usb_cdc.c
         src/platform/usb_descriptors.c
