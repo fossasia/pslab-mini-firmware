@@ -7,7 +7,7 @@
 enum {
     PG_DEFAULT_PIN_BASE = 16,
     PG_DEFAULT_PIN_COUNT = 1,
-    PG_DEFAULT_RATE_HZ = 1000,
+    PG_DEFAULT_RATE_HZ = 2000,
     PG_MAX_PIN_COUNT = 8,
     PG_MAX_PATTERN_WORDS = 16384,
     PG_MAX_RATE_HZ = 75000000,
@@ -58,6 +58,15 @@ static bool apply_config(void)
     return pg_initialized;
 }
 
+static void mark_unconfigured(void)
+{
+    if (pg_initialized) {
+        pattern_generator_deinit(&pg);
+    }
+
+    pg_initialized = false;
+}
+
 void pg_reset_state(void)
 {
     pg_stop();
@@ -96,6 +105,7 @@ bool pg_set_pins(uint32_t pin_base, uint32_t pin_count)
     if (pg_initialized && !apply_config()) {
         state.pin_base = old_pin_base;
         state.pin_count = old_pin_count;
+        mark_unconfigured();
         return false;
     }
 
@@ -113,6 +123,7 @@ bool pg_set_rate(uint32_t rate_hz)
 
     if (pg_initialized && !apply_config()) {
         state.rate_hz = old_rate_hz;
+        mark_unconfigured();
         return false;
     }
 
