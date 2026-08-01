@@ -230,6 +230,45 @@ Available commands:
 bytes per transfer. `TRANsact?` sends the write block followed by a repeated
 start read, which is the common register read pattern for I2C sensors.
 
+The SPI gateway exposes SPI1 as a SCPI master bus. SPI0 is reserved by the
+ESP/WiFi bridge and is not exposed through the generic gateway.
+
+SPI defaults:
+
+- SPI1 SCK: GPIO10
+- SPI1 MOSI/TX: GPIO11
+- SPI1 MISO/RX: GPIO12
+- SPI1 CS: GPIO13
+- Rate: 1 MHz
+- Mode: 0
+- Bit order: MSB first
+- CS polarity: active low
+- Dummy byte for reads: `0xff`
+
+Available commands:
+
+- `BUS:SPI:CONFigure:BUS <1>`
+- `BUS:SPI:CONFigure:BUS?`
+- `BUS:SPI:CONFigure:RATE <hz>`
+- `BUS:SPI:CONFigure:RATE?`
+- `BUS:SPI:CONFigure:MODE <0|1|2|3>`
+- `BUS:SPI:CONFigure:MODE?`
+- `BUS:SPI:CONFigure:DUMMY <byte>`
+- `BUS:SPI:CONFigure:DUMMY?`
+- `BUS:SPI:OPEN`
+- `BUS:SPI:OPEN?`
+- `BUS:SPI:CLOSe`
+- `BUS:SPI:WRITe <arbitrary_block>`
+- `BUS:SPI:READ? <byte_count>`
+- `BUS:SPI:EXCHange? <arbitrary_block>`
+- `BUS:SPI:TRANsact? <arbitrary_block>,<read_byte_count>`
+
+`WRITe`, `READ?`, `EXCHange?`, and `TRANsact?` use SCPI arbitrary blocks and
+are capped at 512 bytes per transfer. `EXCHange?` performs a full duplex SPI
+transfer and returns the bytes received while the command block is clocked out.
+`TRANsact?` writes a command block and then reads a response while keeping CS
+asserted, which is the common register read pattern for SPI sensors.
+
 ## Build
 
 Configure from the project root:
