@@ -10,14 +10,21 @@
 #include "platform/spi_ll.h"
 
 struct SPI_Handle {
-    SPI_LL_Bus bus;
+    uint32_t bus;
+    SPI_LL_Bus ll_bus;
     uint8_t dummy_byte;
     bool initialized;
 };
 
-static SPI_Handle *active_handles[SPI_LL_BUS_COUNT];
+static SPI_Handle *active_handles[SPI_BUS_COUNT];
 
-static bool valid_bus(uint32_t bus) { return bus == SPI_DEFAULT_BUS; }
+static bool valid_bus(uint32_t bus) { return bus < SPI_BUS_COUNT; }
+
+static SPI_LL_Bus to_ll_bus(uint32_t bus)
+{
+    (void)bus;
+    return SPI_LL_BUS_1;
+}
 
 static bool valid_mode(SPI_Mode mode) { return mode <= SPI_MODE_3; }
 
@@ -40,7 +47,7 @@ static SPI_BitOrder from_ll_bit_order(SPI_LL_BitOrder bit_order)
     return (SPI_BitOrder)bit_order;
 }
 
-size_t SPI_get_bus_count(void) { return SPI_LL_BUS_COUNT; }
+size_t SPI_get_bus_count(void) { return SPI_BUS_COUNT; }
 
 bool SPI_default_config(uint32_t bus, SPI_Config *config)
 {
@@ -49,7 +56,7 @@ bool SPI_default_config(uint32_t bus, SPI_Config *config)
     }
 
     SPI_LL_Config ll_config;
-    if (!SPI_LL_default_config((SPI_LL_Bus)bus, &ll_config)) {
+    if (!SPI_LL_default_config(to_ll_bus(bus), &ll_config)) {
         return false;
     }
 
@@ -92,13 +99,15 @@ SPI_Handle *SPI_init(SPI_Config const *config)
         .cs_active_low = config->cs_active_low,
     };
 
-    if (!SPI_LL_init((SPI_LL_Bus)config->bus, &ll_config)) {
+    SPI_LL_Bus ll_bus = to_ll_bus(config->bus);
+    if (!SPI_LL_init(ll_bus, &ll_config)) {
         free(handle);
         return NULL;
     }
 
     *handle = (SPI_Handle){
-        .bus = (SPI_LL_Bus)config->bus,
+        .bus = config->bus,
+        .ll_bus = ll_bus,
         .dummy_byte = config->dummy_byte,
         .initialized = true,
     };
@@ -112,8 +121,8 @@ void SPI_deinit(SPI_Handle *handle)
         return;
     }
 
-    SPI_LL_Bus bus = handle->bus;
-    SPI_LL_deinit(bus);
+    uint32_t bus = handle->bus;
+    SPI_LL_deinit(handle->ll_bus);
     if (valid_bus(bus) && active_handles[bus] == handle) {
         active_handles[bus] = NULL;
     }
@@ -125,29 +134,29 @@ void SPI_deinit(SPI_Handle *handle)
 bool SPI_is_ready(SPI_Handle const *handle)
 {
     return handle && handle->initialized &&
-           SPI_LL_is_initialized(handle->bus);
+           SPI_LL_is_initialized(handle->ll_bus);
 }
 
 uint32_t SPI_get_bus(SPI_Handle const *handle)
 {
-    return SPI_is_ready(handle) ? (uint32_t)handle->bus : SPI_LL_BUS_COUNT;
+    return SPI_is_ready(handle) ? handle->bus : SPI_BUS_COUNT;
 }
 
 uint32_t SPI_get_rate(SPI_Handle const *handle)
 {
-    return SPI_is_ready(handle) ? SPI_LL_get_rate(handle->bus) : 0;
+    return SPI_is_ready(handle) ? SPI_LL_get_rate(handle->ll_bus) : 0;
 }
 
 SPI_Mode SPI_get_mode(SPI_Handle const *handle)
 {
-    return SPI_is_ready(handle) ? from_ll_mode(SPI_LL_get_mode(handle->bus))
+    return SPI_is_ready(handle) ? from_ll_mode(SPI_LL_get_mode(handle->ll_bus))
                                 : SPI_MODE_0;
 }
 
 SPI_BitOrder SPI_get_bit_order(SPI_Handle const *handle)
 {
     return SPI_is_ready(handle)
-               ? from_ll_bit_order(SPI_LL_get_bit_order(handle->bus))
+               ? from_ll_bit_order(SPI_LL_get_bit_order(handle->ll_bus))
                : SPI_BIT_ORDER_MSB_FIRST;
 }
 
@@ -167,18 +176,18 @@ int32_t SPI_exchange(
         return -1;
     }
 
-    if (!SPI_LL_select(handle->bus)) {
+    if (!SPI_LL_select(handle->ll_bus)) {
         return -1;
     }
 
     int32_t result = SPI_LL_transfer(
-        handle->bus,
+        handle->ll_bus,
         tx_data,
         rx_data,
         len,
         handle->dummy_byte
     );
-    SPI_LL_deselect(handle->bus);
+    SPI_LL_deselect(handle->ll_bus);
     return result;
 }
 
@@ -188,18 +197,18 @@ int32_t SPI_write(SPI_Handle *handle, uint8_t const *data, size_t len)
         return -1;
     }
 
-    if (!SPI_LL_select(handle->bus)) {
+    if (!SPI_LL_select(handle->ll_bus)) {
         return -1;
     }
 
     int32_t result = SPI_LL_transfer(
-        handle->bus,
+        handle->ll_bus,
         data,
         NULL,
         len,
         handle->dummy_byte
     );
-    SPI_LL_deselect(handle->bus);
+    SPI_LL_deselect(handle->ll_bus);
     return result;
 }
 
@@ -209,18 +218,18 @@ int32_t SPI_read(SPI_Handle *handle, uint8_t *data, size_t len)
         return -1;
     }
 
-    if (!SPI_LL_select(handle->bus)) {
+    if (!SPI_LL_select(handle->ll_bus)) {
         return -1;
     }
 
     int32_t result = SPI_LL_transfer(
-        handle->bus,
+        handle->ll_bus,
         NULL,
         data,
         len,
         handle->dummy_byte
     );
-    SPI_LL_deselect(handle->bus);
+    SPI_LL_deselect(handle->ll_bus);
     return result;
 }
 
@@ -237,29 +246,33 @@ int32_t SPI_transact(
         return -1;
     }
 
-    if (!SPI_LL_select(handle->bus)) {
+    if (!SPI_LL_select(handle->ll_bus)) {
         return -1;
     }
 
     int32_t written = SPI_LL_transfer(
-        handle->bus,
+        handle->ll_bus,
         tx_data,
         NULL,
         tx_len,
         handle->dummy_byte
     );
-    if (written < 0 || (size_t)written != tx_len) {
-        SPI_LL_deselect(handle->bus);
+    if (written < 0) {
+        SPI_LL_deselect(handle->ll_bus);
+        return written;
+    }
+    if ((size_t)written != tx_len) {
+        SPI_LL_deselect(handle->ll_bus);
         return -1;
     }
 
     int32_t read = SPI_LL_transfer(
-        handle->bus,
+        handle->ll_bus,
         NULL,
         rx_data,
         rx_len,
         handle->dummy_byte
     );
-    SPI_LL_deselect(handle->bus);
+    SPI_LL_deselect(handle->ll_bus);
     return read;
 }

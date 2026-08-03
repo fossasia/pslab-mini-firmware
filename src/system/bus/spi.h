@@ -45,7 +45,8 @@ typedef struct {
 } SPI_Config;
 
 enum {
-    SPI_DEFAULT_BUS = 1,
+    SPI_BUS_COUNT = 1,
+    SPI_DEFAULT_BUS = 0,
     SPI_DEFAULT_RATE_HZ = 1000000,
     SPI_DEFAULT_DUMMY_BYTE = 0xff,
 };
