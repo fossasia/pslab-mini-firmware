@@ -249,8 +249,11 @@ Available commands:
 - `PG:STOP`
 - `PG:STATus?`
 
-`PG:DATA` uses a SCPI arbitrary block containing little-endian `uint32_t`
-pattern words. `PG:STATus?` returns `running,rate_hz,pin_count,pattern_words`.
+`PG:DATA` uses a SCPI arbitrary block containing little-endian packed
+`uint32_t` pattern words. Each word stores `floor(32 / pin_count)` consecutive
+samples; each sample consumes `pin_count` bits, starting from the least
+significant bits. Unused high bits in each word are ignored. `PG:STATus?`
+returns `running,rate_hz,pin_count,pattern_words`.
 
 ## Build
 

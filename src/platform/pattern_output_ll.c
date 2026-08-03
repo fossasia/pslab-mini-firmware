@@ -9,7 +9,7 @@
 #include "platform/platform.h"
 
 enum {
-    PATTERN_OUTPUT_INSTRUCTIONS_PER_SAMPLE = 2,
+    PATTERN_OUTPUT_INSTRUCTIONS_PER_SAMPLE = 1,
 };
 
 static float const PATTERN_OUTPUT_MAX_CLKDIV = 65536.0f;
@@ -17,6 +17,11 @@ static float const PATTERN_OUTPUT_MAX_CLKDIV = 65536.0f;
 static PIO config_pio(PatternOutputLLConfig const *config)
 {
     return config && config->pio ? (PIO)config->pio : pio0;
+}
+
+static uint32_t samples_per_word(uint32_t pin_count)
+{
+    return pin_count == 0 ? 0 : 32u / pin_count;
 }
 
 void pattern_output_ll_default_config(
@@ -128,6 +133,12 @@ bool pattern_output_ll_configure(
         return false;
     }
 
+    uint32_t pull_threshold =
+        config->pin_count * samples_per_word(config->pin_count);
+    if (pull_threshold == 0 || pull_threshold > 32) {
+        return false;
+    }
+
     if (pg->initialized && pattern_output_ll_is_busy(pg)) {
         return false;
     }
@@ -155,11 +166,11 @@ bool pattern_output_ll_configure(
     sm_config_set_out_pins(&sm_config, config->pin_base, config->pin_count);
     sm_config_set_wrap(
         &sm_config,
-        pg->program_offset,
+        pg->program_offset + 1,
         pg->program_offset + 1
     );
     sm_config_set_clkdiv(&sm_config, clk_div);
-    sm_config_set_out_shift(&sm_config, true, false, 32);
+    sm_config_set_out_shift(&sm_config, true, true, pull_threshold);
     sm_config_set_fifo_join(&sm_config, PIO_FIFO_JOIN_TX);
     pio_sm_init(pio, config->sm, pg->program_offset, &sm_config);
     pio_sm_set_consecutive_pindirs(
@@ -252,6 +263,7 @@ bool pattern_output_ll_start(
     pio_sm_set_enabled(pio, pg->config.sm, false);
     pio_sm_clear_fifos(pio, pg->config.sm);
     pio_sm_restart(pio, pg->config.sm);
+    pio_sm_exec(pio, pg->config.sm, pio_encode_jmp(pg->program_offset));
     pg->loop_enabled = loop;
 
     dma_channel_config dma_config =
