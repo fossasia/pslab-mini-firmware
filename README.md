@@ -230,6 +230,34 @@ Available commands:
 bytes per transfer. `TRANsact?` sends the write block followed by a repeated
 start read, which is the common register read pattern for I2C sensors.
 
+## Digital Pattern Generator
+
+The digital pattern generator outputs packed 32-bit pattern words through the
+PIO/DMA pattern output backend. It defaults to GPIO16, one output pin,
+2000 samples per second, and `ONCE` mode.
+
+Available commands:
+
+- `PG:CONFigure:PINS <first_gpio>,<pin_count>`
+- `PG:CONFigure:PINS?`
+- `PG:CONFigure:RATE <rate_hz>`
+- `PG:CONFigure:RATE?`
+- `PG:CONFigure:MODE <ONCE|LOOP>`
+- `PG:CONFigure:MODE?`
+- `PG:DATA <arbitrary_block>`
+- `PG:STARt`
+- `PG:STOP`
+- `PG:STATus?`
+- `PG:UNDerrun?`
+
+`PG:DATA` uses a SCPI arbitrary block containing little-endian packed
+`uint32_t` pattern words. Each word stores `floor(32 / pin_count)` consecutive
+samples; each sample consumes `pin_count` bits, starting from the least
+significant bits. Unused high bits in each word are ignored. `PG:STATus?`
+returns `running,rate_hz,pin_count,pattern_words`.
+`PG:UNDerrun?` returns the number of PIO TX underrun/stall events observed by
+the pattern generator backend.
+
 ## Build
 
 Configure from the project root:

@@ -112,8 +112,12 @@ void pattern_generator_stop(PatternGenerator *pg)
 
 void pattern_generator_task(PatternGenerator *pg)
 {
-    if (!pg || !pg->initialized || !pg->running ||
-        pattern_output_ll_is_busy(&pg->platform)) {
+    if (!pg || !pg->initialized) {
+        return;
+    }
+
+    pattern_output_ll_task(&pg->platform);
+    if (!pg->running || pattern_output_ll_is_busy(&pg->platform)) {
         return;
     }
 
@@ -123,4 +127,13 @@ void pattern_generator_task(PatternGenerator *pg)
 bool pattern_generator_is_running(PatternGenerator const *pg)
 {
     return pg && pg->running && pattern_output_ll_is_busy(&pg->platform);
+}
+
+uint32_t pattern_generator_get_underruns(PatternGenerator *pg)
+{
+    if (!pg || !pg->initialized) {
+        return 0;
+    }
+
+    return pattern_output_ll_get_underruns(&pg->platform);
 }
