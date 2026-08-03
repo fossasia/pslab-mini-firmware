@@ -144,3 +144,9 @@ scpi_result_t scpi_cmd_pattern_generator_status_q(scpi_t *context)
     SCPI_ResultText(context, status);
     return SCPI_RES_OK;
 }
+
+scpi_result_t scpi_cmd_pattern_generator_underrun_q(scpi_t *context)
+{
+    SCPI_ResultUInt32(context, pg_get_underruns());
+    return SCPI_RES_OK;
+}

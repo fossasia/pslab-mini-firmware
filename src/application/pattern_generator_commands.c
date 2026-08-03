@@ -201,6 +201,11 @@ bool pg_get_mode_loop(void) { return state.mode == PATTERN_GENERATOR_MODE_LOOP; 
 
 uint32_t pg_get_pattern_words(void) { return state.pattern_words; }
 
+uint32_t pg_get_underruns(void)
+{
+    return pg_initialized ? pattern_generator_get_underruns(&pg) : 0;
+}
+
 bool pg_is_running(void)
 {
     return pg_initialized && pattern_generator_is_running(&pg);

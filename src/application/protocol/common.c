@@ -120,6 +120,7 @@ extern scpi_result_t scpi_cmd_pattern_generator_data(scpi_t *context);
 extern scpi_result_t scpi_cmd_pattern_generator_start(scpi_t *context);
 extern scpi_result_t scpi_cmd_pattern_generator_stop(scpi_t *context);
 extern scpi_result_t scpi_cmd_pattern_generator_status_q(scpi_t *context);
+extern scpi_result_t scpi_cmd_pattern_generator_underrun_q(scpi_t *context);
 
 static scpi_result_t scpi_cmd_la_wifi_read_q(scpi_t *context);
 static scpi_result_t scpi_cmd_dso_wifi_read_q(scpi_t *context);
@@ -381,6 +382,7 @@ static scpi_command_t const g_SCPI_COMMANDS[] = {
     { "PG:STARt", scpi_cmd_pattern_generator_start },
     { "PG:STOP", scpi_cmd_pattern_generator_stop },
     { "PG:STATus?", scpi_cmd_pattern_generator_status_q },
+    { "PG:UNDerrun?", scpi_cmd_pattern_generator_underrun_q },
 
     // Built-in test signal commands
     { "TEST:SQUare", scpi_cmd_test_square },

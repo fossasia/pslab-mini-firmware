@@ -25,6 +25,7 @@ uint32_t pg_get_pin_count(void);
 uint32_t pg_get_rate(void);
 bool pg_get_mode_loop(void);
 uint32_t pg_get_pattern_words(void);
+uint32_t pg_get_underruns(void);
 bool pg_is_running(void);
 
 #ifdef __cplusplus

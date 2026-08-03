@@ -24,6 +24,7 @@ typedef struct {
     uint32_t program_offset;
     uintptr_t restart_read_addr;
     uint32_t saved_bus_priority;
+    uint32_t underrun_count;
     uint16_t program_instructions[2];
     bool program_loaded;
     bool loop_enabled;
@@ -54,5 +55,7 @@ bool pattern_output_ll_start(
 );
 void pattern_output_ll_stop(PatternOutputLL *pg);
 bool pattern_output_ll_is_busy(PatternOutputLL const *pg);
+void pattern_output_ll_task(PatternOutputLL *pg);
+uint32_t pattern_output_ll_get_underruns(PatternOutputLL *pg);
 
 #endif

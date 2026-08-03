@@ -19,6 +19,34 @@ static PIO config_pio(PatternOutputLLConfig const *config)
     return config && config->pio ? (PIO)config->pio : pio0;
 }
 
+static uint32_t txstall_mask(uint32_t sm)
+{
+    return 1u << (PIO_FDEBUG_TXSTALL_LSB + sm);
+}
+
+static void clear_txstall(PatternOutputLL const *pg)
+{
+    PIO pio = config_pio(&pg->config);
+    pio->fdebug = txstall_mask(pg->config.sm);
+}
+
+static bool consume_txstall(PatternOutputLL *pg)
+{
+    PIO pio = config_pio(&pg->config);
+    uint32_t mask = txstall_mask(pg->config.sm);
+    if ((pio->fdebug & mask) == 0) {
+        return false;
+    }
+
+    pio->fdebug = mask;
+    if (!pg->loop_enabled) {
+        return false;
+    }
+
+    pg->underrun_count++;
+    return true;
+}
+
 static uint32_t samples_per_word(uint32_t pin_count)
 {
     return pin_count == 0 ? 0 : 32u / pin_count;
@@ -264,6 +292,7 @@ bool pattern_output_ll_start(
     pio_sm_clear_fifos(pio, pg->config.sm);
     pio_sm_restart(pio, pg->config.sm);
     pio_sm_exec(pio, pg->config.sm, pio_encode_jmp(pg->program_offset));
+    clear_txstall(pg);
     pg->loop_enabled = loop;
 
     dma_channel_config dma_config =
@@ -306,6 +335,7 @@ bool pattern_output_ll_start(
     }
 
     dma_channel_start((uint)pg->dma_chan);
+    clear_txstall(pg);
     pio_sm_set_enabled(pio, pg->config.sm, true);
     return true;
 }
@@ -341,4 +371,23 @@ bool pattern_output_ll_is_busy(PatternOutputLL const *pg)
     return pg->loop_enabled || dma_channel_is_busy((uint)pg->dma_chan) ||
            dma_channel_is_busy((uint)pg->ctrl_dma_chan) ||
            !pio_sm_is_tx_fifo_empty(pio, pg->config.sm);
+}
+
+void pattern_output_ll_task(PatternOutputLL *pg)
+{
+    if (!pg || !pg->initialized) {
+        return;
+    }
+
+    (void)consume_txstall(pg);
+}
+
+uint32_t pattern_output_ll_get_underruns(PatternOutputLL *pg)
+{
+    if (!pg || !pg->initialized) {
+        return 0;
+    }
+
+    (void)consume_txstall(pg);
+    return pg->underrun_count;
 }
