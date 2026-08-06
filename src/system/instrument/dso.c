@@ -5,7 +5,7 @@
  * This file ports the PSLab DSO instrument layer to RP2350. The STM32 firmware
  * used ADC_LL and TIM_LL for timer-triggered acquisition; this Pico port keeps
  * the instrument-level DSO responsibility and delegates low-level ADC capture
- * to platform/adc_capture.
+ * to the ADC frontend interface.
  *
  * @author PSLab Team
  * @date 2025-09-29
@@ -16,9 +16,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "platform/adc_capture.h"
 #include "platform/platform.h"
 #include "platform/status_led.h"
+#include "system/instrument/adc_frontend.h"
 
 enum {
     DSO_DEFAULT_CHANNEL = 0,
@@ -54,9 +54,14 @@ static struct {
 
 static bool config_is_valid(void)
 {
-    return state.channel <= ADC_CAPTURE_MAX_CHANNEL &&
-           state.sample_rate_hz >= ADC_CAPTURE_MIN_SAMPLE_RATE_HZ &&
-           state.sample_rate_hz <= ADC_CAPTURE_MAX_SAMPLE_RATE_HZ &&
+    AdcFrontendCapabilities capabilities;
+    return adc_frontend_get_capabilities(
+               ADC_FRONTEND_BACKEND_INTERNAL,
+               &capabilities
+           ) &&
+           state.channel <= capabilities.max_channel &&
+           state.sample_rate_hz >= capabilities.min_sample_rate_hz &&
+           state.sample_rate_hz <= capabilities.max_sample_rate_hz &&
            state.samples >= 1 && state.samples <= DSO_MAX_SAMPLES;
 }
 
@@ -66,17 +71,26 @@ static bool apply_config(void)
         return false;
     }
 
-    AdcCaptureConfig config = {
+    AdcFrontendConfig config = {
+        .backend = ADC_FRONTEND_BACKEND_INTERNAL,
         .channel = state.channel,
         .sample_rate_hz = state.sample_rate_hz,
     };
 
     if (adc_initialized) {
-        return adc_capture_configure(&config);
+        return adc_frontend_configure(&config);
     }
 
-    adc_initialized = adc_capture_init(&config);
+    adc_initialized = adc_frontend_init(&config);
     return adc_initialized;
+}
+
+static bool internal_adc_capabilities(AdcFrontendCapabilities *capabilities)
+{
+    return adc_frontend_get_capabilities(
+        ADC_FRONTEND_BACKEND_INTERNAL,
+        capabilities
+    );
 }
 
 static bool set_and_maybe_reconfigure(
@@ -109,7 +123,7 @@ void dso_reset_state(void)
     dso_stream_stop();
 
     if (adc_initialized) {
-        adc_capture_deinit();
+        adc_frontend_deinit();
     }
 
     adc_initialized = false;
@@ -126,18 +140,32 @@ void dso_reset_state(void)
 
 bool dso_set_channel(uint32_t value)
 {
+    AdcFrontendCapabilities capabilities;
+    if (!internal_adc_capabilities(&capabilities)) {
+        return false;
+    }
+
     return set_and_maybe_reconfigure(
-        &state.channel, value, 0, ADC_CAPTURE_MAX_CHANNEL, true
+        &state.channel,
+        value,
+        0,
+        capabilities.max_channel,
+        true
     );
 }
 
 bool dso_set_sample_rate(uint32_t value)
 {
+    AdcFrontendCapabilities capabilities;
+    if (!internal_adc_capabilities(&capabilities)) {
+        return false;
+    }
+
     return set_and_maybe_reconfigure(
         &state.sample_rate_hz,
         value,
-        ADC_CAPTURE_MIN_SAMPLE_RATE_HZ,
-        ADC_CAPTURE_MAX_SAMPLE_RATE_HZ,
+        capabilities.min_sample_rate_hz,
+        capabilities.max_sample_rate_hz,
         true
     );
 }
@@ -181,7 +209,13 @@ bool dso_set_trigger_slope(DsoTriggerSlope slope)
 
 uint32_t dso_get_channel(void) { return state.channel; }
 
-uint32_t dso_get_gpio(void) { return adc_capture_channel_to_gpio(state.channel); }
+uint32_t dso_get_gpio(void)
+{
+    return adc_frontend_channel_to_gpio(
+        ADC_FRONTEND_BACKEND_INTERNAL,
+        state.channel
+    );
+}
 
 uint32_t dso_get_sample_rate(void) { return state.sample_rate_hz; }
 
@@ -224,7 +258,7 @@ static bool wait_for_trigger_timeout(uint32_t timeout_us)
             if (trigger_wait_timed_out(use_timeout, deadline_us)) {
                 return false;
             }
-            if (!adc_capture_read_once(&sample)) {
+            if (!adc_frontend_read_once(&sample)) {
                 return false;
             }
             PLATFORM_idle();
@@ -237,7 +271,7 @@ static bool wait_for_trigger_timeout(uint32_t timeout_us)
         if (trigger_wait_timed_out(use_timeout, deadline_us)) {
             return false;
         }
-        if (!adc_capture_read_once(&sample)) {
+        if (!adc_frontend_read_once(&sample)) {
             return false;
         }
 
@@ -260,16 +294,16 @@ bool dso_initiate(void)
 {
     dso_stream_stop();
 
-    if (!adc_initialized && !apply_config()) {
+    if (!apply_config()) {
         return false;
     }
 
     memset(capture_buffer, 0, state.samples * sizeof(capture_buffer[0]));
 
     status_led_capture_started();
-    AdcCaptureInfo info;
+    AdcFrontendCaptureInfo info;
     bool captured = wait_for_trigger() &&
-                    adc_capture_run(capture_buffer, state.samples, &info);
+                    adc_frontend_run(capture_buffer, state.samples, &info);
     status_led_capture_finished();
 
     if (!captured) {
@@ -299,7 +333,7 @@ bool dso_fetch(uint8_t const **data, size_t *len)
 
 uint32_t dso_status(void)
 {
-    if (stream_enabled || adc_capture_is_busy()) {
+    if (stream_enabled || adc_frontend_is_busy()) {
         return 2;
     }
 
@@ -310,7 +344,7 @@ bool dso_stream_start(void)
 {
     dso_stream_stop();
 
-    if (!adc_initialized && !apply_config()) {
+    if (!apply_config()) {
         ++stream_overruns;
         return false;
     }
@@ -343,9 +377,9 @@ bool dso_stream_next_frame(uint8_t const **data, size_t *len, uint32_t *sequence
         return false;
     }
 
-    AdcCaptureInfo info;
+    AdcFrontendCaptureInfo info;
     bool captured = wait_for_trigger_timeout(DSO_STREAM_TRIGGER_TIMEOUT_US) &&
-                    adc_capture_run(capture_buffer, state.samples, &info);
+                    adc_frontend_run(capture_buffer, state.samples, &info);
     if (!captured) {
         ++stream_overruns;
         return false;
