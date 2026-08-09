@@ -29,6 +29,7 @@ target_sources(pslab_pico PRIVATE
         src/system/instrument/dso.c
         src/system/instrument/mixed_signal.c
         src/system/pattern_generator.c
+        src/platform/ad9629.c
         src/platform/adc_capture.c
         src/platform/internal_adc_frontend.c
         src/platform/i2c_ll.c
