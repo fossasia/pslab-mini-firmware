@@ -4,8 +4,7 @@
 #include <stdint.h>
 
 enum {
-    AD9629_DEFAULT_SPI_BUS = 0,
-    AD9629_DEFAULT_CS_GPIO = 5,
+    AD9629_GPIO_UNASSIGNED = 0xffffffffu,
     AD9629_DEFAULT_TIMEOUT_US = 100000,
 };
 
@@ -16,8 +15,9 @@ void AD9629_default_config(AD9629_Config *config)
     }
 
     *config = (AD9629_Config){
-        .spi_bus = AD9629_DEFAULT_SPI_BUS,
-        .cs_gpio = AD9629_DEFAULT_CS_GPIO,
+        .sclk_gpio = AD9629_GPIO_UNASSIGNED,
+        .sdio_gpio = AD9629_GPIO_UNASSIGNED,
+        .cs_gpio = AD9629_GPIO_UNASSIGNED,
         .timeout_us = AD9629_DEFAULT_TIMEOUT_US,
     };
 }

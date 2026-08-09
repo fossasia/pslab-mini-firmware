@@ -177,7 +177,8 @@ typedef enum {
 } AD9629_OutputDelay;
 
 typedef struct {
-    uint32_t spi_bus;
+    uint32_t sclk_gpio;
+    uint32_t sdio_gpio;
     uint32_t cs_gpio;
     uint32_t timeout_us;
 } AD9629_Config;
@@ -203,7 +204,7 @@ void AD9629_default_config(AD9629_Config *config);
  *
  * Commit 1 only scaffolds the control API. This function validates pointers,
  * copies the configuration, and marks the handle usable by later operations.
- * SPI bus setup and chip probing are implemented by later commits.
+ * SDIO transport setup and chip probing are implemented by later commits.
  *
  * @return true if handle/config are valid and copied.
  */
