@@ -7,10 +7,24 @@ over UDP.
 Pico 2 -> SPI -> ESP32-C3 -> UDP -> host computer
 ```
 
+On first boot, ESP32-C3 starts a temporary setup access point. The user enters
+their Wi-Fi credentials through a local setup page, and the ESP stores them in
+NVS. Later boots join that saved Wi-Fi network as a station.
+
+For a new board, join the temporary Wi-Fi, then open `http://192.168.4.1`.
+The default setup password is `pslab-pico`.
+It can be changed through:
+
+```text
+PSLab ESP SPI bridge -> Temporary provisioning access point password
+```
+
+If the saved credentials cannot connect, the setup access point
+starts again after the station retry limit is reached.
+
 ## Behavior
 
 ```text
-ESP32-C3 joins Wi-Fi as a station.
 ESP32-C3 is an SPI slave.
 Pico is the SPI master.
 ESP receives 512-byte SPI frames into DMA buffers.
@@ -40,13 +54,6 @@ get_idf
 idf.py set-target esp32c3
 idf.py menuconfig
 idf.py build
-```
-
-Set the Wi-Fi SSID and password from:
-
-```text
-PSLab ESP SPI bridge -> Station SSID
-PSLab ESP SPI bridge -> Station password
 ```
 
 ## Flash

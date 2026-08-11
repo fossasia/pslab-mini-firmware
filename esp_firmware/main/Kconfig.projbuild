@@ -1,12 +1,10 @@
 menu "PSLab ESP SPI bridge"
 
-config ESP_BRIDGE_STA_SSID
-    string "Station SSID"
-    default "PSLAB_WIFI_SSID"
-
-config ESP_BRIDGE_STA_PASSWORD
-    string "Station password"
-    default "PSLAB_WIFI_PASSWORD"
+config ESP_BRIDGE_PROVISIONING_PASSWORD
+    string "Temporary provisioning access point password"
+    default "pslab-pico"
+    help
+        WPA2 password used by the temporary PSLab Pico setup access point.
 
 config ESP_BRIDGE_DEST_IP
     string "Initial UDP destination IP"
