@@ -7,10 +7,24 @@ over UDP.
 Pico 2 -> SPI -> ESP32-C3 -> UDP -> host computer
 ```
 
+On first boot, ESP32-C3 starts a temporary setup access point. The user enters
+their Wi-Fi credentials through a local setup page, and the ESP stores them in
+NVS. Later boots join that saved Wi-Fi network as a station.
+
+For a new board, join the temporary Wi-Fi, then open `http://192.168.4.1`.
+The default setup password is `pslab-pico`.
+It can be changed through:
+
+```text
+PSLab ESP SPI bridge -> Temporary provisioning access point password
+```
+
+If the saved credentials cannot connect, the setup access point
+starts again after the station retry limit is reached.
+
 ## Behavior
 
 ```text
-ESP32-C3 joins Wi-Fi as a station.
 ESP32-C3 is an SPI slave.
 Pico is the SPI master.
 ESP receives 512-byte SPI frames into DMA buffers.
@@ -20,6 +34,24 @@ Python receiver validates sequence and payload end-to-end.
 
 The ESP starts with broadcast UDP. The Python receiver replies to the first
 packet, then the ESP switches to unicast.
+
+Once connected to Wi-Fi, the bridge advertises itself through mDNS as:
+
+```text
+pslab-pico.local
+```
+
+The TCP SCPI endpoint is also advertised as `_pslab._tcp`. This lets a host
+connect without copying the ESP's DHCP address:
+
+The following command can be used to test (after setting SCPI control path to wifi).
+
+```bash
+printf '*IDN?\n' | nc pslab-pico.local 5006
+```
+
+The host and ESP must be on the same local network, and the host operating
+system must have mDNS resolution enabled.
 
 ## Pins
 
@@ -40,13 +72,6 @@ get_idf
 idf.py set-target esp32c3
 idf.py menuconfig
 idf.py build
-```
-
-Set the Wi-Fi SSID and password from:
-
-```text
-PSLab ESP SPI bridge -> Station SSID
-PSLab ESP SPI bridge -> Station password
 ```
 
 ## Flash
