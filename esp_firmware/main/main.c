@@ -20,6 +20,7 @@
 #include "freertos/task.h"
 #include "lwip/inet.h"
 #include "lwip/sockets.h"
+#include "mdns_service.h"
 #include "nvs_flash.h"
 
 #include "wifi_provisioning.h"
@@ -226,6 +227,9 @@ static bool start_station(wifi_provisioning_credentials_t const *credentials)
     );
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "station connected");
+        if (!mdns_service_start(CONFIG_ESP_BRIDGE_LOCAL_PORT)) {
+            ESP_LOGW(TAG, "mDNS discovery unavailable");
+        }
         return true;
     } else {
         ESP_LOGW(TAG, "station connection not established yet");
