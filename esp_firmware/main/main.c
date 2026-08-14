@@ -209,6 +209,7 @@ static bool start_station(wifi_provisioning_credentials_t const *credentials)
     if (esp_wifi_set_mode(WIFI_MODE_STA) != ESP_OK ||
         esp_wifi_set_config(WIFI_IF_STA, &sta_config) != ESP_OK ||
         esp_wifi_start() != ESP_OK) {
+        (void)esp_wifi_stop();
         return false;
     }
     if (esp_wifi_set_ps(WIFI_PS_NONE) != ESP_OK) {
