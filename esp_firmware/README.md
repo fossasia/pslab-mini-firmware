@@ -35,6 +35,24 @@ Python receiver validates sequence and payload end-to-end.
 The ESP starts with broadcast UDP. The Python receiver replies to the first
 packet, then the ESP switches to unicast.
 
+Once connected to Wi-Fi, the bridge advertises itself through mDNS as:
+
+```text
+pslab-pico.local
+```
+
+The TCP SCPI endpoint is also advertised as `_pslab._tcp`. This lets a host
+connect without copying the ESP's DHCP address:
+
+The following command can be used to test (after setting SCPI control path to wifi).
+
+```bash
+printf '*IDN?\n' | nc pslab-pico.local 5006
+```
+
+The host and ESP must be on the same local network, and the host operating
+system must have mDNS resolution enabled.
+
 ## Pins
 
 ```text

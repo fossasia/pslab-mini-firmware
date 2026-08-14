@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "main.c" "wifi_provisioning.c"
+    SRCS "main.c" "wifi_provisioning.c" "mdns_service.c"
     INCLUDE_DIRS "."
     REQUIRES
         driver
@@ -10,5 +10,6 @@ idf_component_register(
         esp_timer
         esp_wifi
         lwip
+        mdns
         nvs_flash
 )
