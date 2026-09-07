@@ -1,37 +1,38 @@
-name: Build
+name: Build 
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
-    branches:
-      - main
-env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    branches: [ main ]
+  workflow_dispatch: 
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout PSLab Mini Firmware
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Install Toolchain
         run: |
           sudo apt update
-          sudo apt install gcc-arm-none-eabi libnewlib-arm-none-eabi
+          sudo apt install cmake gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential python3
 
-      - name: Build Firmware
+      - name: Setup Pico SDK 2.1.0
+        run: |
+          git clone --depth 1 --branch 2.1.0 https://github.com/raspberrypi/pico-sdk.git $HOME/pico-sdk
+          cd $HOME/pico-sdk
+          git submodule update --init
+
+      - name: Build Firmware for Pico 2 W
         run: |
           mkdir build
           cd build
-          cmake ..
-          make
+          cmake .. -DPICO_BOARD=pico2_w -DPICO_SDK_PATH=$HOME/pico-sdk
+          make -j4
 
-      - name: Publish build files
+      - name: Upload .uf2 Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pslab-mini-firmware
-          path: build/src/pslab-mini-firmware.srec
+          name: pslab_pico2_w_firmware
+          path: build/*.uf2
