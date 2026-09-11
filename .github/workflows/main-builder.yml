@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ dev26, main ]
   workflow_dispatch: 
 
 jobs:
@@ -35,4 +35,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pslab_pico2_w_firmware
-          path: build/*.uf2
+          path: build/*.uf2 
+          if-no-files-found: error
