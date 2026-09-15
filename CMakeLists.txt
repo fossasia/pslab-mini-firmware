@@ -15,12 +15,14 @@ target_sources(pslab_pico PRIVATE
         src/application/main.c
         src/application/protocol/common.c
         src/application/protocol/bus/i2c.c
+        src/application/protocol/bus/spi.c
         src/application/protocol/bus/uart.c
         src/application/protocol/la.c
         src/application/protocol/dso.c
         src/application/protocol/mso.c
         src/application/communication_commands.c
         src/application/gateway/i2c_commands.c
+        src/application/gateway/spi_commands.c
         src/application/gateway/uart_commands.c
         src/application/logic_analyser_commands.c
         src/application/dso_commands.c
@@ -34,12 +36,14 @@ target_sources(pslab_pico PRIVATE
         src/platform/pattern_output_ll.c
         src/platform/platform.c
         src/platform/esp_spi_bridge.c
+        src/platform/spi_ll.c
         src/platform/uart_ll.c
         src/platform/usb_cdc.c
         src/platform/usb_descriptors.c
         src/platform/status_led.c
         src/platform/test_signal.c
         src/system/bus/i2c.c
+        src/system/bus/spi.c
         src/system/bus/uart.c
         src/system/logic_analyser.c
         src/system/transport.c

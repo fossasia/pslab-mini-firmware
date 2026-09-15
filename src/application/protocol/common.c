@@ -21,6 +21,7 @@
 #include "application/logic_analyser_commands.h"
 #include "application/mixed_signal_commands.h"
 #include "application/protocol/bus/i2c.h"
+#include "application/protocol/bus/spi.h"
 #include "application/protocol/bus/uart.h"
 #include "platform/platform.h"
 #include "platform/status_led.h"
@@ -280,6 +281,21 @@ static scpi_command_t const g_SCPI_COMMANDS[] = {
     { "BUS:I2C:WRITe", scpi_cmd_bus_i2c_write },
     { "BUS:I2C:READ?", scpi_cmd_bus_i2c_read_q },
     { "BUS:I2C:TRANsact?", scpi_cmd_bus_i2c_transact_q },
+    { "BUS:SPI:OPEN", scpi_cmd_bus_spi_open },
+    { "BUS:SPI:OPEN?", scpi_cmd_bus_spi_open_q },
+    { "BUS:SPI:CLOSe", scpi_cmd_bus_spi_close },
+    { "BUS:SPI:CONFigure:BUS", scpi_cmd_bus_spi_configure_bus },
+    { "BUS:SPI:CONFigure:BUS?", scpi_cmd_bus_spi_configure_bus_q },
+    { "BUS:SPI:CONFigure:RATE", scpi_cmd_bus_spi_configure_rate },
+    { "BUS:SPI:CONFigure:RATE?", scpi_cmd_bus_spi_configure_rate_q },
+    { "BUS:SPI:CONFigure:MODE", scpi_cmd_bus_spi_configure_mode },
+    { "BUS:SPI:CONFigure:MODE?", scpi_cmd_bus_spi_configure_mode_q },
+    { "BUS:SPI:CONFigure:DUMMY", scpi_cmd_bus_spi_configure_dummy },
+    { "BUS:SPI:CONFigure:DUMMY?", scpi_cmd_bus_spi_configure_dummy_q },
+    { "BUS:SPI:WRITe", scpi_cmd_bus_spi_write },
+    { "BUS:SPI:READ?", scpi_cmd_bus_spi_read_q },
+    { "BUS:SPI:EXCHange?", scpi_cmd_bus_spi_exchange_q },
+    { "BUS:SPI:TRANsact?", scpi_cmd_bus_spi_transact_q },
 
     // Logic analyser commands
     { "LA:CONFigure:PINBase", scpi_cmd_configure_logic_analyser_pinbase },
