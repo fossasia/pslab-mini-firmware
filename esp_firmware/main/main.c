@@ -22,6 +22,8 @@
 #include "lwip/sockets.h"
 #include "nvs_flash.h"
 
+#include "wifi_provisioning.h"
+
 #define FRAME_LEN 512
 #define HEADER_LEN 12
 #define MAX_PAYLOAD_LEN (FRAME_LEN - HEADER_LEN)
@@ -195,28 +197,25 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
     }
 }
 
-static void start_wifi(void)
+static bool start_station(wifi_provisioning_credentials_t const *credentials)
 {
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    wifi_event_group = xEventGroupCreate();
-
-    esp_netif_create_default_wifi_sta();
-
-    wifi_init_config_t init_config = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&init_config));
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL));
-
     wifi_config_t sta_config = {0};
-    strlcpy((char *)sta_config.sta.ssid, CONFIG_ESP_BRIDGE_STA_SSID, sizeof(sta_config.sta.ssid));
-    strlcpy((char *)sta_config.sta.password, CONFIG_ESP_BRIDGE_STA_PASSWORD, sizeof(sta_config.sta.password));
+    strlcpy((char *)sta_config.sta.ssid, credentials->ssid, sizeof(sta_config.sta.ssid));
+    strlcpy((char *)sta_config.sta.password, credentials->password, sizeof(sta_config.sta.password));
     sta_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
-    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
+    xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT);
+    sta_retry_count = 0;
+    if (esp_wifi_set_mode(WIFI_MODE_STA) != ESP_OK ||
+        esp_wifi_set_config(WIFI_IF_STA, &sta_config) != ESP_OK ||
+        esp_wifi_start() != ESP_OK) {
+        (void)esp_wifi_stop();
+        return false;
+    }
+    if (esp_wifi_set_ps(WIFI_PS_NONE) != ESP_OK) {
+        esp_wifi_stop();
+        return false;
+    }
 
     EventBits_t bits = xEventGroupWaitBits(
         wifi_event_group,
@@ -227,9 +226,50 @@ static void start_wifi(void)
     );
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "station connected");
+        return true;
     } else {
         ESP_LOGW(TAG, "station connection not established yet");
+        esp_wifi_stop();
+        return false;
     }
+}
+
+static bool start_wifi(void)
+{
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    wifi_event_group = xEventGroupCreate();
+    if (!wifi_event_group) {
+        return false;
+    }
+
+    esp_netif_create_default_wifi_ap();
+    esp_netif_create_default_wifi_sta();
+
+    wifi_init_config_t init_config = WIFI_INIT_CONFIG_DEFAULT();
+    if (esp_wifi_init(&init_config) != ESP_OK ||
+        esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL) != ESP_OK ||
+        esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL) != ESP_OK) {
+        return false;
+    }
+
+    wifi_provisioning_credentials_t credentials = {0};
+    if (!wifi_provisioning_load_credentials(&credentials)) {
+        ESP_LOGI(TAG, "no saved Wi-Fi credentials; starting setup network");
+        if (!wifi_provisioning_run(&credentials)) {
+            return false;
+        }
+    }
+
+    if (start_station(&credentials)) {
+        return true;
+    }
+
+    ESP_LOGW(TAG, "saved station configuration failed; starting setup network");
+    if (!wifi_provisioning_run(&credentials)) {
+        return false;
+    }
+    return start_station(&credentials);
 }
 
 static void init_spi(void)
@@ -501,7 +541,10 @@ static void spi_task(void *arg)
 static void udp_task(void *arg)
 {
     (void)arg;
-    start_wifi();
+    if (!start_wifi()) {
+        ESP_LOGE(TAG, "Wi-Fi setup failed");
+        vTaskDelete(NULL);
+    }
 
     int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sock < 0) {
