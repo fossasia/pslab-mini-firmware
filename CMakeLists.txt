@@ -19,12 +19,14 @@ target_sources(pslab_pico PRIVATE
         src/application/protocol/la.c
         src/application/protocol/dso.c
         src/application/protocol/mso.c
+        src/application/protocol/pg.c
         src/application/communication_commands.c
         src/application/gateway/i2c_commands.c
         src/application/gateway/uart_commands.c
         src/application/logic_analyser_commands.c
         src/application/dso_commands.c
         src/application/mixed_signal_commands.c
+        src/application/pattern_generator_commands.c
         src/system/instrument/dso.c
         src/system/instrument/mixed_signal.c
         src/system/pattern_generator.c

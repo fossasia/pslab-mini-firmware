@@ -41,6 +41,7 @@ bool pattern_generator_start(
 void pattern_generator_stop(PatternGenerator *pg);
 void pattern_generator_task(PatternGenerator *pg);
 bool pattern_generator_is_running(PatternGenerator const *pg);
+uint32_t pattern_generator_get_underruns(PatternGenerator *pg);
 
 struct PatternGenerator {
     PatternGeneratorConfig config;
