@@ -12,11 +12,13 @@
 #include "hardware/watchdog.h"
 #include "pico/stdlib.h"
 
+#include "platform/internal_adc_frontend.h"
 #include "platform.h"
 
 void PLATFORM_init(void)
 {
     /* Pico SDK runtime performs the core clock/runtime setup before main(). */
+    internal_adc_frontend_register();
 }
 
 uint32_t PLATFORM_get_tick(void)

@@ -3,9 +3,9 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "platform/adc_capture.h"
 #include "platform/platform.h"
 #include "platform/status_led.h"
+#include "system/instrument/adc_frontend.h"
 
 enum {
     MIXED_SIGNAL_DEFAULT_DIGITAL_PIN_BASE = 16,
@@ -59,10 +59,15 @@ static bool digital_pins_are_valid(void)
 
 static bool config_is_valid(void)
 {
+    AdcFrontendCapabilities capabilities;
     return digital_pins_are_valid() &&
-           state.analog_channel <= ADC_CAPTURE_MAX_CHANNEL &&
-           state.sample_rate_hz >= ADC_CAPTURE_MIN_SAMPLE_RATE_HZ &&
-           state.sample_rate_hz <= ADC_CAPTURE_MAX_SAMPLE_RATE_HZ &&
+           adc_frontend_get_capabilities(
+               ADC_FRONTEND_BACKEND_INTERNAL,
+               &capabilities
+           ) &&
+           state.analog_channel <= capabilities.max_channel &&
+           state.sample_rate_hz >= capabilities.min_sample_rate_hz &&
+           state.sample_rate_hz <= capabilities.max_sample_rate_hz &&
            state.samples >= 1 && state.samples <= MIXED_SIGNAL_MAX_SAMPLES &&
            state.trigger_pin <= MIXED_SIGNAL_MAX_GPIO_PIN;
 }
@@ -90,7 +95,8 @@ static bool apply_config(void)
         .clk_div = logic_analyser_clock_divider(),
     };
 
-    AdcCaptureConfig adc_config = {
+    AdcFrontendConfig adc_config = {
+        .backend = ADC_FRONTEND_BACKEND_INTERNAL,
         .channel = state.analog_channel,
         .sample_rate_hz = state.sample_rate_hz,
     };
@@ -109,8 +115,8 @@ static bool apply_config(void)
     }
     logic_analyser_initialized = true;
 
-    bool adc_ready = adc_initialized ? adc_capture_configure(&adc_config)
-                                     : adc_capture_init(&adc_config);
+    bool adc_ready = adc_initialized ? adc_frontend_configure(&adc_config)
+                                     : adc_frontend_init(&adc_config);
     if (!adc_ready) {
         return false;
     }
@@ -150,7 +156,7 @@ void mixed_signal_reset_state(void)
         logic_analyser_deinit(&logic_analyser);
     }
     if (adc_initialized) {
-        adc_capture_deinit();
+        adc_frontend_deinit();
     }
 
     logic_analyser_initialized = false;
@@ -190,22 +196,38 @@ bool mixed_signal_set_digital_pin_count(uint32_t value)
 
 bool mixed_signal_set_analog_channel(uint32_t value)
 {
+    AdcFrontendCapabilities capabilities;
+    if (!adc_frontend_get_capabilities(
+            ADC_FRONTEND_BACKEND_INTERNAL,
+            &capabilities
+        )) {
+        return false;
+    }
+
     return set_and_maybe_reconfigure(
         &state.analog_channel,
         value,
         0,
-        ADC_CAPTURE_MAX_CHANNEL,
+        capabilities.max_channel,
         true
     );
 }
 
 bool mixed_signal_set_sample_rate(uint32_t value)
 {
+    AdcFrontendCapabilities capabilities;
+    if (!adc_frontend_get_capabilities(
+            ADC_FRONTEND_BACKEND_INTERNAL,
+            &capabilities
+        )) {
+        return false;
+    }
+
     return set_and_maybe_reconfigure(
         &state.sample_rate_hz,
         value,
-        ADC_CAPTURE_MIN_SAMPLE_RATE_HZ,
-        ADC_CAPTURE_MAX_SAMPLE_RATE_HZ,
+        capabilities.min_sample_rate_hz,
+        capabilities.max_sample_rate_hz,
         true
     );
 }
@@ -278,7 +300,7 @@ MixedSignalCaptureInfo const *mixed_signal_get_last_info(void)
 
 bool mixed_signal_initiate(void)
 {
-    if ((!logic_analyser_initialized || !adc_initialized) && !apply_config()) {
+    if (!apply_config()) {
         return false;
     }
 
@@ -296,9 +318,9 @@ bool mixed_signal_initiate(void)
     memset(digital_buffer, 0, digital_word_count * sizeof(digital_buffer[0]));
     memset(analog_buffer, 0, state.samples * sizeof(analog_buffer[0]));
 
-    AdcCaptureInfo adc_info;
+    AdcFrontendCaptureInfo adc_info;
     LogicAnalyserCaptureInfo logic_info;
-    if (!adc_capture_arm(analog_buffer, state.samples, &adc_info)) {
+    if (!adc_frontend_arm(analog_buffer, state.samples, &adc_info)) {
         return false;
     }
 
@@ -313,7 +335,7 @@ bool mixed_signal_initiate(void)
         false
     );
     if (!logic_armed) {
-        adc_capture_abort();
+        adc_frontend_abort();
         return false;
     }
 
@@ -325,24 +347,24 @@ bool mixed_signal_initiate(void)
         MIXED_SIGNAL_TRIGGER_TIMEOUT_US
     );
     if (!triggered) {
-        adc_capture_abort();
+        adc_frontend_abort();
         logic_analyser_capture_abort(&logic_analyser);
         status_led_capture_finished();
         capture_valid = false;
         return false;
     }
 
-    bool adc_started = adc_capture_start();
+    bool adc_started = adc_frontend_start();
     bool logic_started = logic_analyser_capture_start_armed(&logic_analyser);
     if (!adc_started || !logic_started) {
-        adc_capture_abort();
+        adc_frontend_abort();
         logic_analyser_capture_abort(&logic_analyser);
         status_led_capture_finished();
         return false;
     }
 
     logic_analyser_capture_wait(&logic_analyser);
-    bool adc_completed = adc_capture_wait();
+    bool adc_completed = adc_frontend_wait();
     bool logic_completed = logic_analyser_capture_complete(&logic_analyser);
     status_led_capture_finished();
 
@@ -394,7 +416,7 @@ bool mixed_signal_fetch_analog(uint8_t const **data, size_t *len)
 
 MixedSignalStatus mixed_signal_status(void)
 {
-    if (logic_analyser_is_busy(&logic_analyser) || adc_capture_is_busy()) {
+    if (logic_analyser_is_busy(&logic_analyser) || adc_frontend_is_busy()) {
         return MIXED_SIGNAL_STATUS_BUSY;
     }
 
