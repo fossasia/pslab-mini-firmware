@@ -4,10 +4,10 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-
+#include "pico/time.h"
+#include "tusb.h"
 #include "scpi/error.h"
 #include "scpi/scpi.h"
-
 #include "application/gateway/i2c_commands.h"
 
 static uint8_t response_buffer[I2C_GATEWAY_MAX_TRANSFER];
@@ -155,7 +155,6 @@ scpi_result_t scpi_cmd_bus_i2c_write(scpi_t *context)
         return result_execution_error(context);
     }
 
-    SCPI_ResultUInt32(context, (uint32_t)written);
     return SCPI_RES_OK;
 }
 
@@ -173,8 +172,9 @@ scpi_result_t scpi_cmd_bus_i2c_read_q(scpi_t *context)
     }
 
     int32_t bytes_read = i2c_gateway_read(response_buffer, len);
+    
     if (bytes_read < 0) {
-        return result_execution_error(context);
+        bytes_read = 0;
     }
 
     SCPI_ResultArbitraryBlock(context, response_buffer, (size_t)bytes_read);
@@ -183,15 +183,14 @@ scpi_result_t scpi_cmd_bus_i2c_read_q(scpi_t *context)
 
 scpi_result_t scpi_cmd_bus_i2c_transact_q(scpi_t *context)
 {
+    uint32_t read_len = 0;
     char const *data = NULL;
     size_t len = 0;
-    uint32_t read_len = 0;
-
-    if (!SCPI_ParamArbitraryBlock(context, &data, &len, TRUE)) {
-        return result_missing_parameter(context);
-    }
 
     if (!SCPI_ParamUInt32(context, &read_len, TRUE)) {
+        return result_missing_parameter(context);
+    }
+    if (!SCPI_ParamArbitraryBlock(context, &data, &len, TRUE)) {
         return result_missing_parameter(context);
     }
 
@@ -200,14 +199,10 @@ scpi_result_t scpi_cmd_bus_i2c_transact_q(scpi_t *context)
         return result_execution_error(context);
     }
 
-    int32_t bytes_read = i2c_gateway_transact(
-        (uint8_t const *)data,
-        len,
-        response_buffer,
-        read_len
-    );
+    int32_t bytes_read = i2c_gateway_transact((uint8_t const *)data, len, response_buffer, read_len);
+
     if (bytes_read < 0) {
-        return result_execution_error(context);
+        bytes_read = 0;
     }
 
     SCPI_ResultArbitraryBlock(context, response_buffer, (size_t)bytes_read);
